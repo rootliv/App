@@ -989,8 +989,13 @@ function openBook(id){
     ${b.set&&b.set.length?`<p class="kv"><b>Ambientazione.</b> ${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')} 🗺️</p>`:''}
     ${b.cur?`<p class="kv"><b>Curiosità.</b> ${b.cur}</p>`:''}
     ${b.quote?`<div class="quote">${b.quote}</div>`:''}
-    <div class="field" style="margin-top:18px"><label>📝 Le tue note personali</label><textarea rows="3" placeholder="Scrivi qui pensieri, evidenziazioni, citazioni…">${b.note||''}</textarea></div>
+    <div class="field" style="margin-top:18px"><label>📝 Le tue note personali</label><textarea id="bookNote" rows="3" placeholder="Scrivi qui pensieri, evidenziazioni, citazioni…">${b.note||''}</textarea></div>
     <div class="field"><label>⭐ La tua valutazione</label><div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
+      ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Rimetti tra "da leggere"</button>`:''}
+      ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn" onclick="saveBookNote(${b.id},this)">💾 Salva</button>
       <button class="btn ghost" onclick="refreshCover(${b.id},this)">🔄 Aggiorna copertina (IT)</button>
@@ -1014,7 +1019,8 @@ function removeBook(id){
  books=books.filter(b=>b.id!==id);if(mode==='demo')save();closeModal();go('libreria');
 }
 function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
-function saveBookNote(id,btn){const b=book(id);const ta=btn.parentElement.querySelector('textarea');if(ta)b.note=ta.value;persistBook(id,{note:b.note||''});btn.textContent='✓ Salvato!';setTimeout(()=>btn.textContent='💾 Salva',1600)}
+function saveBookNote(id,btn){const b=book(id);const ta=$('#bookNote');if(ta)b.note=ta.value;persistBook(id,{note:b.note||''});btn.textContent='✓ Salvato!';setTimeout(()=>btn.textContent='💾 Salva',1600)}
+function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&!b.prog)b.prog=0;persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
 function openAi(id){
  const s=aiSuggest.find(x=>x.id===id);
  $('#modal').innerHTML=`
@@ -1604,8 +1610,8 @@ function renderHomeCloud(){
  <div class="stat-row">
    <div class="stat"><div class="ic">📚</div><div class="n">${read}</div><div class="l">Libri letti</div></div>
    <div class="stat"><div class="ic">📖</div><div class="n">${reading.length}</div><div class="l">In lettura</div></div>
+   <div class="stat"><div class="ic">🔖</div><div class="n">${books.filter(b=>b.status==='toread').length}</div><div class="l">Da leggere</div></div>
    <div class="stat"><div class="ic">👥</div><div class="n">${myClubs.length}</div><div class="l">Club</div></div>
-   <div class="stat"><div class="ic">📅</div><div class="n">${next?Math.max(0,daysTo(next.date)):'–'}</div><div class="l">Giorni al prossimo incontro</div></div>
  </div>
  ${reading.length?`<div class="sec-title">📖 Continua a leggere</div>
  <div class="row">${reading.map(b=>`<div class="card pad" style="flex:1;min-width:280px;cursor:pointer" onclick="openBook(${b.id})"><div style="display:flex;gap:16px"><div style="width:66px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div><div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${b.t}</b><div class="muted" style="font-size:13px;margin:2px 0 10px">${b.a}</div><div class="bar"><i style="width:${b.prog||0}%"></i></div></div></div></div>`).join('')}</div>`:''}
