@@ -1517,16 +1517,18 @@ async function loadAiRecs(){
  const d=(profile&&profile.data)||{};
  const have=new Set(books.map(b=>(b.t||'').toLowerCase()));
  const disliked=(d.disliked||[]).map(x=>x.toLowerCase());
- const queries=[];const usedA=new Set();
+ let queries=[];const usedA=new Set();const usedG=new Set();
  const addA=(a,reason)=>{if(!a)return;const k=a.toLowerCase();if(usedA.has(k))return;usedA.add(k);queries.push({q:'inauthor:'+a,reason})};
- (d.authors||[]).slice(0,3).forEach(a=>addA(a,'Perché segui '+a));
- [...new Set(books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Perché hai apprezzato '+a));
- (d.genres||[]).slice(0,3).forEach(g=>queries.push({q:'subject:'+g,reason:'Perché ami il genere '+g}));
+ const addG=(g,reason)=>{if(!g)return;const k=g.toLowerCase();if(usedG.has(k))return;usedG.add(k);queries.push({q:'subject:'+g,reason})};
+ // dal tuo Profilo lettore
+ (d.authors||[]).forEach(a=>addA(a,'Perché segui '+a));
+ (d.genres||[]).forEach(g=>addG(g,'Perché ami il genere '+g));
  (d.loved||[]).slice(0,2).forEach(t=>queries.push({q:t,reason:'Perché hai amato '+t}));
- if(!queries.length){ // nessuna preferenza: ripiego sui dati della libreria
-   [...new Set(books.map(b=>b.a).filter(Boolean))].slice(0,2).forEach(a=>addA(a,'Dai tuoi libri: '+a));
-   [...new Set(books.map(b=>b.g).filter(Boolean))].slice(0,2).forEach(g=>queries.push({q:'subject:'+g,reason:'Dai generi della tua libreria'}));
- }
+ // da "La mia Libreria"
+ [...new Set(books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Perché hai apprezzato '+a));
+ [...new Set(books.map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Dalla tua libreria: '+a));
+ [...new Set(books.map(b=>b.g).filter(Boolean))].forEach(g=>addG(g,'Dai generi della tua libreria'));
+ queries=queries.slice(0,7);
  if(!queries.length){
    box.innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:42px">✨</div>
      <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
@@ -1708,10 +1710,10 @@ function renderHomeCloud(){
    <button class="btn" onclick="go('libreria')">📚 Vai alla libreria</button>
  </div>
  <div class="stat-row">
-   <div class="stat"><div class="ic">📚</div><div class="n">${read}</div><div class="l">Libri letti</div></div>
-   <div class="stat"><div class="ic">📖</div><div class="n">${reading.length}</div><div class="l">In lettura</div></div>
-   <div class="stat"><div class="ic">🔖</div><div class="n">${books.filter(b=>b.status==='toread').length}</div><div class="l">Da leggere</div></div>
-   <div class="stat"><div class="ic">👥</div><div class="n">${myClubs.length}</div><div class="l">Club</div></div>
+   <div class="stat" style="cursor:pointer" onclick="libTab='read';go('libreria')"><div class="ic">📚</div><div class="n">${read}</div><div class="l">Libri letti</div></div>
+   <div class="stat" style="cursor:pointer" onclick="libTab='reading';go('libreria')"><div class="ic">📖</div><div class="n">${reading.length}</div><div class="l">In lettura</div></div>
+   <div class="stat" style="cursor:pointer" onclick="libTab='toread';go('libreria')"><div class="ic">🔖</div><div class="n">${books.filter(b=>b.status==='toread').length}</div><div class="l">Da leggere</div></div>
+   <div class="stat" style="cursor:pointer" onclick="go('club')"><div class="ic">👥</div><div class="n">${myClubs.length}</div><div class="l">Club</div></div>
  </div>
  ${reading.length?`<div class="sec-title">📖 Continua a leggere</div>
  <div class="row">${reading.map(b=>`<div class="card pad" style="flex:1;min-width:280px;cursor:pointer" onclick="openBook(${b.id})"><div style="display:flex;gap:16px"><div style="width:66px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div><div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${b.t}</b><div class="muted" style="font-size:13px;margin:2px 0 10px">${b.a}</div><div class="bar"><i style="width:${b.prog||0}%"></i></div></div></div></div>`).join('')}</div>`:''}
