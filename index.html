@@ -30,7 +30,7 @@ body{font-family:'Inter',sans-serif;color:var(--ink);-webkit-font-smoothing:anti
    radial-gradient(1200px 600px at 110% -10%, #f3e3d4 0%, transparent 55%),
    radial-gradient(900px 500px at -10% 0%, #ecebe0 0%, transparent 50%),
    var(--bg);
-  background-attachment:fixed}
+  background-attachment:fixed;overflow-x:hidden}
 h1,h2,h3,h4,.serif{font-family:'Fraunces',serif;letter-spacing:-.01em}
 a{color:inherit}
 ::selection{background:var(--coral-soft)}
@@ -278,6 +278,31 @@ input[type=range]{accent-color:var(--coral)}
 }
 .fade{animation:fade .4s ease}
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ===== MOBILE FINE-TUNING ===== */
+@media(max-width:560px){
+  .view{padding:8px 12px 100px}
+  .pad{padding:18px}
+  .hero{padding:24px 20px}
+  .hero h1{font-size:24px}
+  .hero .eyebrow{font-size:10px}
+  .sec-title{font-size:17px;margin:24px 0 12px}
+  .overlay{padding:10px}
+  .modal{border-radius:18px}
+  .modal-top{padding:14px 16px}
+  .book-head{padding:18px 16px 6px}
+  .modal-body{padding:6px 16px 22px}
+  #map{height:340px}
+  .btn{padding:12px 16px}
+  .btn.sm{padding:9px 14px}
+  .stat .n{font-size:26px}
+  .cover .ct{font-size:15px}
+  /* evita lo zoom automatico su iOS quando si tocca un campo */
+  input,select,textarea{font-size:16px!important}
+}
+@media(max-width:380px){
+  .shelf{grid-template-columns:repeat(2,1fr);gap:14px}
+}
 
 /* ===== AUTH ===== */
 .auth{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
@@ -578,6 +603,7 @@ renders.home=()=>{
 };
 
 renders.profilo=()=>{
+ if(mode==='cloud')return renderProfiloCloud();
  view.innerHTML=`
  <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
    <div style="width:92px;height:92px;border-radius:26px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:34px;font-weight:600;box-shadow:var(--shadow)">EM</div>
@@ -635,7 +661,13 @@ renders.libreria=()=>{
        ${coverEl(s.ci,s.t,s.a,'✨')}
        <div class="meta"><b>${s.t}</b><span>${s.a}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
      </div>`).join('')}</div>`
-  :`<div class="shelf">${list.map(b=>bookCard(b)).join('')}</div>`}`;
+  : (list.length?`<div class="shelf">${list.map(b=>bookCard(b)).join('')}</div>`
+     :`<div class="card pad" style="text-align:center;padding:48px 20px">
+        <div style="font-size:46px">📚</div>
+        <h2 style="font-size:21px;margin:10px 0 6px">${libTab==='all'?'La tua libreria è vuota':'Niente qui, per ora'}</h2>
+        <div class="muted" style="max-width:420px;margin:0 auto 18px">${libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.'}</div>
+        <button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>
+      </div>`)}`;
 };
 
 let clubTab=1;
@@ -706,6 +738,7 @@ renders.club=()=>{
 };
 
 renders.ai=()=>{
+ if(mode==='cloud')return renderAiCloud();
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <div style="font-size:32px">🤖</div>
@@ -773,11 +806,19 @@ function aiAsk(q){
 }
 
 renders.calendario=()=>{
+ const planBooks=books.filter(b=>b.status!=='read');
+ if(!planBooks.length){
+   view.innerHTML=`<div class="card pad" style="text-align:center;padding:48px 20px">
+     <div style="font-size:44px">🗓️</div>
+     <h2 style="font-size:21px;margin:10px 0 6px">Nessun libro da pianificare</h2>
+     <div class="muted" style="max-width:420px;margin:0 auto 18px">Aggiungi un libro "in lettura" o "da leggere" e qui creeremo un piano per arrivare pronta all'incontro.</div>
+     <button class="btn" onclick="go('libreria')">📚 Vai alla libreria</button>
+   </div>`;return;}
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1;min-width:300px">
      <h3 style="font-size:16px;margin-bottom:16px">⚙️ Imposta il tuo ritmo</h3>
-     <div class="field"><label>Libro</label><select id="cBook">${books.filter(b=>b.status!=='read').map(b=>`<option value="${b.id}">${b.t}</option>`).join('')}</select></div>
+     <div class="field"><label>Libro</label><select id="cBook">${planBooks.map(b=>`<option value="${b.id}">${b.t}</option>`).join('')}</select></div>
      <div class="field"><label>Come preferisci misurare?</label><select id="cMode"><option value="pages">Pagine al giorno</option><option value="chapters">Capitoli al giorno</option><option value="days">Giorni a settimana disponibili</option></select></div>
      <div class="field"><label>Quanto? (numero)</label><input id="cAmt" type="number" value="25" min="1"></div>
      <div class="field"><label>Data dell'incontro</label><input id="cDate" type="date" value="2026-07-12"></div>
@@ -853,6 +894,7 @@ renders.diario=()=>{
 };
 
 renders.mappa=()=>{
+ if(mode==='cloud')return renderMappaCloud();
  view.innerHTML=`
  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
    <div class="tabs"><button class="active">Tutti i miei libri</button><button onclick="alert('Filtro per club (demo)')">Per club</button><button onclick="alert('Filtro per anno (demo)')">Per anno</button><button onclick="alert('Filtro per genere (demo)')">Per genere</button></div>
@@ -1405,6 +1447,145 @@ function renderDiarioCloud(){
  loadClubNotes(c).then(()=>renderNotesList());
 }
 
+function renderAiCloud(){
+ const nm=((profile&&profile.name)||'Lettrice').split(' ')[0];
+ const reading=books.find(b=>b.status==='reading');
+ const club=myClubs[0];
+ view.innerHTML=`
+ <div class="card pad ai-card" style="margin-bottom:18px">
+   <div style="font-size:32px">🤖</div>
+   <div style="flex:1">
+     <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler. ${reading?('Stai leggendo <b>'+reading.t+'</b>.'):'Aggiungi un libro alla libreria per consigli su misura.'}</p>
+   </div>
+ </div>
+
+ <div class="sec-title">📕 Qualche idea di lettura</div>
+ <div class="row">
+  ${aiSuggest.map(s=>`
+   <div class="card pad" style="flex:1;min-width:300px">
+     <div style="display:flex;gap:14px">
+       <div style="width:70px;flex:none">${coverEl(s.ci,s.t,'')}</div>
+       <div style="flex:1"><b style="font-family:'Fraunces';font-size:17px">${s.t}</b><div class="muted" style="font-size:13px">${s.a} · ${s.g}</div>
+         <div class="compat"><span class="match">${s.compat}%</span><div class="bar"><i style="width:${s.compat}%"></i></div></div></div>
+     </div>
+     <p style="font-size:13.5px;margin:12px 0 10px;line-height:1.55">${s.trama}</p>
+     ${buyLinks(s.t,s.a)}
+   </div>`).join('')}
+ </div>
+
+ ${club?`<div class="sec-title">👥 Per il club "${club.name}"</div>
+ <div class="card pad"><div class="ai-bubble">Posso analizzare i gusti dei membri di <b>${club.name}</b> e proporre un libro che metta d'accordo il gruppo, con il livello di compatibilità. ${club.current_title?('Ora state leggendo <b>'+club.current_title+'</b>.'):'Avviate una scelta del libro dal club per iniziare.'}</div></div>`:''}
+
+ <div class="sec-title">🛠️ Strumenti AI per la discussione</div>
+ <div class="suggest">
+   <button onclick="aiAsk('Genera 5 domande per la discussione finale')">💬 Domande di discussione</button>
+   <button onclick="aiAsk('Suggerisci temi di dibattito')">⚖️ Temi di dibattito</button>
+   <button onclick="aiAsk('Spiega i riferimenti storici')">🏛️ Riferimenti storici</button>
+   <button onclick="aiAsk('Citazioni significative')">❝ Citazioni</button>
+ </div>
+ <div id="aiOut" style="margin-top:14px"></div>
+ <div class="chatbox">
+   <input id="aiText" placeholder="Chiedi qualcosa all'assistente…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
+ </div>
+ <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questa versione le risposte AI sono esempi. Collegando un modello AI vero diventeranno personalizzate sui tuoi libri.</div>`;
+}
+function renderMappaCloud(){
+ const placed=books.filter(b=>b.set&&b.set.length);
+ const countries=[...new Set(placed.flatMap(b=>b.set.map(s=>s.c)))];
+ view.innerHTML=`
+ <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+   <h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3>
+   <span class="pill sky">🌍 ${countries.length} paesi · ${placed.length} libri</span>
+ </div>
+ <div id="map"></div>
+ <div class="card pad" style="margin-top:18px">
+   ${placed.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: ${countries.join(', ')}.</div>`
+     :`<div class="srch-empty">Nessun libro con ambientazione nota, per ora. Man mano che aggiungi e leggi libri, le loro ambientazioni compariranno qui sulla mappa. 🌏</div>`}
+ </div>`;
+ setTimeout(initMap,60);
+}
+/* ============ PROFILO (cloud) ============ */
+function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function renderProfiloCloud(){
+ const p=profile||{};const d=p.data||{};
+ const read=books.filter(b=>b.status==='read').length;
+ const goal=+d.goal||0;
+ const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
+ const chips=(arr,empty)=>(arr&&arr.length)?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):`<span class="muted" style="font-size:13px">${empty}</span>`;
+ view.innerHTML=`
+ <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+   <div style="width:84px;height:84px;border-radius:24px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:30px;flex:none">${ini2(p.name||'?')}</div>
+   <div style="flex:1;min-width:200px">
+     <h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2>
+     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}</div>
+     <div class="chips" style="margin-top:10px">
+       ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
+       ${goal?`<span class="pill green">🎯 Obiettivo ${goal} libri</span>`:''}
+       <span class="pill sky">👥 ${myClubs.length} club</span>
+     </div>
+   </div>
+   <button class="btn ghost" onclick="openEditProfile()">✏️ Modifica profilo</button>
+ </div>
+ <div class="row" style="margin-top:18px">
+   <div class="card pad" style="flex:1;min-width:260px">
+     <h3 style="font-size:16px;margin-bottom:12px">📗 Generi preferiti</h3>
+     <div class="chips">${chips(d.genres,'Non hai ancora indicato generi preferiti.')}</div>
+     <h3 style="font-size:16px;margin:18px 0 12px">✍️ Autori preferiti</h3>
+     <div class="chips">${chips(d.authors,'Nessun autore preferito.')}</div>
+   </div>
+   <div class="card pad" style="flex:1;min-width:260px">
+     <h3 style="font-size:16px;margin-bottom:12px">💛 Libri del cuore</h3>
+     <div class="chips">${chips(d.loved,'Aggiungi i tuoi libri del cuore.')}</div>
+     <h3 style="font-size:16px;margin:18px 0 12px">🚫 Non fanno per me</h3>
+     <div class="chips">${chips(d.disliked,'Niente da segnalare.')}</div>
+   </div>
+ </div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:12px">🎯 Obiettivo di lettura ${new Date().getFullYear()}</h3>
+   ${goal?`<div class="bar"><i style="width:${Math.min(100,Math.round(read/goal*100))}%"></i></div><div class="muted" style="font-size:13px;margin-top:8px">${read} di ${goal} libri completati.</div>`:`<div class="muted" style="font-size:13.5px">Nessun obiettivo impostato. <a href="#" onclick="openEditProfile();return false" style="color:var(--plum);font-weight:600">Impostane uno →</a></div>`}
+   <hr>
+   <h3 style="font-size:16px;margin-bottom:6px">⚙️ Preferenze per i consigli AI</h3>
+   <div class="set-row"><div>Privilegia autrici e voci femminili</div><div class="toggle ${d.aiFem?'on':''}" onclick="toggleAiPref('aiFem',this)"></div></div>
+   <div class="set-row"><div>Evita libri molto lunghi (oltre 600 pagine)</div><div class="toggle ${d.aiShort?'on':''}" onclick="toggleAiPref('aiShort',this)"></div></div>
+   <div class="set-row"><div>Suggerisci ambientazioni nuove</div><div class="toggle ${d.aiNew?'on':''}" onclick="toggleAiPref('aiNew',this)"></div></div>
+ </div>`;
+}
+function openEditProfile(){
+ const d=(profile&&profile.data)||{};
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
+    <div class="field"><label>Generi preferiti (separati da virgola)</label><input id="epGenres" value="${esc((d.genres||[]).join(', '))}"></div>
+    <div class="field"><label>Autori preferiti</label><input id="epAuthors" value="${esc((d.authors||[]).join(', '))}"></div>
+    <div class="field"><label>Libri del cuore</label><input id="epLoved" value="${esc((d.loved||[]).join(', '))}"></div>
+    <div class="field"><label>Generi/temi non graditi</label><input id="epDis" value="${esc((d.disliked||[]).join(', '))}"></div>
+    <div class="row" style="gap:12px">
+      <div class="field" style="flex:1;min-width:120px"><label>Ritmo (pag/giorno)</label><input id="epPace" type="number" min="0" value="${d.pace||''}"></div>
+      <div class="field" style="flex:1;min-width:120px"><label>Obiettivo annuale (libri)</label><input id="epGoal" type="number" min="0" value="${d.goal||''}"></div>
+    </div>
+    <button class="btn" onclick="saveProfile()">💾 Salva</button>
+  </div>`;
+ openOverlay();
+}
+function splitList(v){return (v||'').split(',').map(s=>s.trim()).filter(Boolean)}
+async function saveProfile(){
+ const name=$('#epName').value.trim()||(profile&&profile.name)||'Lettore';
+ const d=Object.assign({},(profile&&profile.data)||{},{
+   genres:splitList($('#epGenres').value),authors:splitList($('#epAuthors').value),
+   loved:splitList($('#epLoved').value),disliked:splitList($('#epDis').value),
+   pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
+ });
+ profile=Object.assign({},profile,{name,data:d});
+ try{await supa.from('profiles').update({name,data:d}).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
+ $('#meName').textContent=name;$('#meAv').textContent=ini2(name);
+ closeModal();renderProfiloCloud();
+}
+async function saveProfileData(){try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}}
+function toggleAiPref(k,el){el.classList.toggle('on');profile.data=profile.data||{};profile.data[k]=el.classList.contains('on');saveProfileData()}
+
 /* ============ HOME / INCONTRI / NOTIFICHE (cloud) ============ */
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico la tua home… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
@@ -1546,7 +1727,7 @@ async function register(){
  const {data,error}=await supa.auth.signUp({email,password:pass,options:{data:{name,username}}});
  if(error)return showErr(traduciErrore(error.message));
  if(!data.session)return showErr('Account creato. Conferma l\'email ricevuta, poi accedi.');
- authUser=data.user;mode='cloud';profile={name,username};
+ authUser=data.user;mode='cloud';profile={name,username,data:{}};
  try{await cloudLoadBooks()}catch(e){}
  const j=await handlePendingJoin();startApp(j?'club':undefined);
 }
@@ -1572,7 +1753,8 @@ async function login(){
  const j=await handlePendingJoin();startApp(j?'club':undefined);
 }
 async function loadProfile(){
- try{const {data}=await supa.from('profiles').select('name,username').eq('id',authUser.id).maybeSingle();if(data)profile=data}catch(e){}
+ try{const {data}=await supa.from('profiles').select('name,username,data,created_at').eq('id',authUser.id).maybeSingle();
+   if(data)profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at}}catch(e){}
 }
 
 function guest(){
@@ -1589,13 +1771,9 @@ function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
- let {data,error}=await supa.from('books').select('*').order('id');
+ const {data,error}=await supa.from('books').select('*').order('id');
  if(error)throw error;
- if(!data||!data.length){
-   const rows=seedBooks.map(b=>({user_id:authUser.id,title:b.t,author:b.a,genre:b.g,pages:b.pg,status:b.status,progress:b.prog,rating:b.rate,cover_url:b.coverUrl||null,plot:b.trama,note:null}));
-   const ins=await supa.from('books').insert(rows).select('*');data=ins.data||[];
- }
- books=data.map(dbToBook);
+ books=(data||[]).map(dbToBook);
 }
 function save(){ // demo: salva tutto localmente; cloud: solo la posizione di lettura
  if(mode==='demo')localStorage.setItem('pagina_data___demo__',JSON.stringify({books,myPos}));
