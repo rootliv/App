@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pàgina · Club del libro & libreria virtuale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{
+  --plum:#6d2540; --plum-dark:#521b30; --plum-soft:#9a4c66;
+  --coral:#e08a5d; --coral-soft:#f6d9c7;
+  --gold:#caa14a; --gold-soft:#f3e6c4;
+  --sage:#5f8d6c; --sage-soft:#dcebe0;
+  --sky:#3f739c;
+  --bg:#f6f1e9; --bg2:#efe7da; --surface:#fffdf9; --surface2:#fbf6ee;
+  --ink:#2a221f; --ink-soft:#766a61; --ink-faint:#a89d92;
+  --line:#ece1d2;
+  --shadow-sm:0 2px 8px rgba(80,45,30,.06);
+  --shadow:0 14px 34px rgba(85,45,30,.10);
+  --shadow-lg:0 26px 60px rgba(70,35,25,.18);
+  --r:22px; --r-sm:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased;
+  background:
+   radial-gradient(1200px 600px at 110% -10%, #f3e3d4 0%, transparent 55%),
+   radial-gradient(900px 500px at -10% 0%, #ecebe0 0%, transparent 50%),
+   var(--bg);
+  background-attachment:fixed}
+h1,h2,h3,h4,.serif{font-family:'Fraunces',serif;letter-spacing:-.01em}
+a{color:inherit}
+::selection{background:var(--coral-soft)}
+.app{display:flex;min-height:100vh}
+
+/* ===== SIDEBAR ===== */
+.sidebar{width:264px;position:fixed;inset:14px auto 14px 14px;border-radius:26px;
+  background:linear-gradient(165deg,var(--plum) 0%,var(--plum-dark) 100%);
+  color:#f7e7d6;display:flex;flex-direction:column;padding:22px 16px;z-index:60;
+  box-shadow:var(--shadow-lg)}
+.brand{display:flex;align-items:center;gap:12px;padding:4px 8px 18px}
+.brand .logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(140deg,var(--gold),var(--coral));
+  color:#3a1320;display:grid;place-items:center;font-family:'Fraunces';font-weight:900;font-size:24px;box-shadow:0 6px 16px rgba(0,0,0,.25)}
+.brand b{font-family:'Fraunces';font-size:22px;font-weight:600;display:block;line-height:1}
+.brand small{font-size:10.5px;color:#e7b78f;font-weight:600;letter-spacing:1.5px;text-transform:uppercase}
+.nav{display:flex;flex-direction:column;gap:2px;overflow-y:auto;flex:1;padding-right:2px;margin-top:6px}
+.nav::-webkit-scrollbar{width:0}
+.nav .grp{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:#c98e74;font-weight:700;padding:14px 14px 6px}
+.nav button{position:relative;display:flex;align-items:center;gap:13px;background:none;border:none;color:#f0d8c5;
+  font-family:inherit;font-size:14.5px;font-weight:500;padding:11px 14px;border-radius:13px;cursor:pointer;text-align:left;width:100%;transition:.18s}
+.nav button .ic{font-size:17px;width:22px;text-align:center}
+.nav button:hover{background:rgba(255,255,255,.09);color:#fff}
+.nav button.active{background:linear-gradient(100deg,rgba(255,255,255,.96),rgba(255,255,255,.88));color:var(--plum-dark);font-weight:600;box-shadow:0 8px 18px rgba(0,0,0,.18)}
+.nav button.active .ic{filter:none}
+.side-foot{display:flex;align-items:center;gap:11px;padding:13px 12px;margin-top:8px;border-radius:16px;background:rgba(255,255,255,.08)}
+.side-foot .av{width:38px;height:38px;border-radius:12px;background:linear-gradient(140deg,var(--coral),var(--gold));color:#3a1320;display:grid;place-items:center;font-weight:700;flex:none}
+.side-foot b{font-size:13.5px;display:block}
+.side-foot small{color:#e7b78f;font-size:11px}
+
+/* ===== MAIN ===== */
+.main{margin-left:292px;flex:1;min-width:0}
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:16px;padding:18px 38px 14px;
+  background:linear-gradient(180deg,rgba(246,241,233,.92),rgba(246,241,233,.6) 70%,transparent);backdrop-filter:blur(10px)}
+.topbar h2{font-size:24px;font-weight:600}
+.topbar .sub{color:var(--ink-soft);font-size:13px;margin-top:1px}
+.topbar .spacer{flex:1}
+.search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:11px 17px;width:260px;color:var(--ink-faint);box-shadow:var(--shadow-sm);transition:.2s}
+.search:focus-within{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+.search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink)}
+.bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;font-size:18px;display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
+.bell:hover{transform:translateY(-2px);border-color:var(--coral-soft)}
+.bell .dot{position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
+.view{padding:14px 38px 110px;max-width:1200px}
+
+/* ===== GENERIC ===== */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.pad{padding:24px}
+.row{display:flex;gap:18px;flex-wrap:wrap}
+.btn{font-family:inherit;font-weight:600;font-size:14px;border:none;border-radius:30px;padding:12px 20px;cursor:pointer;
+  background:linear-gradient(120deg,var(--plum),var(--plum-soft));color:#fff;display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 8px 18px rgba(109,37,64,.28);transition:.18s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 24px rgba(109,37,64,.34)}
+.btn:active{transform:translateY(0)}
+.btn.gold{background:linear-gradient(120deg,var(--gold),var(--coral));color:#3a1320;box-shadow:0 8px 18px rgba(202,161,74,.3)}
+.btn.ghost{background:var(--surface);color:var(--plum);border:1.5px solid var(--line);box-shadow:var(--shadow-sm)}
+.btn.ghost:hover{border-color:var(--coral);background:#fff8f1}
+.btn.sm{padding:8px 15px;font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--surface2);color:var(--plum);border:1px solid var(--line)}
+.pill.green{background:var(--sage-soft);color:#3a6a48;border-color:transparent}
+.pill.sky{background:#e1edf6;color:var(--sky);border-color:transparent}
+.pill.gold{background:var(--gold-soft);color:#8a6b18;border-color:transparent}
+.pill.coral{background:var(--coral-soft);color:#b45f33;border-color:transparent}
+.muted{color:var(--ink-soft)}
+.faint{color:var(--ink-faint)}
+.sec-title{font-size:19px;font-weight:600;margin:32px 0 16px;display:flex;align-items:center;gap:10px}
+.sec-title:first-child{margin-top:6px}
+hr{border:none;border-top:1px solid var(--line);margin:20px 0}
+.tabs{display:flex;gap:5px;background:var(--bg2);padding:5px;border-radius:30px;width:fit-content;flex-wrap:wrap;border:1px solid var(--line)}
+.tabs button{border:none;background:none;font-family:inherit;font-weight:600;font-size:13px;padding:9px 17px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s}
+.tabs button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
+input[type=range]{accent-color:var(--coral)}
+
+/* ===== HERO ===== */
+.hero{position:relative;overflow:hidden;border-radius:var(--r);padding:34px 36px;color:#fde9d6;
+  background:linear-gradient(125deg,var(--plum) 0%,var(--plum-dark) 60%,#3f1422 100%)}
+.hero::before{content:"";position:absolute;inset:0;background:
+   radial-gradient(420px 220px at 88% 12%, rgba(224,138,93,.5), transparent 60%),
+   radial-gradient(360px 200px at 70% 120%, rgba(202,161,74,.35), transparent 60%)}
+.hero::after{content:"📚";position:absolute;right:30px;bottom:-22px;font-size:140px;opacity:.16;transform:rotate(-8deg)}
+.hero>*{position:relative}
+.hero .eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#f0c39e;font-weight:700;margin-bottom:8px}
+.hero h1{font-size:33px;font-weight:600;color:#fff;margin-bottom:8px;line-height:1.1}
+.hero p{max-width:580px;opacity:.94;font-size:15px;line-height:1.55}
+.hero .btn{margin-top:18px;background:#fff;color:var(--plum-dark);box-shadow:0 10px 24px rgba(0,0,0,.25)}
+
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:18px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:18px 20px;box-shadow:var(--shadow-sm);transition:.18s}
+.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.stat .ic{font-size:20px}
+.stat .n{font-family:'Fraunces';font-size:32px;font-weight:600;color:var(--plum);line-height:1;margin-top:6px}
+.stat .l{font-size:12.5px;color:var(--ink-soft);margin-top:4px}
+
+/* ===== BOOK COVERS ===== */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:24px}
+.book{cursor:pointer;transition:.2s}
+.book:hover{transform:translateY(-6px)}
+.cover{aspect-ratio:2/3;border-radius:6px 12px 12px 6px;position:relative;overflow:hidden;color:#fff;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:16px 16px 18px;
+  box-shadow:0 14px 26px rgba(60,30,20,.28), inset 0 0 0 1px rgba(255,255,255,.08)}
+.cover::before{content:"";position:absolute;left:0;top:0;bottom:0;width:9px;
+  background:linear-gradient(90deg,rgba(0,0,0,.28),rgba(255,255,255,.18) 60%,rgba(0,0,0,.12))}
+.cover::after{content:"";position:absolute;inset:0;opacity:.5;mix-blend-mode:soft-light;
+  background-image:radial-gradient(circle at 30% 20%, rgba(255,255,255,.5), transparent 40%),
+   repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 9px)}
+.cover .ct{font-family:'Fraunces';font-weight:600;font-size:16.5px;line-height:1.16;position:relative;z-index:1;
+  text-shadow:0 1px 8px rgba(0,0,0,.3)}
+.cover .ca{font-size:11.5px;opacity:.92;font-weight:500;margin-top:5px;position:relative;z-index:1;
+  border-top:1px solid rgba(255,255,255,.3);padding-top:6px}
+.cover .badge{position:absolute;top:10px;right:10px;font-size:14px;background:rgba(255,255,255,.92);color:var(--plum);
+  width:30px;height:30px;border-radius:10px;display:grid;place-items:center;z-index:3;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.cover img.real{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+
+/* search results */
+.srch-item{display:flex;gap:14px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface)}
+.srch-item .th{width:46px;height:68px;border-radius:6px;object-fit:cover;flex:none;background:var(--bg2);box-shadow:var(--shadow-sm)}
+.srch-item b{font-size:14px;line-height:1.25;display:block}
+.srch-item .mt{font-size:12.5px;color:var(--ink-soft)}
+.srch-empty{text-align:center;color:var(--ink-soft);padding:30px 10px}
+.book .meta{margin-top:12px}
+.book .meta b{font-size:14px;display:block;line-height:1.25}
+.book .meta span{font-size:12px;color:var(--ink-soft)}
+.stars{color:var(--gold);font-size:13px;letter-spacing:1.5px;margin-top:3px}
+
+/* ===== PROGRESS ===== */
+.bar{height:9px;background:var(--bg2);border-radius:10px;overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--coral),var(--plum-soft));border-radius:10px;transition:width .5s}
+
+/* ===== MODAL ===== */
+.overlay{position:fixed;inset:0;background:rgba(40,22,18,.55);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:120;padding:24px}
+.overlay.open{display:flex;animation:fade .25s}
+.modal{background:var(--surface);border-radius:26px;max-width:780px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:pop .3s}
+@keyframes pop{from{transform:scale(.96) translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.modal .x{position:sticky;top:16px;float:right;margin:16px 16px 0;background:var(--surface2);border:1px solid var(--line);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:16px;z-index:3;transition:.15s}
+.modal .x:hover{background:var(--coral-soft)}
+.modal-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:16px 22px;background:rgba(255,253,249,.96);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.modal-top b{font-size:15px}
+.modal-top .close{display:inline-flex;align-items:center;gap:7px;background:var(--plum);color:#fff;border:none;
+  font-family:inherit;font-weight:600;font-size:13.5px;padding:9px 16px;border-radius:30px;cursor:pointer;box-shadow:0 6px 14px rgba(109,37,64,.3)}
+.modal-top .close:hover{background:var(--plum-dark)}
+.book-head{display:flex;gap:24px;padding:24px 30px 10px}
+.book-head .cover{width:150px;height:225px;flex:none}
+.book-head h2{font-size:26px;line-height:1.08}
+.book-head .book-author{color:var(--ink-soft);margin:4px 0 14px;font-size:14.5px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.buy{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.buy a{font-size:12.5px;font-weight:600;text-decoration:none;border:1.5px solid var(--line);padding:9px 14px;border-radius:11px;color:var(--plum);background:var(--surface);transition:.15s;box-shadow:var(--shadow-sm)}
+.buy a:hover{border-color:var(--coral);background:#fff8f1;transform:translateY(-2px)}
+.modal-body{padding:8px 30px 30px}
+.kv{font-size:14px;line-height:1.75}
+.kv b{color:var(--plum)}
+.quote{border-left:3px solid var(--coral);padding:10px 16px;font-family:'Fraunces';font-style:italic;font-size:15px;color:var(--ink);background:linear-gradient(120deg,#fdf6ec,#fbeede);border-radius:0 12px 12px 0;margin:12px 0}
+.field{margin-bottom:15px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);transition:.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+
+/* ===== MEMBERS ===== */
+.avstack{display:flex}
+.avstack .av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12.5px;font-weight:700;color:#fff;border:2.5px solid var(--surface);margin-left:-9px}
+.avstack .av:first-child{margin-left:0}
+.member{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px solid var(--line)}
+.member:last-child{border:none}
+.member .av{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
+
+/* ===== AI ===== */
+.ai-card{display:flex;gap:16px;align-items:flex-start;border:1px solid var(--coral-soft);
+  background:linear-gradient(135deg,#fffdf7 0%,#fdf3e7 100%)}
+.ai-bubble{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:15px 17px;font-size:14px;line-height:1.65;box-shadow:var(--shadow-sm)}
+.match{font-weight:700;color:var(--sage)}
+.compat{display:flex;align-items:center;gap:10px;margin:6px 0}
+.compat .bar{flex:1}
+.chatbox{display:flex;gap:9px;margin-top:16px}
+.chatbox input{flex:1;border:1px solid var(--line);border-radius:30px;padding:13px 19px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);box-shadow:var(--shadow-sm)}
+.chatbox input:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+.suggest{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.suggest button{font-size:12.5px;border:1px solid var(--coral-soft);background:var(--surface);border-radius:30px;padding:9px 15px;cursor:pointer;font-family:inherit;font-weight:500;color:var(--plum);transition:.15s;box-shadow:var(--shadow-sm)}
+.suggest button:hover{background:#fff6ec;transform:translateY(-2px)}
+
+/* ===== PLAN ===== */
+.plan-day{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.plan-day:last-child{border:none}
+.plan-day .d{width:56px;text-align:center;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 0}
+.plan-day .d b{display:block;font-family:'Fraunces';font-size:18px;color:var(--plum);line-height:1}
+.plan-day .d small{font-size:10.5px;color:var(--ink-soft)}
+
+/* ===== JOURNAL ===== */
+.note{border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px;background:var(--surface);box-shadow:var(--shadow-sm)}
+.note.locked{background:repeating-linear-gradient(45deg,#f6efe4,#f6efe4 11px,#f1e8d9 11px,#f1e8d9 22px);border-style:dashed;box-shadow:none}
+.note .nh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.note .nh .av{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-weight:700;color:#fff;font-size:12px}
+.note .nh b{font-size:13.5px}
+.note .nh time{font-size:11.5px;color:var(--ink-faint)}
+.lock-msg{display:flex;align-items:center;gap:11px;color:var(--ink-soft);font-size:13.5px}
+
+/* ===== MEETINGS ===== */
+.event{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+.event:last-child{border:none}
+.event .date{width:66px;text-align:center;flex:none;background:linear-gradient(140deg,var(--surface2),#fff);border:1px solid var(--line);border-radius:14px;padding:10px 0}
+.event .date b{font-family:'Fraunces';font-size:26px;color:var(--plum);display:block;line-height:1}
+.event .date small{text-transform:uppercase;font-size:10.5px;letter-spacing:1.5px;color:var(--coral);font-weight:700}
+
+/* ===== MAP ===== */
+#map{height:460px;border-radius:18px;border:1px solid var(--line);z-index:1;box-shadow:var(--shadow)}
+.leaflet-popup-content{font-family:'Inter';font-size:13px}
+.leaflet-popup-content b{font-family:'Fraunces';font-size:14px}
+.leaflet-popup-content-wrapper{border-radius:14px}
+
+/* ===== NOTIFICATIONS ===== */
+.notif{display:flex;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
+.notif:last-child{border:none}
+.notif .ni{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:19px;flex:none}
+.notif b{font-size:14px}
+.notif p{font-size:13px;color:var(--ink-soft);margin-top:2px}
+.notif time{font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
+.toggle{position:relative;width:48px;height:27px;background:#dcd0bf;border-radius:20px;cursor:pointer;transition:.2s;flex:none}
+.toggle.on{background:var(--sage)}
+.toggle::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.toggle.on::after{left:24px}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.set-row:last-child{border:none}
+
+/* ===== BOTTOM NAV (mobile) ===== */
+.botnav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:70;
+  background:rgba(255,253,249,.95);backdrop-filter:blur(12px);border-top:1px solid var(--line);
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));justify-content:space-around}
+.botnav button{border:none;background:none;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10px;font-weight:600;color:var(--ink-faint);padding:5px 9px;border-radius:12px;cursor:pointer}
+.botnav button .ic{font-size:20px}
+.botnav button.active{color:var(--plum)}
+.mtog{display:none}
+
+@media(max-width:900px){
+  .sidebar{inset:0 auto 0 0;border-radius:0 24px 24px 0;transform:translateX(-105%);transition:.28s}
+  .sidebar.show{transform:none}
+  .main{margin-left:0}
+  .mtog{display:grid}
+  .botnav{display:flex}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .view{padding:8px 16px 110px}
+  .topbar{padding:14px 16px 12px}
+  .search{display:none}
+  .book-head{flex-direction:column;align-items:center;text-align:center}
+  .hero h1{font-size:27px}
+}
+.fade{animation:fade .4s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ===== AUTH ===== */
+.auth{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
+  background:radial-gradient(900px 500px at 10% 0%,#7a2b46,transparent 60%),
+   radial-gradient(800px 500px at 100% 100%,#3f1422,transparent 55%),var(--plum-dark)}
+.auth-card{display:grid;grid-template-columns:1fr 1fr;max-width:900px;width:100%;background:var(--surface);
+  border-radius:28px;overflow:hidden;box-shadow:var(--shadow-lg);animation:pop .4s}
+.auth-side{padding:46px 40px;color:#fbe9d8;background:linear-gradient(165deg,var(--plum),var(--plum-dark));display:flex;flex-direction:column}
+.auth-side .logo{width:54px;height:54px;border-radius:16px;background:linear-gradient(140deg,var(--gold),var(--coral));color:#3a1320;display:grid;place-items:center;font-family:'Fraunces';font-weight:900;font-size:30px;box-shadow:0 8px 18px rgba(0,0,0,.3)}
+.auth-side h1{font-size:34px;font-weight:600;color:#fff;margin:22px 0 8px}
+.auth-side p{font-size:14.5px;opacity:.9;line-height:1.55}
+.auth-side ul{list-style:none;margin-top:auto;padding-top:26px;display:flex;flex-direction:column;gap:13px}
+.auth-side li{display:flex;align-items:center;gap:11px;font-size:13.5px;opacity:.95}
+.auth-side li span{font-size:18px}
+.auth-form{padding:46px 40px;display:flex;flex-direction:column}
+.auth-form h2{font-size:23px;margin-bottom:4px}
+.auth-form .lead{color:var(--ink-soft);font-size:13.5px;margin-bottom:22px}
+.auth-form .tabs{margin-bottom:22px}
+.auth-form .field{margin-bottom:15px}
+.auth-err{background:#fbe3df;color:#b03a2e;font-size:12.5px;padding:10px 13px;border-radius:10px;margin-bottom:14px;display:none}
+.auth-err.show{display:block}
+.auth-sep{display:flex;align-items:center;gap:12px;color:var(--ink-faint);font-size:12px;margin:18px 0}
+.auth-sep::before,.auth-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.auth-note{font-size:11px;color:var(--ink-faint);margin-top:18px;line-height:1.5}
+@media(max-width:760px){.auth-card{grid-template-columns:1fr}.auth-side{display:none}.auth-form{padding:34px 26px}}
+</style>
+</head>
+<body>
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth" class="auth">
+  <div class="auth-card">
+    <div class="auth-side">
+      <div class="logo">P</div>
+      <h1>Pàgina</h1>
+      <p>Il tuo club del libro e la tua libreria virtuale, riuniti in un unico posto.</p>
+      <ul>
+        <li><span>📚</span> Organizza letti, in lettura e da leggere</li>
+        <li><span>👥</span> Partecipa a più club del libro</li>
+        <li><span>✨</span> Consigli su misura dall'assistente AI</li>
+        <li><span>🔒</span> Diario condiviso senza spoiler</li>
+      </ul>
+    </div>
+    <div class="auth-form">
+      <h2 id="authTitle">Bentornata 👋</h2>
+      <div class="lead" id="authLead">Accedi per riprendere a leggere.</div>
+      <div class="tabs" style="margin-bottom:22px">
+        <button id="tabLogin" class="active" onclick="authTab('login')">Accedi</button>
+        <button id="tabReg" onclick="authTab('reg')">Registrati</button>
+      </div>
+      <div class="auth-err" id="authErr"></div>
+
+      <div id="formLogin">
+        <div class="field"><label>Email o username</label><input id="lId" placeholder="nome@email.it oppure @username"></div>
+        <div class="field"><label>Password</label><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+        <button class="btn" style="width:100%;justify-content:center" onclick="login()">Accedi</button>
+      </div>
+
+      <div id="formReg" style="display:none">
+        <div class="field"><label>Nome e cognome</label><input id="rName" placeholder="Es. Elena Marchetti"></div>
+        <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off" onkeydown="if(event.key==='Enter')register()"></div>
+        <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
+        <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 6 caratteri" onkeydown="if(event.key==='Enter')register()"></div>
+        <button class="btn gold" style="width:100%;justify-content:center" onclick="register()">Crea il mio account</button>
+      </div>
+
+      <div class="auth-sep">oppure</div>
+      <button class="btn ghost" style="width:100%;justify-content:center" onclick="guest()">👀 Entra nella demo (dati di esempio)</button>
+      <div class="auth-note">🔒 Prototipo: i tuoi dati e la password sono salvati solo su questo dispositivo, nel browser. Non è ancora un sistema sicuro per dati reali — useremo un account cloud nella fase successiva.</div>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" style="display:none">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="logo">P</div>
+      <div><b>Pàgina</b><small>club & libreria</small></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="av" id="meAv">EM</div>
+      <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Lettrice · 4 club</small></div>
+      <button onclick="logout()" title="Esci" style="background:none;border:none;color:#e7b78f;cursor:pointer;font-size:17px;padding:4px">⎋</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <button class="bell mtog" onclick="document.getElementById('sidebar').classList.toggle('show')">☰</button>
+      <div>
+        <h2 id="pageTitle">Home</h2>
+        <div class="sub" id="pageSub">Il tuo angolo di lettura</div>
+      </div>
+      <div class="spacer"></div>
+      <div class="search"><span>🔎</span><input placeholder="Cerca libri, club, autori…"></div>
+      <button class="bell" onclick="go('notifiche')">🔔<span class="dot"></span></button>
+    </header>
+    <div class="view fade" id="view"></div>
+  </main>
+</div>
+
+<!-- BOTTOM NAV (mobile) -->
+<nav class="botnav" id="botnav"></nav>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ============ DATI DI ESEMPIO ============ */
+const palettes=[['#6d2540','#a8536f'],['#34678f','#5a93c0'],['#3f7d5a','#6fb189'],['#9a6a2f','#caa14a'],['#5b3a72','#8a63a8'],['#9a3b3b','#cf6f50'],['#2f6d6a','#4ea59f']];
+function pal(i){return palettes[i%palettes.length]}
+function coverStyle(i){const[a,b]=pal(i);return`background:linear-gradient(150deg,${a},${b})`}
+
+const seedBooks=[
+ {id:1,t:"La casa degli spiriti",a:"Isabel Allende",g:"Realismo magico",pg:480,ch:14,status:"reading",prog:62,rate:0,
+  trama:"Tre generazioni della famiglia Trueba attraversano amori, fantasmi e rivoluzioni in un Cile in trasformazione.",
+  set:[{c:"Cile",lat:-33.45,lng:-70.66,city:"Santiago"}],
+  cur:"Allende iniziò il romanzo come una lettera al nonno morente.",
+  quote:"«La memoria è fragile e il corso di una vita è breve.»"},
+ {id:2,t:"Cent'anni di solitudine",a:"Gabriel García Márquez",g:"Realismo magico",pg:417,ch:20,status:"read",prog:100,rate:5,
+  trama:"La saga della famiglia Buendía nella mitica Macondo, tra prodigi, solitudini e il peso ciclico del tempo.",
+  set:[{c:"Colombia",lat:10.96,lng:-74.79,city:"Macondo (Aracataca)"}],
+  cur:"Márquez vendette l'auto per finire il libro; vinse il Nobel nel 1982.",
+  quote:"«Molti anni dopo, di fronte al plotone di esecuzione…»"},
+ {id:3,t:"Norwegian Wood",a:"Haruki Murakami",g:"Romanzo di formazione",pg:386,ch:11,status:"read",prog:100,rate:4,
+  trama:"Tokyo, fine anni '60: Toru ricorda l'amore, la perdita e la fragilità della giovinezza.",
+  set:[{c:"Giappone",lat:35.68,lng:139.69,city:"Tokyo"}],
+  cur:"Il titolo viene dalla canzone dei Beatles del 1965.",
+  quote:"«La morte non è il contrario della vita, ma una sua parte.»"},
+ {id:4,t:"L'amica geniale",a:"Elena Ferrante",g:"Narrativa",pg:331,ch:62,status:"toread",prog:0,rate:0,
+  trama:"L'amicizia complessa e luminosa tra Lila e Lenù in un rione di Napoli del dopoguerra.",
+  set:[{c:"Italia",lat:40.85,lng:14.27,city:"Napoli"}],
+  cur:"L'identità di Elena Ferrante resta tuttora un mistero letterario.",
+  quote:"«Le persone ben fatte non si lasciano sopraffare dai luoghi.»"},
+ {id:5,t:"Il nome della rosa",a:"Umberto Eco",g:"Giallo storico",pg:512,ch:7,status:"toread",prog:0,rate:0,
+  trama:"In un'abbazia medievale, frate Guglielmo indaga su una serie di morti tra labirinti e biblioteche proibite.",
+  set:[{c:"Italia",lat:44.69,lng:7.69,city:"Abbazia (Piemonte)"}],
+  cur:"Eco scelse un titolo 'neutro' per non orientare il lettore.",
+  quote:"«I libri non sono fatti per crederci, ma per essere sottoposti a indagine.»"},
+ {id:6,t:"Il deserto dei Tartari",a:"Dino Buzzati",g:"Romanzo",pg:233,ch:30,status:"reading",prog:28,rate:0,
+  trama:"Il tenente Drogo attende per tutta la vita un nemico che forse non arriverà mai, alla Fortezza Bastiani.",
+  set:[{c:"Italia",lat:46.5,lng:11.35,city:"Fortezza (Dolomiti)"}],
+  cur:"Buzzati era giornalista al Corriere della Sera.",
+  quote:"«Il tempo era fuggito senza che nessuno se ne accorgesse.»"},
+];
+let books=JSON.parse(JSON.stringify(seedBooks));
+const aiSuggest=[
+ {id:101,t:"Pachinko",a:"Min Jin Lee",g:"Saga familiare",reasons:["Ami le saghe multigenerazionali come 'La casa degli spiriti'","Ambientazione asiatica come Murakami","Temi di identità e radici"],compat:94,
+  trama:"Quattro generazioni di una famiglia coreana in Giappone, tra discriminazione, sacrificio e speranza.",ci:1,
+  set:[{c:"Corea/Giappone",lat:35.1,lng:129.0}]},
+ {id:102,t:"La breve favolosa vita di Oscar Wao",a:"Junot Díaz",g:"Realismo magico",reasons:["Stile vicino a García Márquez","Storia familiare e maledizioni","Voce narrativa originale"],compat:88,
+  trama:"Un ragazzo dominicano-americano e la 'fukú', la maledizione che insegue la sua famiglia.",ci:4,
+  set:[{c:"Rep. Dominicana",lat:18.48,lng:-69.9}]},
+];
+const members=[
+ {n:"Elena Marchetti",role:"Admin",col:"#6d2540",prog:62,me:true},
+ {n:"Marco Rinaldi",role:"Moderatore",col:"#34678f",prog:40},
+ {n:"Sofia Greco",role:"Membro",col:"#3f7d5a",prog:71},
+ {n:"Luca Bianchi",role:"Membro",col:"#9a6a2f",prog:18},
+ {n:"Giulia Conti",role:"Membro (turno scelta)",col:"#5b3a72",prog:55},
+];
+const clubs=[
+ {id:1,name:"Le Pagine Erranti",emoji:"🌍",members:8,role:"Admin",book:1,chooser:"Giulia Conti",next:"12 lug",ci:0,desc:"Letteratura che ci porta in giro per il mondo."},
+ {id:2,name:"Caffè Letterario",emoji:"☕",members:12,role:"Moderatore",book:6,chooser:"Marco Rinaldi",next:"5 lug",ci:1,desc:"Classici e contemporanei, un libro al mese."},
+ {id:3,name:"Notturni di Lettura",emoji:"🌙",members:5,role:"Membro",book:3,chooser:"Tu",next:"20 lug",ci:4,desc:"Gialli, thriller e atmosfere notturne."},
+ {id:4,name:"Sorelle di Carta",emoji:"📖",members:6,role:"Membro",book:4,chooser:"Sofia Greco",next:"28 lug",ci:2,desc:"Voci femminili nella narrativa."},
+];
+const votes=[{t:"L'amica geniale",a:"Elena Ferrante",v:5,ci:4},{t:"Il nome della rosa",a:"Umberto Eco",v:3,ci:3},{t:"Pachinko",a:"Min Jin Lee",v:2,ci:1}];
+const notes=[
+ {who:"Sofia Greco",col:"#3f7d5a",pos:9,posTxt:"Cap. 9",time:"2 giorni fa",txt:"Il modo in cui Clara comunica con gli spiriti mi ha ricordato mia nonna. Splendido.",shared:true},
+ {who:"Marco Rinaldi",col:"#34678f",pos:6,posTxt:"Cap. 6",time:"3 giorni fa",txt:"Domanda: il realismo magico qui è evasione o un modo per dire l'indicibile della Storia?",shared:true},
+ {who:"Giulia Conti",col:"#5b3a72",pos:12,posTxt:"Cap. 12",time:"1 giorno fa",txt:"⚠️ Quello che succede a Esteban cambia tutto… non dico altro!",shared:true},
+ {who:"Luca Bianchi",col:"#9a6a2f",pos:5,posTxt:"Cap. 5",time:"oggi",txt:"Sto andando piano ma mi sto innamorando della scrittura.",shared:true},
+];
+const meetings=[
+ {d:12,m:"LUG",ci:0,title:"Incontro finale · Le Pagine Erranti",book:"La casa degli spiriti",where:"Online · Google Meet",link:true,who:6},
+ {d:5,m:"LUG",ci:1,title:"Incontro intermedio · Caffè Letterario",book:"Il deserto dei Tartari",where:"Libreria Tomo, Roma",link:false,who:9},
+ {d:20,m:"LUG",ci:4,title:"Apertura libro · Notturni di Lettura",book:"Norwegian Wood",where:"Online · Zoom",link:true,who:4},
+];
+const notifs=[
+ {ic:"🗳️",bg:"#f3e6c4",t:"Votazione aperta",p:"'Sorelle di Carta' sta scegliendo il prossimo libro. Hai 3 giorni per votare.",time:"10 min fa"},
+ {ic:"📅",bg:"#e1edf6",t:"Incontro imminente",p:"Le Pagine Erranti si vede il 12 luglio per 'La casa degli spiriti'.",time:"1 ora fa"},
+ {ic:"📝",bg:"#dcebe0",t:"Nuova nota disponibile",p:"Sofia ha condiviso una riflessione sul Cap. 9 (sblocca leggendo fin lì).",time:"2 ore fa"},
+ {ic:"✨",bg:"#f6d9c7",t:"Curiosità del giorno",p:"Sapevi che Isabel Allende scrive sempre un nuovo libro l'8 gennaio?",time:"oggi"},
+ {ic:"📖",bg:"#f3e6c4",t:"Promemoria lettura",p:"Oggi tocca a te: 22 pagine per restare in linea con il club.",time:"oggi"},
+ {ic:"💛",bg:"#dcebe0",t:"Un membro è indietro",p:"Luca è un po' rimasto indietro: un messaggio di incoraggiamento aiuterebbe!",time:"ieri"},
+];
+
+/* ============ HELPERS ============ */
+const $=s=>document.querySelector(s);
+const view=$('#view');
+function book(id){return books.find(b=>b.id===id)}
+function ini(n){return n.split(' ').map(x=>x[0]).join('')}
+function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
+ return`<div class="buy">
+   <a target="_blank" href="https://www.amazon.it/s?k=${q}">🛒 Amazon</a>
+   <a target="_blank" href="https://www.lafeltrinelli.it/ricerca/${q}">📕 Feltrinelli</a>
+   <a target="_blank" href="https://www.mondadoristore.it/search/?q=${q}">📗 Mondadori</a>
+ </div>`}
+function stars(n){return'★'.repeat(n)+'☆'.repeat(5-n)}
+function coverEl(i,t,a,badge,url){return`<div class="cover" style="${coverStyle(i)}">${badge?`<div class="badge">${badge}</div>`:''}${url?`<img class="real" src="${url}" alt="${(t||'').replace(/"/g,'')}" onerror="this.style.display='none'">`:''}<div class="ct">${t||''}</div><div class="ca">${a||''}</div></div>`}
+function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'✓':'🔖';
+ return`<div class="book" onclick="openBook(${b.id})">
+   ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
+   <div class="meta"><b>${b.t}</b><span>${b.a}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}</div>
+ </div>`}
+
+/* ============ NAV ============ */
+const pages=[
+ {id:'home',ic:'🏠',label:'Home',title:'Home',sub:'Il tuo angolo di lettura',grp:'Tu'},
+ {id:'profilo',ic:'👤',label:'Profilo',title:'Profilo lettore',sub:'Chi sei come lettrice',grp:'Tu'},
+ {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
+ {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'4 club · libri condivisi',grp:'Insieme'},
+ {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
+ {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
+ {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
+ {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva pronta all\'incontro',grp:'Strumenti'},
+ {id:'mappa',ic:'🗺️',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Strumenti'},
+ {id:'notifiche',ic:'🔔',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Strumenti'},
+];
+function buildNav(){
+ let html='',last='';
+ pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
+   html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${p.ic}</span>${p.label}</button>`});
+ $('#nav').innerHTML=html;
+ const main=['home','libreria','club','ai','incontri'];
+ $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
+   return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${p.ic}</span>${p.label.split(' ')[0]}</button>`}).join('');
+}
+let current='home';
+function go(id){
+ current=id;const p=pages.find(x=>x.id===id);
+ $('#pageTitle').textContent=p.title;$('#pageSub').textContent=p.sub;
+ document.querySelectorAll('#nav button,#botnav button').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+ view.classList.remove('fade');void view.offsetWidth;view.classList.add('fade');
+ renders[id]();
+ document.getElementById('sidebar').classList.remove('show');
+ window.scrollTo(0,0);
+}
+
+/* ============ RENDERERS ============ */
+const renders={};
+
+renders.home=()=>{
+ const reading=books.filter(b=>b.status==='reading');
+ view.innerHTML=`
+ <div class="hero">
+   <div class="eyebrow">Sabato 27 giugno</div>
+   <h1>Bentornata, Elena 👋</h1>
+   <p>Sei a metà de <b>La casa degli spiriti</b> con Le Pagine Erranti. Mancano 6 giorni all'incontro: sei perfettamente in linea con il tuo piano di lettura.</p>
+   <button class="btn" onclick="go('calendario')">📅 Vedi il piano di oggi</button>
+ </div>
+ <div class="stat-row">
+   <div class="stat"><div class="ic">📚</div><div class="n">37</div><div class="l">Libri letti</div></div>
+   <div class="stat"><div class="ic">👥</div><div class="n">4</div><div class="l">Club attivi</div></div>
+   <div class="stat"><div class="ic">🌍</div><div class="n">12</div><div class="l">Paesi esplorati</div></div>
+   <div class="stat"><div class="ic">🎯</div><div class="n">8/40</div><div class="l">Obiettivo 2026</div></div>
+ </div>
+
+ <div class="sec-title">📖 Continua a leggere</div>
+ <div class="row">
+  ${reading.map(b=>`
+   <div class="card pad" style="flex:1;min-width:290px;cursor:pointer" onclick="openBook(${b.id})">
+     <div style="display:flex;gap:16px">
+       <div style="width:74px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
+       <div style="flex:1">
+         <b style="font-family:'Fraunces';font-size:17px">${b.t}</b>
+         <div class="muted" style="font-size:13px;margin:2px 0 12px">${b.a}</div>
+         <div class="bar"><i style="width:${b.prog}%"></i></div>
+         <div class="muted" style="font-size:12px;margin-top:7px">${b.prog}% · pag. ${Math.round(b.pg*b.prog/100)} di ${b.pg}</div>
+       </div>
+     </div>
+   </div>`).join('')}
+ </div>
+
+ <div class="sec-title">✨ Il consiglio AI di oggi</div>
+ <div class="card pad ai-card">
+   <div style="font-size:32px">🤖</div>
+   <div style="flex:1">
+     <div class="ai-bubble">Visti i tuoi gusti (realismo magico, saghe familiari), penso che <b>Pachinko</b> di Min Jin Lee ti conquisterebbe. <span class="match">Compatibilità 94%</span>.</div>
+     <button class="btn gold sm" style="margin-top:13px" onclick="go('ai')">Scopri perché →</button>
+   </div>
+ </div>
+
+ <div class="sec-title">🔔 Ti aspettano</div>
+ <div class="card pad">
+   <div class="set-row"><div>🗳️ <b>Votazione aperta</b> · Sorelle di Carta sceglie il prossimo libro</div><button class="btn sm" onclick="go('club')">Vota</button></div>
+   <div class="set-row"><div>📅 <b>Incontro</b> · Le Pagine Erranti, 12 luglio</div><button class="btn ghost sm" onclick="go('incontri')">Dettagli</button></div>
+   <div class="set-row"><div>📝 <b>Nuova nota</b> di Sofia sul Cap. 9</div><button class="btn ghost sm" onclick="go('diario')">Leggi</button></div>
+ </div>`;
+};
+
+renders.profilo=()=>{
+ view.innerHTML=`
+ <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
+   <div style="width:92px;height:92px;border-radius:26px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:34px;font-weight:600;box-shadow:var(--shadow)">EM</div>
+   <div style="flex:1;min-width:200px">
+     <h2 style="font-size:27px">Elena Marchetti</h2>
+     <div class="muted">📍 Roma · Lettrice dal 2019</div>
+     <div class="chips" style="margin-top:12px">
+       <span class="pill gold">🔥 Ritmo: 28 pag/giorno</span>
+       <span class="pill green">🎯 Obiettivo 2026: 40 libri</span>
+       <span class="pill sky">👥 4 club</span>
+     </div>
+   </div>
+   <button class="btn ghost">✏️ Modifica profilo</button>
+ </div>
+
+ <div class="row" style="margin-top:18px">
+   <div class="card pad" style="flex:1;min-width:270px">
+     <h3 style="font-size:16px;margin-bottom:12px">📗 Generi preferiti</h3>
+     <div class="chips"><span class="pill">Realismo magico</span><span class="pill">Narrativa</span><span class="pill">Romanzo storico</span><span class="pill">Formazione</span></div>
+     <h3 style="font-size:16px;margin:20px 0 12px">✍️ Autori preferiti</h3>
+     <div class="chips"><span class="pill">Isabel Allende</span><span class="pill">García Márquez</span><span class="pill">Elena Ferrante</span></div>
+   </div>
+   <div class="card pad" style="flex:1;min-width:270px">
+     <h3 style="font-size:16px;margin-bottom:12px">💛 Libri del cuore</h3>
+     <div class="chips"><span class="pill green">Cent'anni di solitudine</span><span class="pill green">Norwegian Wood</span></div>
+     <h3 style="font-size:16px;margin:20px 0 12px">🚫 Non fanno per me</h3>
+     <div class="chips"><span class="pill coral">Horror estremo</span><span class="pill coral">Manualistica tecnica</span></div>
+   </div>
+ </div>
+
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:14px">🎯 Obiettivo di lettura 2026</h3>
+   <div class="bar"><i style="width:20%"></i></div>
+   <div class="muted" style="font-size:13px;margin-top:9px">8 di 40 libri completati · sei in anticipo di 2 libri sulla tabella!</div>
+   <hr>
+   <h3 style="font-size:16px;margin-bottom:6px">⚙️ Preferenze per i consigli AI</h3>
+   <div class="set-row"><div>Privilegia autrici e voci femminili</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+   <div class="set-row"><div>Evita libri molto lunghi (oltre 600 pagine)</div><div class="toggle" onclick="this.classList.toggle('on')"></div></div>
+   <div class="set-row"><div>Suggerisci libri ambientati in luoghi nuovi</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+ </div>`;
+};
+
+let libTab='all';
+renders.libreria=()=>{
+ const tabs=[['all','Tutti'],['reading','In lettura'],['toread','Da leggere'],['read','Letti'],['ai','Consigliati AI']];
+ const list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
+ view.innerHTML=`
+ <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+   <div class="tabs">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}</button>`).join('')}</div>
+   <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
+ </div>
+ ${libTab==='ai'
+  ?`<div class="shelf">${aiSuggest.map(s=>`
+     <div class="book" onclick="openAi(${s.id})">
+       ${coverEl(s.ci,s.t,s.a,'✨')}
+       <div class="meta"><b>${s.t}</b><span>${s.a}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
+     </div>`).join('')}</div>`
+  :`<div class="shelf">${list.map(b=>bookCard(b)).join('')}</div>`}`;
+};
+
+let clubTab=1;
+renders.club=()=>{
+ if(mode==='cloud')return renderClubCloud();
+ const c=clubs.find(x=>x.id===clubTab);const b=book(c.book);
+ view.innerHTML=`
+ <div class="row" style="margin-bottom:6px">
+  ${clubs.map(cl=>`
+   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;transition:.18s;${cl.id===clubTab?'border:2px solid var(--coral);box-shadow:var(--shadow)':''}" onclick="clubTab=${cl.id};renders.club()">
+     <div style="font-size:28px">${cl.emoji}</div>
+     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${cl.name}</b>
+     <div class="muted" style="font-size:12.5px">${cl.members} membri · ${cl.role}</div>
+   </div>`).join('')}
+   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;display:grid;place-items:center;border-style:dashed;background:transparent" onclick="alert('Qui potrai creare un nuovo club o inserire un codice di invito.')">
+     <div style="text-align:center;color:var(--ink-soft)"><div style="font-size:28px">＋</div>Crea o unisciti</div>
+   </div>
+ </div>
+
+ <div class="card pad" style="margin-top:18px">
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+     <div><h2 style="font-size:23px">${c.emoji} ${c.name}</h2><div class="muted">${c.desc}</div></div>
+     <span class="pill gold">Tuo ruolo: ${c.role}</span>
+   </div>
+   <hr>
+   <div class="row">
+     <div style="flex:2;min-width:260px">
+       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📖 Libro del mese</div>
+       <div style="display:flex;gap:14px;cursor:pointer" onclick="openBook(${b.id})">
+         <div style="width:64px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
+         <div><b style="font-family:'Fraunces';font-size:17px">${b.t}</b><div class="muted" style="font-size:13px">${b.a}</div>
+         <div class="pill sky" style="margin-top:10px">🎲 Sceglie: ${c.chooser}</div></div>
+       </div>
+     </div>
+     <div style="flex:1;min-width:200px">
+       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📅 Prossimo incontro</div>
+       <b style="font-family:'Fraunces';font-size:22px;color:var(--plum)">${c.next}</b>
+       <div class="muted" style="font-size:13px;margin-top:8px">Progresso medio del club</div>
+       <div class="bar" style="margin-top:7px"><i style="width:52%"></i></div>
+     </div>
+   </div>
+ </div>
+
+ <div class="row" style="margin-top:18px">
+   <div class="card pad" style="flex:1;min-width:290px">
+     <h3 style="font-size:16px;margin-bottom:8px">👥 Membri e ruoli</h3>
+     ${members.map(m=>`<div class="member"><div class="av" style="background:${m.col}">${ini(m.n)}</div>
+       <div style="flex:1"><b style="font-size:14px">${m.n}${m.me?' (tu)':''}</b><div class="muted" style="font-size:12.5px">${m.role}</div></div>
+       <div style="width:84px"><div class="bar"><i style="width:${m.prog}%"></i></div><div class="muted" style="font-size:11px;margin-top:4px;text-align:right">${m.prog}%</div></div>
+     </div>`).join('')}
+   </div>
+   <div class="card pad" style="flex:1;min-width:290px">
+     <h3 style="font-size:16px;margin-bottom:6px">🗳️ Votazione prossimo libro</h3>
+     <div class="muted" style="font-size:13px;margin-bottom:14px">Proposte da ${clubs[3].chooser} · chiude tra 3 giorni</div>
+     ${votes.map(v=>`<div style="margin-bottom:14px">
+       <div style="display:flex;justify-content:space-between;font-size:14px"><b>${v.t}</b><span class="muted">${v.v} voti</span></div>
+       <div class="muted" style="font-size:12px">${v.a}</div>
+       <div class="bar" style="margin-top:6px"><i style="width:${v.v/5*100}%"></i></div>
+       <button class="btn ghost sm" style="margin-top:8px" onclick="this.textContent='✓ Votato!';this.disabled=true;this.style.opacity=.7">Vota</button>
+     </div>`).join('')}
+   </div>
+ </div>
+
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:10px">📚 Storico letture del club</h3>
+   <div class="muted" style="font-size:13.5px">Cent'anni di solitudine · Norwegian Wood · Il deserto dei Tartari · La casa degli spiriti (in corso) — 14 libri letti insieme dal 2021.</div>
+ </div>`;
+};
+
+renders.ai=()=>{
+ view.innerHTML=`
+ <div class="card pad ai-card" style="margin-bottom:18px">
+   <div style="font-size:32px">🤖</div>
+   <div style="flex:1">
+     <b style="font-family:'Fraunces';font-size:19px">Ciao Elena, sono Pàgina AI</b>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Conosco i tuoi gusti e quelli dei tuoi club. Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler in base a dove sei arrivata.</p>
+   </div>
+ </div>
+
+ <div class="sec-title">📕 Consigliati per te</div>
+ <div class="row">
+  ${aiSuggest.map(s=>`
+   <div class="card pad" style="flex:1;min-width:300px">
+     <div style="display:flex;gap:14px">
+       <div style="width:70px;flex:none">${coverEl(s.ci,s.t,'')}</div>
+       <div style="flex:1">
+         <b style="font-family:'Fraunces';font-size:17px">${s.t}</b>
+         <div class="muted" style="font-size:13px">${s.a} · ${s.g}</div>
+         <div class="compat"><span class="match">${s.compat}%</span><div class="bar"><i style="width:${s.compat}%"></i></div></div>
+       </div>
+     </div>
+     <p style="font-size:13.5px;margin:12px 0 10px;line-height:1.55">${s.trama}</p>
+     <div class="muted" style="font-size:12px;font-weight:700;margin-bottom:5px">Perché è adatto a te:</div>
+     <ul style="font-size:13px;padding-left:18px;color:var(--ink-soft);line-height:1.7">${s.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+     ${buyLinks(s.t,s.a)}
+   </div>`).join('')}
+ </div>
+
+ <div class="sec-title">👥 Per il club "Le Pagine Erranti"</div>
+ <div class="card pad">
+   <div class="ai-bubble">Analizzando i gusti degli 8 membri (5 amano il realismo magico, 3 preferiscono ambientazioni internazionali), il libro più adatto al gruppo è <b>Pachinko</b>. Mette d'accordo chi cerca emozione familiare e chi vuole scoprire culture lontane. <span class="match">Compatibilità di gruppo 91%</span>.</div>
+ </div>
+
+ <div class="sec-title">🛠️ Strumenti AI per la discussione</div>
+ <div class="suggest">
+   <button onclick="aiAsk('Genera 5 domande per la discussione finale')">💬 Domande di discussione</button>
+   <button onclick="aiAsk('Suggerisci temi di dibattito')">⚖️ Temi di dibattito</button>
+   <button onclick="aiAsk('Spiega i riferimenti storici')">🏛️ Riferimenti storici</button>
+   <button onclick="aiAsk('Curiosità sull\\'autrice')">✨ Curiosità autore</button>
+   <button onclick="aiAsk('Citazioni significative')">❝ Citazioni</button>
+   <button onclick="aiAsk('Spunto di riflessione (senza spoiler, sono al cap. 8)')">🔒 Spunto senza spoiler</button>
+ </div>
+ <div id="aiOut" style="margin-top:14px"></div>
+ <div class="chatbox">
+   <input id="aiText" placeholder="Chiedi qualcosa su 'La casa degli spiriti'…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
+ </div>
+ <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questo prototipo le risposte AI sono esempi pre-impostati. Collegheremo un modello AI vero in una fase successiva.</div>`;
+};
+const aiAnswers={
+ 'Genera 5 domande per la discussione finale':"<b>Domande per l'incontro finale:</b><br>1. Come cambia il significato della 'casa' nel corso delle tre generazioni?<br>2. Clara e i suoi poteri: realtà, metafora o forma di resistenza?<br>3. In che modo la Storia politica del Cile entra nelle vite private dei Trueba?<br>4. Esteban è un villain, una vittima o entrambi?<br>5. Cosa significa il quaderno di Clara per la memoria familiare?",
+ 'Suggerisci temi di dibattito':"<b>Temi per il dibattito:</b><br>• Memoria personale vs. memoria collettiva<br>• Il ciclo della violenza e la possibilità del perdono<br>• Il ruolo delle donne come custodi della famiglia<br>• Realismo magico come linguaggio del trauma storico",
+ 'Spiega i riferimenti storici':"<b>Contesto storico:</b> il romanzo riflette il Cile del Novecento fino al colpo di stato del 1973. Il personaggio del 'Poeta' richiama Pablo Neruda, e 'il Candidato' evoca Salvador Allende (zio dell'autrice). La parte finale dialoga con la dittatura di Pinochet.",
+ "Curiosità sull'autrice":"<b>Isabel Allende:</b> inizia ogni nuovo libro l'8 gennaio, data in cui scrisse la lettera al nonno da cui nacque questo romanzo. È tra le autrici in lingua spagnola più lette al mondo, con oltre 75 milioni di copie vendute.",
+ 'Citazioni significative':"<div class='quote'>«La memoria è fragile e il corso di una vita è molto breve.»</div><div class='quote'>«Le parole non hanno colore.»</div>",
+ 'Spunto di riflessione (senza spoiler, sono al cap. 8)':"🔒 <b>Sei al capitolo 8 — niente spoiler.</b><br>Fin qui, nota come la casa di città e la tenuta di campagna rappresentino due mondi opposti. Mentre leggi, chiediti: di chi è davvero la voce che narra? Tieni l'ipotesi a mente per i prossimi capitoli."
+};
+function aiAsk(q){
+ if(!q||!q.trim())return;
+ const out=$('#aiOut');
+ const ans=aiAnswers[q]||`<b>Ottima domanda.</b> Ecco una risposta di esempio: nel prototipo l'AI riconosce le richieste principali (domande di discussione, temi, riferimenti storici, curiosità, citazioni, spunti senza spoiler). Collegando un modello reale potrà rispondere liberamente a "<i>${q}</i>".`;
+ out.innerHTML=`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${ans}</div></div>`;
+ const t=$('#aiText');if(t)t.value='';
+ out.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+renders.calendario=()=>{
+ view.innerHTML=`
+ <div class="row">
+   <div class="card pad" style="flex:1;min-width:300px">
+     <h3 style="font-size:16px;margin-bottom:16px">⚙️ Imposta il tuo ritmo</h3>
+     <div class="field"><label>Libro</label><select id="cBook">${books.filter(b=>b.status!=='read').map(b=>`<option value="${b.id}">${b.t}</option>`).join('')}</select></div>
+     <div class="field"><label>Come preferisci misurare?</label><select id="cMode"><option value="pages">Pagine al giorno</option><option value="chapters">Capitoli al giorno</option><option value="days">Giorni a settimana disponibili</option></select></div>
+     <div class="field"><label>Quanto? (numero)</label><input id="cAmt" type="number" value="25" min="1"></div>
+     <div class="field"><label>Data dell'incontro</label><input id="cDate" type="date" value="2026-07-12"></div>
+     <button class="btn" style="width:100%;justify-content:center" onclick="genPlan()">📅 Genera il mio piano</button>
+   </div>
+   <div class="card pad" style="flex:1.3;min-width:300px" id="planOut">
+     <div style="text-align:center;padding:50px 10px"><div style="font-size:40px">🗓️</div><div class="muted" style="margin-top:12px">Imposta il tuo ritmo e genera un piano personalizzato per arrivare pronta all'incontro.</div></div>
+   </div>
+ </div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:8px">🧩 Funziona con ogni tipo di libro</h3>
+   <div class="muted" style="font-size:13.5px;line-height:1.6">Il piano si adatta a libri con capitoli, libri senza capitoli (per pagina o percentuale), saggi, raccolte di racconti e libri divisi in parti o sezioni. Se resti indietro, l'app ricalcola automaticamente il ritmo per i giorni rimanenti.</div>
+ </div>`;
+};
+function genPlan(){
+ const b=book(+$('#cBook').value);
+ const mode=$('#cMode').value;const amt=Math.max(1,+$('#cAmt').value||1);
+ const meet=new Date($('#cDate').value);const today=new Date('2026-06-27');
+ const days=Math.max(1,Math.round((meet-today)/86400000));
+ const remainingPg=Math.round(b.pg*(1-b.prog/100));
+ let unit,total;
+ if(mode==='pages'){unit='pagine';total=Math.ceil(remainingPg/amt)}
+ else if(mode==='chapters'){const remCh=Math.ceil(b.ch*(1-b.prog/100));unit='capitoli';total=Math.ceil(remCh/amt)}
+ else{const sessions=amt;unit='pagine/sessione';total=Math.ceil(days/7*sessions)}
+ const need=Math.ceil(remainingPg/days);
+ const onTrack=mode==='pages'?amt>=need:true;
+ const dayNames=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+ let rows='';let acc=Math.round(b.pg*b.prog/100);
+ const show=Math.min(days,7);
+ for(let i=1;i<=show;i++){const dt=new Date(today.getTime()+i*86400000);
+   acc=Math.min(b.pg,acc+need);
+   rows+=`<div class="plan-day"><div class="d"><b>${dt.getDate()}</b><small>${dayNames[dt.getDay()]}</small></div>
+     <div style="flex:1"><b style="font-size:14px">${need} ${mode==='chapters'?'capitoli':'pagine'}</b><div class="muted" style="font-size:12px">fino a pag. ${acc}</div></div>
+     <div class="bar" style="width:90px"><i style="width:${Math.round(acc/b.pg*100)}%"></i></div></div>`;
+ }
+ $('#planOut').innerHTML=`
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+     <h3 style="font-size:16px">📖 Piano per "${b.t}"</h3>
+     <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo da aumentare'}</span>
+   </div>
+   <div class="muted" style="font-size:13px;margin:8px 0 14px">${days} giorni all'incontro · ~${remainingPg} pagine da leggere · servono ~<b>${need} pagine al giorno</b>.</div>
+   ${!onTrack?`<div class="note locked" style="margin-bottom:12px"><b>Consiglio:</b> con ${amt} ${unit} al giorno arrivi un po' corta. Prova ad alzare a ${need} per finire in tempo, oppure aggiungi un paio di sessioni.</div>`:''}
+   ${rows}
+   ${days>7?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">…e così via per i restanti ${days-7} giorni</div>`:''}`;
+}
+
+let myPos=8;
+renders.diario=()=>{
+ if(mode==='cloud')return renderDiarioCloud();
+ view.innerHTML=`
+ <div class="card pad" style="margin-bottom:18px">
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+     <div><h3 style="font-size:16px">✍️ Diario condiviso · La casa degli spiriti</h3><div class="muted" style="font-size:13px;margin-top:2px">Le note dei membri si sbloccano solo quando raggiungi quel punto del libro. Niente spoiler. 🔒</div></div>
+     <div style="text-align:right"><div class="muted" style="font-size:12px;margin-bottom:4px">Sei al capitolo</div><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="14" value="${myPos}" oninput="myPos=+this.value;save();renders.diario()" style="width:140px"><b style="font-family:'Fraunces';font-size:22px;color:var(--plum)">${myPos}</b></div></div>
+   </div>
+ </div>
+
+ <div class="row" style="margin-bottom:18px">
+   <button class="btn">＋ Nota condivisa</button>
+   <button class="btn ghost">🔒 Nota privata</button>
+   <button class="btn ghost">❝ Aggiungi citazione</button>
+ </div>
+
+ <div class="sec-title">📝 Note del club</div>
+ ${notes.slice().sort((a,b)=>a.pos-b.pos).map(n=>{
+   const locked=n.pos>myPos;
+   if(locked)return`<div class="note locked"><div class="lock-msg">🔒 <div><b>Nota bloccata</b> · ${n.who} ha scritto qualcosa a <b>${n.posTxt}</b>. Si sblocca quando arrivi a quel punto.</div></div></div>`;
+   return`<div class="note fade"><div class="nh"><div class="av" style="background:${n.col}">${ini(n.who)}</div><b>${n.who}</b><span class="pill">${n.posTxt}</span><time style="margin-left:auto">${n.time}</time></div><p style="font-size:14px;line-height:1.6">${n.txt}</p></div>`;
+ }).join('')}
+
+ <div class="sec-title">🔒 Le mie note private</div>
+ <div class="note" style="border-left:3px solid var(--coral)"><div class="nh"><b>Solo per te</b><span class="pill gold">Cap. 7</span></div><p style="font-size:14px">Tema ricorrente: le donne tengono in piedi la famiglia mentre gli uomini la mettono in crisi. Da riprendere all'incontro.</p></div>`;
+};
+
+renders.mappa=()=>{
+ view.innerHTML=`
+ <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+   <div class="tabs"><button class="active">Tutti i miei libri</button><button onclick="alert('Filtro per club (demo)')">Per club</button><button onclick="alert('Filtro per anno (demo)')">Per anno</button><button onclick="alert('Filtro per genere (demo)')">Per genere</button></div>
+   <span class="pill sky">🌍 12 paesi · 6 libri sulla mappa</span>
+ </div>
+ <div id="map"></div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:6px">🧭 Il viaggio del club "Le Pagine Erranti"</h3>
+   <div class="muted" style="font-size:13.5px;line-height:1.6">Dal Cile di Allende alla Colombia di Macondo, dal Giappone di Murakami alla Napoli di Ferrante: 4 continenti esplorati insieme nell'ultimo anno. Prossima tappa proposta dall'AI: la Corea/Giappone di "Pachinko". 🌏</div>
+ </div>`;
+ setTimeout(initMap,60);
+};
+let mapObj;
+function initMap(){
+ if(mapObj){mapObj.remove();mapObj=null}
+ mapObj=L.map('map',{scrollWheelZoom:false}).setView([20,10],2);
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
+ const icon=L.divIcon({className:'',html:'<div style="background:#6d2540;color:#fff;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa14a"><span style="transform:rotate(45deg);font-size:14px">📖</span></div>',iconSize:[32,32],iconAnchor:[16,30]});
+ books.forEach(b=>b.set.forEach(s=>{
+   L.marker([s.lat,s.lng],{icon}).addTo(mapObj)
+    .bindPopup(`<b>${b.t}</b><br>${b.a}<br><span style="color:#766a61">📍 ${s.city||s.c}, ${s.c}</span>`);
+ }));
+}
+
+renders.incontri=()=>{
+ view.innerHTML=`
+ <div class="row" style="margin-bottom:18px">
+   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">3</div><div class="muted" style="font-size:13px">Incontri in programma</div></div>
+   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">5</div><div class="muted" style="font-size:13px">Giorni al prossimo</div></div>
+   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">19</div><div class="muted" style="font-size:13px">Partecipanti totali</div></div>
+ </div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">📅 Prossimi incontri</h3><button class="btn sm">＋ Nuovo incontro</button></div>
+ <div class="card pad">
+   ${meetings.map(m=>{const cl=clubs[m.ci];return`
+     <div class="event">
+       <div class="date"><b>${m.d}</b><small>${m.m}</small></div>
+       <div style="flex:1">
+         <b style="font-family:'Fraunces';font-size:16px">${m.title}</b>
+         <div class="muted" style="font-size:13px;margin:4px 0 8px">${cl.emoji} ${cl.name} · 📖 ${m.book}</div>
+         <div class="chips"><span class="pill ${m.link?'sky':'coral'}">${m.link?'🎥 '+m.where:'📍 '+m.where}</span></div>
+       </div>
+       <div style="text-align:right">
+         <div class="avstack" style="justify-content:flex-end;margin-bottom:10px">${Array.from({length:Math.min(4,m.who)}).map((_,i)=>`<div class="av" style="background:${pal(i)[0]}">${String.fromCharCode(65+i)}</div>`).join('')}${m.who>4?`<div class="av" style="background:#cfc3b4;color:#5a5048">+${m.who-4}</div>`:''}</div>
+         ${m.link?'<button class="btn sm">Partecipa</button>':'<button class="btn ghost sm">Ci sarò</button>'}
+       </div>
+     </div>`}).join('')}
+ </div>`;
+};
+
+renders.notifiche=()=>{
+ const opts=['📖 Promemoria di lettura','📅 Incontro imminente','📚 Nuovo libro scelto','📝 Nuova nota disponibile','🗳️ Votazione aperta','🔄 Piano di lettura aggiornato','✨ Curiosità giornaliera','💛 Membro rimasto indietro'];
+ view.innerHTML=`
+ <div class="row">
+   <div class="card pad" style="flex:1.4;min-width:300px">
+     <h3 style="font-size:16px;margin-bottom:6px">🔔 Recenti</h3>
+     ${notifs.map(n=>`<div class="notif"><div class="ni" style="background:${n.bg}">${n.ic}</div><div style="flex:1"><b>${n.t}</b><p>${n.p}</p></div><time>${n.time}</time></div>`).join('')}
+   </div>
+   <div class="card pad" style="flex:1;min-width:260px">
+     <h3 style="font-size:16px;margin-bottom:6px">⚙️ Cosa vuoi ricevere</h3>
+     ${opts.map((o,i)=>`<div class="set-row"><div>${o}</div><div class="toggle ${i===7?'':'on'}" onclick="this.classList.toggle('on')"></div></div>`).join('')}
+   </div>
+ </div>`;
+};
+
+/* ============ MODALS ============ */
+function openBook(id){
+ const b=book(id);
+ const statusMap={reading:['📖 In lettura','green'],read:['✓ Letto','sky'],toread:['🔖 Da leggere','gold']};
+ const st=statusMap[b.status]||['',''];
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>Dettagli libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="book-head">
+    <div style="width:150px;flex:none">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
+    <div style="flex:1">
+      <h2>${b.t}</h2>
+      <div class="book-author">${b.a}</div>
+      <div class="chips">
+        <span class="pill ${st[1]}">${st[0]}</span>
+        ${b.g?`<span class="pill">${b.g}</span>`:''}
+        ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
+        ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
+      </div>
+      ${b.rate?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
+      ${b.status==='reading'?`<div style="margin-top:10px"><div class="bar"><i style="width:${b.prog}%"></i></div><div class="muted" style="font-size:12px;margin-top:6px">${b.prog}% completato</div></div>`:''}
+      ${buyLinks(b.t,b.a)}
+    </div>
+  </div>
+  <div class="modal-body">
+    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${b.trama||'Trama non disponibile.'}</p>
+    ${b.set&&b.set.length?`<p class="kv"><b>Ambientazione.</b> ${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')} 🗺️</p>`:''}
+    ${b.cur?`<p class="kv"><b>Curiosità.</b> ${b.cur}</p>`:''}
+    ${b.quote?`<div class="quote">${b.quote}</div>`:''}
+    <div class="field" style="margin-top:18px"><label>📝 Le tue note personali</label><textarea rows="3" placeholder="Scrivi qui pensieri, evidenziazioni, citazioni…">${b.note||''}</textarea></div>
+    <div class="field"><label>⭐ La tua valutazione</label><div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="saveBookNote(${b.id},this)">💾 Salva</button>
+      <button class="btn ghost" onclick="refreshCover(${b.id},this)">🔄 Aggiorna copertina (IT)</button>
+      <button class="btn ghost" onclick="removeBook(${b.id})">🗑 Rimuovi</button>
+    </div>
+  </div>`;
+ openOverlay();
+}
+async function refreshCover(id,btn){
+ const b=book(id);if(btn){btn.textContent='⏳ Cerco…';btn.disabled=true}
+ let img='';
+ try{const g=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,true);img=g[0]&&g[0].coverUrl}catch(e){}
+ if(!img){try{const g2=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,false);img=g2[0]&&g2[0].coverUrl}catch(e){}}
+ if(!img){try{const o=await fromOpenLib(b.t+' '+b.a);img=o[0]&&o[0].coverUrl}catch(e){}}
+ if(img){b.coverUrl=img;persistBook(id,{cover_url:img});openBook(id)}
+ else if(btn){btn.textContent='Nessuna copertina trovata';setTimeout(()=>{btn.textContent='🔄 Aggiorna copertina (IT)';btn.disabled=false},1800)}
+}
+function removeBook(id){
+ if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
+ if(mode==='cloud'&&supa)supa.from('books').delete().eq('id',id).then(()=>{},()=>{});
+ books=books.filter(b=>b.id!==id);if(mode==='demo')save();closeModal();go('libreria');
+}
+function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
+function saveBookNote(id,btn){const b=book(id);const ta=btn.parentElement.querySelector('textarea');if(ta)b.note=ta.value;persistBook(id,{note:b.note||''});btn.textContent='✓ Salvato!';setTimeout(()=>btn.textContent='💾 Salva',1600)}
+function openAi(id){
+ const s=aiSuggest.find(x=>x.id===id);
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>✨ Consiglio AI</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="book-head">
+    <div style="width:150px;flex:none">${coverEl(s.ci,s.t,s.a,'✨')}</div>
+    <div style="flex:1">
+      <h2>${s.t}</h2><div class="book-author">${s.a} · ${s.g}</div>
+      <div class="compat"><span class="match" style="font-size:18px">${s.compat}% per te</span></div>
+      <div class="bar" style="margin:6px 0 14px"><i style="width:${s.compat}%"></i></div>
+      ${buyLinks(s.t,s.a)}
+    </div>
+  </div>
+  <div class="modal-body">
+    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${s.trama}</p>
+    <div class="muted" style="font-weight:700;font-size:13px;margin-bottom:6px">✨ Perché l'AI te lo consiglia</div>
+    <ul style="font-size:14px;padding-left:18px;line-height:1.8;color:var(--ink-soft)">${s.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
+    <button class="btn" style="margin-top:18px">🔖 Aggiungi a "Da leggere"</button>
+  </div>`;
+ openOverlay();
+}
+/* ===== RICERCA LIBRI (API reale) ===== */
+let searchResults=[];
+let searchTimer=null;
+function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
+function httpsImg(u){return(u||'').replace(/^http:\/\//,'https://')}
+async function fromGoogle(q,itOnly){
+ const lang=itOnly?'&langRestrict=it':'';
+ const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&maxResults=12&country=IT'+lang);
+ if(!r.ok)throw new Error('google');
+ const d=await r.json();
+ return(d.items||[]).map(it=>{const v=it.volumeInfo||{};
+   return{t:v.title||'Senza titolo',a:(v.authors&&v.authors.join(', '))||'Autore sconosciuto',
+     year:(v.publishedDate||'').slice(0,4),trama:stripHtml(v.description)||'Trama non disponibile.',
+     pg:v.pageCount||0,g:(v.categories&&v.categories[0])||'Narrativa',
+     coverUrl:httpsImg(v.imageLinks&&(v.imageLinks.thumbnail||v.imageLinks.smallThumbnail))};
+ });
+}
+async function fromOpenLib(q){
+ const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=12&fields=title,author_name,first_publish_year,cover_i,number_of_pages_median,subject');
+ if(!r.ok)throw new Error('openlib');
+ const d=await r.json();
+ return(d.docs||[]).map(x=>({t:x.title||'Senza titolo',a:(x.author_name&&x.author_name.join(', '))||'Autore sconosciuto',
+   year:x.first_publish_year||'',trama:'Trama non disponibile per questa fonte.',
+   pg:x.number_of_pages_median||0,g:(x.subject&&x.subject[0])||'Narrativa',
+   coverUrl:x.cover_i?`https://covers.openlibrary.org/b/id/${x.cover_i}-M.jpg`:''}));
+}
+function liveSearch(q){
+ clearTimeout(searchTimer);
+ q=(q||'').trim();
+ const box=$('#searchResults');
+ if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere per vedere i suggerimenti…</div>';return}
+ searchTimer=setTimeout(()=>searchBooks(q),350);
+}
+async function doSearch(q){let res=[];
+ try{res=await fromGoogle(q,true)}catch(e){}
+ if(!res.length){try{res=await fromGoogle(q,false)}catch(e){}}
+ if(!res.length){try{res=await fromOpenLib(q)}catch(e){}}
+ return res;
+}
+function renderResults(btnFor){
+ const box=$('#searchResults');if(!box)return;
+ if(!searchResults.length){box.innerHTML='<div class="srch-empty">⚠️ Nessun risultato (o nessuna connessione). Prova con un altro titolo.</div>';return}
+ box.innerHTML=searchResults.map((s,i)=>`<div class="srch-item">
+   ${s.coverUrl?`<img class="th" src="${s.coverUrl}" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
+   <div style="flex:1;min-width:0"><b>${s.t}</b><div class="mt">${s.a}${s.year?' · '+s.year:''}${s.pg?' · '+s.pg+' pag.':''}</div></div>
+   ${btnFor(i)}
+ </div>`).join('');
+}
+async function searchBooks(q){
+ q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);
+ const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco nell\'archivio…</div>';
+ searchResults=await doSearch(q);
+ renderResults(i=>`<button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>`);
+}
+function liveSearchClub(q,clubId){clearTimeout(searchTimer);q=(q||'').trim();const box=$('#searchResults');if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere…</div>';return}searchTimer=setTimeout(()=>searchBooksClub(q,clubId),350)}
+async function searchBooksClub(q,clubId){
+ q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);
+ const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco…</div>';
+ searchResults=await doSearch(q);
+ renderResults(i=>`<button class="btn sm" onclick="chooseClubBook(${clubId},${i})">Scegli</button>`);
+}
+async function addFoundBook(i){
+ const s=searchResults[i];if(!s)return;
+ if(mode==='cloud'&&supa){
+   const {data,error}=await supa.from('books').insert({user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status:'toread',progress:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null}).select('*').single();
+   if(error){alert('Non riesco a salvare il libro nel cloud: '+error.message);return}
+   books.push(dbToBook(data));
+ }else{
+   const id=Math.max(0,...books.map(b=>b.id))+1;
+   books.push({id,t:s.t,a:s.a,g:s.g,pg:s.pg,ch:0,status:'toread',prog:0,rate:0,trama:s.trama,set:[],cur:'',quote:'',coverUrl:s.coverUrl});
+   save();
+ }
+ closeModal();libTab='toread';go('libreria');
+}
+function openAddBook(){
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>📚 Aggiungi un libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div style="padding:20px 30px 6px">
+    <div class="muted" style="font-size:13.5px">Cerca per titolo o autore: i suggerimenti compaiono mentre scrivi. Copertina, trama e dettagli arrivano automaticamente (edizioni italiane).</div>
+  </div>
+  <div class="modal-body" style="padding-top:6px">
+    <div class="chatbox" style="margin-top:0">
+      <input id="searchInput" placeholder="Es. L'insostenibile leggerezza dell'essere…" oninput="liveSearch(this.value)" onkeydown="if(event.key==='Enter')searchBooks(this.value)">
+      <button class="btn" onclick="searchBooks(document.getElementById('searchInput').value)">Cerca</button>
+    </div>
+    <div id="searchResults" style="margin-top:18px"><div class="srch-empty">Inizia a scrivere un titolo: i risultati compaiono qui sotto. 📖</div></div>
+  </div>`;
+ openOverlay();
+ setTimeout(()=>{const el=$('#searchInput');if(el)el.focus()},80);
+}
+async function enrichCovers(){
+ const todo=books.filter(b=>!b.coverUrl);
+ if(!todo.length)return;
+ await Promise.all(todo.map(async b=>{
+   try{
+     let img='';
+     try{const g=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,true);img=g[0]&&g[0].coverUrl}catch(e){}
+     if(!img){try{const g2=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,false);img=g2[0]&&g2[0].coverUrl}catch(e){}}
+     if(!img){const o=await fromOpenLib(b.t+' '+b.a);img=o[0]&&o[0].coverUrl}
+     if(img){b.coverUrl=img;if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:img}).eq('id',b.id)}catch(e){}}}
+   }catch(e){}
+ }));
+ if(mode==='demo')save();if(renders[current])renders[current]();
+}
+
+/* ============ CLUB CLOUD (reali e condivisi) ============ */
+let myClubs=[],clubsLoaded=false,clubSel=null,myRoles={},noteAuthors={},cloudNotes=[];
+function clubCode(id){return Number(id).toString(36).toUpperCase()}
+function copyCode(code,btn){try{navigator.clipboard.writeText(code)}catch(e){}if(btn){btn.textContent='Copiato!';setTimeout(()=>btn.textContent='Copia',1500)}}
+async function cloudLoadClubs(){
+ const {data:mem}=await supa.from('club_members').select('club_id,role').eq('user_id',authUser.id);
+ myRoles={};(mem||[]).forEach(m=>myRoles[m.club_id]=m.role);
+ const ids=(mem||[]).map(m=>m.club_id);
+ if(!ids.length){myClubs=[];return}
+ const {data}=await supa.from('clubs').select('*').in('id',ids);
+ myClubs=data||[];
+}
+async function loadMembers(clubId){
+ const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
+ const ids=(mem||[]).map(m=>m.user_id);if(!ids.length)return [];
+ const {data:profs}=await supa.from('profiles').select('id,name,username').in('id',ids);
+ const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
+ return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||''}));
+}
+function ini2(n){return ((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase()}
+function renderClubCloud(){
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club… ☁️</div></div>';
+   cloudLoadClubs().then(()=>{clubsLoaded=true;if(!clubSel&&myClubs[0])clubSel=myClubs[0].id;renderClubCloud()}).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel caricamento dei club.</div></div>'});return}
+ if(!myClubs.length){
+   view.innerHTML=`<div class="card pad" style="text-align:center;padding:50px 20px">
+     <div style="font-size:46px">👥</div>
+     <h2 style="font-size:22px;margin:10px 0 6px">Nessun club, per ora</h2>
+     <div class="muted" style="max-width:430px;margin:0 auto 18px">Crea il tuo club del libro e invita gli amici con un codice, oppure unisciti a un club esistente.</div>
+     <button class="btn" onclick="openClubModal()">＋ Crea o unisciti a un club</button>
+   </div>`;return}
+ const c=myClubs.find(x=>x.id===clubSel)||myClubs[0];clubSel=c.id;
+ const role=myRoles[c.id]||'membro';
+ view.innerHTML=`
+  <div class="row" style="margin-bottom:6px">
+   ${myClubs.map(cl=>`<div class="card pad" style="flex:1;min-width:200px;cursor:pointer;${cl.id===clubSel?'border:2px solid var(--coral)':''}" onclick="clubSel=${cl.id};renderClubCloud()">
+     <div style="font-size:28px">${cl.emoji||'📖'}</div>
+     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${cl.name}</b>
+     <div class="muted" style="font-size:12.5px">${myRoles[cl.id]||'membro'}</div></div>`).join('')}
+   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;display:grid;place-items:center;border-style:dashed;background:transparent" onclick="openClubModal()">
+     <div style="text-align:center;color:var(--ink-soft)"><div style="font-size:28px">＋</div>Crea o unisciti</div></div>
+  </div>
+  <div class="card pad" style="margin-top:18px">
+   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+     <div><h2 style="font-size:23px">${c.emoji||'📖'} ${c.name}</h2><div class="muted">${c.description||''}</div></div>
+     <span class="pill gold">Tuo ruolo: ${role}</span>
+   </div>
+   <hr>
+   <div class="row">
+     <div style="flex:2;min-width:240px">
+       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📖 Libro del mese</div>
+       <div id="selPanel"><div class="muted" style="font-size:13px">Carico…</div></div>
+     </div>
+     <div style="flex:1;min-width:220px">
+       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">✉️ Invita al club</div>
+       <button class="btn gold sm" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
+       <div class="muted" style="font-size:12px;margin-top:8px">oppure codice: <b style="letter-spacing:2px;color:var(--plum)">${clubCode(c.id)}</b></div>
+       <div class="muted" style="font-size:11.5px;margin-top:6px">Chi apre il link entra nel club (registrandosi se serve).</div>
+     </div>
+   </div>
+   <hr>
+   <h3 style="font-size:16px;margin-bottom:6px">👥 Membri</h3>
+   <div id="clubMembers"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
+   ${c.current_title?`<hr><button class="btn" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
+  </div>`;
+ loadMembers(c.id).then(list=>{
+   const mEl=$('#clubMembers');
+   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member"><div class="av" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</div>
+     <div style="flex:1"><b style="font-size:14px">${m.name}${m.id===authUser.id?' (tu)':''}</b><div class="muted" style="font-size:12.5px">${m.username?'@'+m.username+' · ':''}${m.role}</div></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
+   const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
+   if(c.selection_mode==='voting')loadAndRenderProposals(c.id);
+ }).catch(()=>{});
+}
+function openClubModal(){
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>Club del libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <h3 style="font-size:16px;margin-bottom:10px">＋ Crea un nuovo club</h3>
+    <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
+    <div class="row" style="gap:12px">
+      <div class="field" style="flex:none;width:90px"><label>Emoji</label><input id="ncEmoji" maxlength="2" value="📖"></div>
+      <div class="field" style="flex:1"><label>Descrizione</label><input id="ncDesc" placeholder="Di cosa parla il club"></div>
+    </div>
+    <button class="btn" onclick="createClub()">Crea club</button>
+    <hr>
+    <h3 style="font-size:16px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
+    <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 1F)" autocapitalize="off"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
+    <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
+  </div>`;
+ openOverlay();
+}
+function clubMsg(m,ok){const e=$('#clubMsg');if(e){e.textContent=m;e.classList.add('show');e.style.color=ok?'var(--sage)':'';e.style.background=ok?'#e3f1e8':''}}
+async function createClub(){
+ const name=$('#ncName').value.trim();if(!name)return clubMsg('Inserisci il nome del club.');
+ const emoji=$('#ncEmoji').value.trim()||'📖';const desc=$('#ncDesc').value.trim();
+ const {data,error}=await supa.from('clubs').insert({name,emoji,description:desc,owner:authUser.id}).select('*').single();
+ if(error)return clubMsg('Errore: '+error.message);
+ await supa.from('club_members').insert({club_id:data.id,user_id:authUser.id,role:'admin'});
+ clubsLoaded=false;clubSel=data.id;closeModal();go('club');
+}
+async function joinClub(){
+ const code=($('#joinCode').value||'').trim();const id=parseInt(code,36);
+ if(!code||!id)return clubMsg('Codice non valido.');
+ const {data:cl}=await supa.from('clubs').select('id,name').eq('id',id).maybeSingle();
+ if(!cl)return clubMsg('Nessun club trovato con questo codice.');
+ await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
+ clubsLoaded=false;clubSel=id;closeModal();go('club');
+}
+function openBookSearch(title,pickFn,clubId){
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>${title}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="chatbox" style="margin-top:0"><input id="searchInput" placeholder="Cerca un titolo…" oninput="liveSearchPick(this.value,'${pickFn}',${clubId})" onkeydown="if(event.key==='Enter')searchBooksPick(this.value,'${pickFn}',${clubId})"><button class="btn" onclick="searchBooksPick(document.getElementById('searchInput').value,'${pickFn}',${clubId})">Cerca</button></div>
+    <div id="searchResults" style="margin-top:18px"><div class="srch-empty">Scrivi un titolo per cercarlo.</div></div>
+  </div>`;
+ openOverlay();setTimeout(()=>{const el=$('#searchInput');if(el)el.focus()},80);
+}
+function liveSearchPick(q,fn,clubId){clearTimeout(searchTimer);q=(q||'').trim();const box=$('#searchResults');if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere…</div>';return}searchTimer=setTimeout(()=>searchBooksPick(q,fn,clubId),350)}
+async function searchBooksPick(q,fn,clubId){q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco…</div>';searchResults=await doSearch(q);renderResults(i=>`<button class="btn sm" onclick="${fn}(${clubId},${i})">Scegli</button>`)}
+function openChooseClubBook(clubId){openBookSearch('📖 Scegli il libro del mese','chooseClubBook',clubId)}
+function openProposeBook(clubId){openBookSearch('💡 Proponi un libro','proposeFound',clubId)}
+
+async function chooseClubBook(clubId,i){
+ const s=searchResults[i];if(!s)return;
+ const c=myClubs.find(x=>x.id===clubId)||{};
+ const patch={current_title:s.t,current_author:s.a,current_cover:s.coverUrl||null,selection_mode:null,current_chooser:null};
+ if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id){
+   const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers.slice():[];if(!cc.includes(authUser.id))cc.push(authUser.id);patch.cycle_choosers=cc;
+ }
+ const {error}=await supa.from('clubs').update(patch).eq('id',clubId);
+ if(error){alert('Errore: '+error.message);return}
+ clubsLoaded=false;closeModal();go('club');
+}
+async function proposeFound(clubId,i){
+ const s=searchResults[i];if(!s)return;
+ const {error}=await supa.from('proposals').upsert({club_id:clubId,user_id:authUser.id,title:s.t,author:s.a,cover:s.coverUrl||null},{onConflict:'club_id,user_id'});
+ if(error){alert('Errore: '+error.message);return}
+ closeModal();clubsLoaded=false;go('club');
+}
+
+/* ---- meccanismi di scelta del libro ---- */
+function selectionPanelHTML(c,role,members){
+ const me=authUser.id;
+ if(c.selection_mode==='rotation'){
+   const ch=members.find(m=>m.id===c.current_chooser);const nm=ch?ch.name:'…';
+   let h=`<div class="pill sky">🎲 Turno di scelta: <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
+   if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">📖 Scegli il libro</button></div>`;
+   else h+=`<div class="muted" style="font-size:13px;margin-top:10px">In attesa che ${nm} scelga il libro…</div>`;
+   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:10px" onclick="cancelSelection(${c.id})">Annulla</button></div>`;
+   return h;
+ }
+ if(c.selection_mode==='voting'){
+   let h=`<div class="pill gold">🗳️ Votazione in corso</div>
+     <div style="margin-top:12px"><button class="btn sm" onclick="openProposeBook(${c.id})">＋ Proponi un libro</button></div>
+     <div id="propList" style="margin-top:14px"><div class="muted" style="font-size:13px">Carico le proposte…</div></div>`;
+   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:12px" onclick="closeVoting(${c.id})">🏆 Chiudi votazione</button></div>`;
+   return h;
+ }
+ let h=c.current_title?`<div style="display:flex;gap:14px">
+     <div style="width:60px;flex:none">${coverEl(c.id,c.current_title,'',null,c.current_cover)}</div>
+     <div><b style="font-family:'Fraunces';font-size:17px">${c.current_title}</b><div class="muted" style="font-size:13px">${c.current_author||''}</div><span class="pill green" style="margin-top:8px">📖 In lettura</span></div>
+   </div>`:`<div class="muted" style="font-size:13.5px">Nessun libro scelto, per ora.</div>`;
+ if(role==='admin')h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+     <button class="btn sm" onclick="startRotation(${c.id})">🎲 Sorteggio a turni</button>
+     <button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>
+   </div><div class="muted" style="font-size:11.5px;margin-top:6px">Scegli come decidere il prossimo libro.</div>`;
+ else if(!c.current_title)h+=`<div class="muted" style="font-size:12px;margin-top:8px">L'admin avvierà la scelta del libro.</div>`;
+ return h;
+}
+async function startRotation(clubId){
+ const c=myClubs.find(x=>x.id===clubId)||{};
+ const members=await loadMembers(clubId);
+ let pool=members.map(m=>m.id).filter(id=>!((c.cycle_choosers||[]).includes(id)));
+ if(!pool.length){pool=members.map(m=>m.id);await supa.from('clubs').update({cycle_choosers:[]}).eq('id',clubId)}
+ if(!pool.length){alert('Nessun membro nel club.');return}
+ const pick=pool[Math.floor(Math.random()*pool.length)];
+ await supa.from('clubs').update({selection_mode:'rotation',current_chooser:pick}).eq('id',clubId);
+ clubsLoaded=false;go('club');
+}
+async function cancelSelection(clubId){
+ await supa.from('clubs').update({selection_mode:null,current_chooser:null}).eq('id',clubId);
+ clubsLoaded=false;go('club');
+}
+async function startVoting(clubId){
+ await supa.from('proposals').delete().eq('club_id',clubId);
+ await supa.from('votes').delete().eq('club_id',clubId);
+ await supa.from('clubs').update({selection_mode:'voting',current_chooser:null}).eq('id',clubId);
+ clubsLoaded=false;go('club');
+}
+async function loadAndRenderProposals(clubId){
+ const el=$('#propList');if(!el)return;
+ const {data:props}=await supa.from('proposals').select('*').eq('club_id',clubId);
+ const {data:votes}=await supa.from('votes').select('*').eq('club_id',clubId);
+ const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
+ const myVote=(votes||[]).find(v=>v.user_id===authUser.id);
+ const ids=[...new Set((props||[]).map(p=>p.user_id))];const pm={};
+ if(ids.length){const {data:pr}=await supa.from('profiles').select('id,name').in('id',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
+ if(!props||!props.length){el.innerHTML='<div class="muted" style="font-size:13px">Ancora nessuna proposta. Proponi tu il primo libro!</div>';return}
+ const total=(votes||[]).length;
+ el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;
+   return `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+     <div style="width:36px;flex:none">${coverEl(p.id,p.title,'',null,p.cover)}</div>
+     <div style="flex:1;min-width:0"><b style="font-size:13.5px">${p.title}</b><div class="muted" style="font-size:11.5px">${p.author||''} · da ${pm[p.user_id]||'membro'}</div>
+       <div class="bar" style="margin-top:5px"><i style="width:${total?Math.round(n/total*100):0}%"></i></div></div>
+     <div style="text-align:right"><div class="muted" style="font-size:12px">${n}</div>
+       <button class="btn ${mine?'':'ghost'} sm" onclick="castVote(${clubId},${p.id})">${mine?'✓':'Vota'}</button></div>
+   </div>`}).join('');
+}
+async function castVote(clubId,proposalId){
+ await supa.from('votes').upsert({club_id:clubId,user_id:authUser.id,proposal_id:proposalId},{onConflict:'club_id,user_id'});
+ loadAndRenderProposals(clubId);
+}
+async function closeVoting(clubId){
+ const {data:props}=await supa.from('proposals').select('*').eq('club_id',clubId);
+ if(!props||!props.length){alert('Nessuna proposta da votare.');return}
+ const {data:votes}=await supa.from('votes').select('*').eq('club_id',clubId);
+ const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
+ let win=props[0];props.forEach(p=>{if((counts[p.id]||0)>(counts[win.id]||0))win=p});
+ await supa.from('clubs').update({current_title:win.title,current_author:win.author,current_cover:win.cover,selection_mode:null,current_chooser:null}).eq('id',clubId);
+ await supa.from('proposals').delete().eq('club_id',clubId);
+ await supa.from('votes').delete().eq('club_id',clubId);
+ clubsLoaded=false;go('club');
+}
+function inviteLink(id){const base=location.href.split('#')[0].split('?')[0];return base+'?club='+clubCode(id)}
+function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.textContent;btn.textContent='✓ Link copiato!';setTimeout(()=>btn.textContent=t,1700)}}
+async function joinByCode(code){
+ const id=parseInt(code,36);if(!id)return false;
+ try{const {data:cl}=await supa.from('clubs').select('id').eq('id',id).maybeSingle();
+   if(!cl)return false;
+   await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
+   clubSel=id;clubsLoaded=false;return true;
+ }catch(e){return false}
+}
+async function handlePendingJoin(){
+ if(!pendingJoin)return false;const code=pendingJoin;pendingJoin=null;
+ const ok=await joinByCode(code);
+ try{history.replaceState({},'',location.href.split('#')[0].split('?')[0])}catch(e){}
+ return ok;
+}
+
+/* ---- Diario condiviso cloud ---- */
+async function loadClubNotes(c){
+ const {data}=await supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title).order('position');
+ cloudNotes=data||[];
+ const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
+ if(ids.length){const {data:profs}=await supa.from('profiles').select('id,name,username').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
+}
+function renderNotesList(){
+ const el=$('#notesList');if(!el)return;
+ if(!cloudNotes.length){el.innerHTML='<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>';return}
+ el.innerHTML=cloudNotes.map(n=>{const locked=n.position>myPos;const nm=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].name)||'Lettore';
+   if(locked)return `<div class="note locked"><div class="lock-msg">🔒 <div><b>Nota bloccata</b> · ${nm} ha scritto a <b>pos. ${n.position}</b>. Si sblocca quando arrivi lì.</div></div></div>`;
+   return `<div class="note fade"><div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${ini2(nm)}</div><b>${nm}</b><span class="pill">pos. ${n.position}</span></div><p style="font-size:14px;line-height:1.6">${(n.text||'').replace(/</g,'&lt;')}</p></div>`;
+ }).join('');
+}
+async function addClubNote(clubId){
+ const c=myClubs.find(x=>x.id===clubId);if(!c)return;
+ const ta=$('#noteText');const txt=ta?ta.value.trim():'';if(!txt)return;
+ await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:myPos,text:txt,shared:true});
+ if(ta)ta.value='';await loadClubNotes(c);renderNotesList();
+}
+function renderDiarioCloud(){
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';
+   cloudLoadClubs().then(()=>{clubsLoaded=true;renderDiarioCloud()});return}
+ const withBook=myClubs.filter(c=>c.current_title);
+ if(!withBook.length){view.innerHTML=`<div class="card pad" style="text-align:center;padding:44px 20px"><div style="font-size:42px">✍️</div><div class="muted" style="margin:12px auto 16px;max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</div><button class="btn" onclick="go('club')">Vai ai club</button></div>`;return}
+ const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;
+ view.innerHTML=`
+  <div class="card pad" style="margin-bottom:18px">
+   <div class="tabs" style="margin-bottom:12px">${withBook.map(cl=>`<button class="${cl.id===c.id?'active':''}" onclick="clubSel=${cl.id};renderDiarioCloud()">${cl.emoji||'📖'} ${cl.name}</button>`).join('')}</div>
+   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+     <div><h3 style="font-size:16px">✍️ ${c.current_title}</h3><div class="muted" style="font-size:13px">Le note si sbloccano in base al punto raggiunto. Niente spoiler. 🔒</div></div>
+     <div style="text-align:right"><div class="muted" style="font-size:12px;margin-bottom:4px">Tuo avanzamento</div>
+       <div style="display:flex;align-items:center;gap:10px"><input type="range" min="0" max="100" value="${myPos}" oninput="myPos=+this.value;save();renderDiarioCloud()" style="width:150px"><b style="font-family:'Fraunces';font-size:20px;color:var(--plum)">${myPos}%</b></div></div>
+   </div>
+  </div>
+  <div class="card pad" style="margin-bottom:18px">
+   <div class="field" style="margin-bottom:8px"><label>✍️ Scrivi una nota condivisa (visibile dalla posizione ${myPos}%)</label><textarea id="noteText" rows="2" placeholder="Una riflessione, una domanda, una citazione…"></textarea></div>
+   <button class="btn" onclick="addClubNote(${c.id})">Condividi nota</button>
+  </div>
+  <div class="sec-title">📝 Note del club</div>
+  <div id="notesList"><div class="muted" style="padding:10px">Carico le note…</div></div>`;
+ loadClubNotes(c).then(()=>renderNotesList());
+}
+function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
+function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow=''}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+/* ============ SUPABASE (account cloud) ============ */
+const SUPABASE_URL='https://ogcgfemadhtzzhdjkjda.supabase.co';
+const SUPABASE_KEY='sb_publishable_d-yZxBxgQc_7k2alklVAKA_AVMBT7d5';
+let supa=null;
+try{ supa = window.supabase && window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){}
+
+let mode='demo';     // 'cloud' = account vero su Supabase, 'demo' = ospite locale
+let authUser=null;   // utente Supabase
+let profile=null;    // {name, username}
+let session=null;
+let pendingJoin=null;
+try{pendingJoin=new URLSearchParams(location.search).get('club')}catch(e){}
+
+function showErr(m){authReset();const e=$('#authErr');if(e){e.textContent=m;e.classList.add('show')}}
+function clearErr(){const e=$('#authErr');if(e)e.classList.remove('show')}
+function authReset(){
+ const r=document.querySelector('#formReg .btn');if(r){r.disabled=false;r.textContent='Crea il mio account'}
+ const l=document.querySelector('#formLogin .btn');if(l){l.disabled=false;l.textContent='Accedi'}
+}
+function authBusy(sel,txt){const b=document.querySelector(sel);if(b){b.disabled=true;b.textContent=txt}}
+function authTab(t){
+ const l=t==='login';
+ $('#tabLogin').classList.toggle('active',l);$('#tabReg').classList.toggle('active',!l);
+ $('#formLogin').style.display=l?'block':'none';$('#formReg').style.display=l?'none':'block';
+ $('#authTitle').textContent=l?'Bentornata 👋':'Crea il tuo account';
+ $('#authLead').textContent=l?'Accedi per riprendere a leggere.':'Bastano pochi secondi per iniziare.';
+ clearErr();
+}
+function traduciErrore(m){m=(m||'').toLowerCase();
+ if(m.includes('already')&&m.includes('regist'))return 'Esiste già un account con questa email. Prova ad accedere.';
+ if(m.includes('rate')||m.includes('limit'))return 'Troppi tentativi: riprova tra qualche minuto.';
+ if(m.includes('password'))return 'Password non valida (minimo 6 caratteri).';
+ return 'Errore: '+m;
+}
+
+async function register(){
+ clearErr();
+ const name=$('#rName').value.trim();
+ const username=$('#rUser').value.trim().replace(/^@/,'');
+ const email=$('#rEmail').value.trim().toLowerCase(),pass=$('#rPass').value;
+ if(!name)return showErr('Inserisci il tuo nome.');
+ if(!/^[a-zA-Z0-9_]{3,20}$/.test(username))return showErr('Username: 3-20 caratteri, solo lettere, numeri o _ (niente spazi).');
+ if(!/^\S+@\S+\.\S+$/.test(email))return showErr('Inserisci un\'email valida.');
+ if(pass.length<6)return showErr('La password deve avere almeno 6 caratteri.');
+ if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
+ authBusy('#formReg .btn','Creo l\'account…');
+ try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',username).limit(1);
+   if(taken&&taken.length)return showErr('Questo username è già stato preso. Scegline un altro.');
+ }catch(e){}
+ const {data,error}=await supa.auth.signUp({email,password:pass,options:{data:{name,username}}});
+ if(error)return showErr(traduciErrore(error.message));
+ if(!data.session)return showErr('Account creato. Conferma l\'email ricevuta, poi accedi.');
+ authUser=data.user;mode='cloud';profile={name,username};
+ try{await cloudLoadBooks()}catch(e){}
+ const j=await handlePendingJoin();startApp(j?'club':undefined);
+}
+
+async function login(){
+ clearErr();
+ const idRaw=$('#lId').value.trim().replace(/^@/,'');const pass=$('#lPass').value;
+ if(!idRaw)return showErr('Inserisci email o username.');
+ if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
+ authBusy('#formLogin .btn','Accedo…');
+ let email=idRaw;
+ if(!idRaw.includes('@')){
+   try{const {data,error}=await supa.rpc('email_for_login',{login:idRaw});
+     if(error||!data)return showErr('Nessun account trovato con questo username.');
+     email=data;
+   }catch(e){return showErr('Nessun account trovato con questo username.')}
+ }
+ const {data,error}=await supa.auth.signInWithPassword({email:email.toLowerCase(),password:pass});
+ if(error)return showErr('Email/username o password non corretti.');
+ authUser=data.user;mode='cloud';
+ await loadProfile();
+ try{await cloudLoadBooks()}catch(e){}
+ const j=await handlePendingJoin();startApp(j?'club':undefined);
+}
+async function loadProfile(){
+ try{const {data}=await supa.from('profiles').select('name,username').eq('id',authUser.id).maybeSingle();if(data)profile=data}catch(e){}
+}
+
+function guest(){
+ mode='demo';session='__demo__';localStorage.setItem('pagina_session','__demo__');
+ const d=localStorage.getItem('pagina_data___demo__');
+ if(d){try{const o=JSON.parse(d);if(Array.isArray(o.books))books=o.books;if(typeof o.myPos==='number')myPos=o.myPos}catch(e){}}
+ else{books=JSON.parse(JSON.stringify(seedBooks));myPos=8;save()}
+ startApp();
+}
+async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localStorage.removeItem('pagina_session');location.reload()}
+
+/* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
+function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
+ return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
+   coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
+async function cloudLoadBooks(){
+ let {data,error}=await supa.from('books').select('*').order('id');
+ if(error)throw error;
+ if(!data||!data.length){
+   const rows=seedBooks.map(b=>({user_id:authUser.id,title:b.t,author:b.a,genre:b.g,pages:b.pg,status:b.status,progress:b.prog,rating:b.rate,cover_url:b.coverUrl||null,plot:b.trama,note:null}));
+   const ins=await supa.from('books').insert(rows).select('*');data=ins.data||[];
+ }
+ books=data.map(dbToBook);
+}
+function save(){ // demo: salva tutto localmente; cloud: solo la posizione di lettura
+ if(mode==='demo')localStorage.setItem('pagina_data___demo__',JSON.stringify({books,myPos}));
+ else try{localStorage.setItem('pagina_pos',String(myPos))}catch(e){}
+}
+function persistBook(id,patch){
+ if(mode==='cloud'&&supa){supa.from('books').update(patch).eq('id',id).then(()=>{},()=>{})}
+ else save();
+}
+
+function startApp(target){
+ $('#auth').style.display='none';
+ $('#appRoot').style.display='flex';
+ const name=mode==='demo'?'Ospite Demo':((profile&&profile.name)||'Lettrice');
+ const username=mode==='demo'?'':((profile&&profile.username)||'');
+ $('#meName').textContent=name;
+ $('#meAv').textContent=(name.split(' ').map(x=>x[0]).slice(0,2).join('')||'P').toUpperCase();
+ $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(username?'@'+username:'Account cloud ☁️');
+ buildNav();go(target||'home');
+ enrichCovers();
+}
+
+/* ============ INIT ============ */
+(async function(){
+ if(supa){
+   try{const {data}=await supa.auth.getSession();
+     if(data&&data.session){authUser=data.session.user;mode='cloud';await loadProfile();try{await cloudLoadBooks()}catch(e){}const j=await handlePendingJoin();startApp(j?'club':undefined);return}
+   }catch(e){}
+ }
+ if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui sei stata invitata.';const tt=$('#authTitle');if(tt)tt.textContent='Sei stata invitata in un club 📖';}
+ if(localStorage.getItem('pagina_session')==='__demo__'&&!pendingJoin)guest();
+})();
+</script>
+</body>
+</html>
