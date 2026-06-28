@@ -350,6 +350,23 @@ input[type=range]{accent-color:var(--coral)}
   .shelf{grid-template-columns:repeat(2,1fr);gap:14px}
 }
 
+/* ===== ACCESSIBILITÀ & MICROINTERAZIONI ===== */
+:focus-visible{outline:2px solid var(--coral);outline-offset:2px;border-radius:8px}
+.nav button:focus-visible,.botnav button:focus-visible,.tabs button:focus-visible{outline-offset:-2px}
+.card{transition:box-shadow .2s,transform .2s}
+.botnav button:active{transform:scale(.92)}
+.pill{transition:.15s}
+/* skeleton di caricamento */
+.skel{position:relative;overflow:hidden;background:var(--bg2);border-radius:12px}
+.skel::after{content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);animation:sh 1.2s infinite}
+[data-theme="dark"] .skel::after{background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent)}
+@keyframes sh{100%{transform:translateX(100%)}}
+.skel-cover{aspect-ratio:2/3;border-radius:10px}
+.skel-line{height:12px;margin-top:8px;border-radius:6px}
+.skel-line.sm{width:60%}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
 /* ===== AUTH ===== */
 .auth{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:24px;
   background:radial-gradient(900px 500px at 10% 0%,#7a2b46,transparent 60%),
@@ -714,7 +731,7 @@ renders.libreria=()=>{
  </div>
  ${libTab==='ai'
   ? (mode==='cloud'
-     ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Consigli generati dai tuoi gusti (profilo) e dalla tua libreria.</div><div id="aiRecs"><div class="srch-empty">Sto cercando i libri giusti per te… ✨</div></div>`
+     ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Consigli generati dai tuoi gusti (profilo) e dalla tua libreria.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
      : `<div class="shelf">${aiSuggest.map(s=>`
      <div class="book" onclick="openAi(${s.id})">
        ${coverEl(s.ci,s.t,s.a,'✨')}
