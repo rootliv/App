@@ -193,6 +193,10 @@ input[type=range]{accent-color:var(--coral)}
 .chipopt.on{background:var(--plum);color:#fff;border-color:var(--plum)}
 .chipadd{display:flex;gap:8px}
 .chipadd input{flex:1}
+.acbox{display:none;border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm);max-height:240px;overflow-y:auto}
+.acopt{display:block;width:100%;text-align:left;border:none;background:none;font-family:inherit;font-size:13.5px;padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--line);color:var(--ink)}
+.acopt:last-child{border-bottom:none}
+.acopt:hover{background:var(--surface2);color:var(--plum)}
 
 /* ===== MEMBERS ===== */
 .avstack{display:flex}
@@ -1571,6 +1575,37 @@ const PROFILE_SUGGEST={
  disliked:['Horror estremo','Splatter','Manualistica tecnica','Romance erotico','Saggistica accademica','Politica','Self-help','Fantasy molto lungo']
 };
 let editSel={genres:[],authors:[],loved:[],disliked:[]};
+const GENRE_POOL=['Romanzo','Romanzo storico','Romanzo di formazione','Giallo','Thriller','Noir','Poliziesco','Fantasy','Fantascienza','Distopia','Horror','Gotico','Rosa','Romance','Avventura','Classici','Letteratura contemporanea','Saggistica','Biografia','Autobiografia','Memoir','Poesia','Teatro','Young Adult','Per ragazzi','Realismo magico','Umoristico','Satira','Graphic novel','Fumetto','Epica','Mistero','Spionaggio','Western','Cyberpunk','Steampunk','Urban fantasy','Racconti','Filosofia','Storia','Viaggi','Cucina','Self-help','Psicologia','Religione','Politica','Economia','Scienza','True crime','Romanzo psicologico'];
+const AC_POOL={genres:GENRE_POOL,disliked:GENRE_POOL,authors:PROFILE_SUGGEST.authors,loved:PROFILE_SUGGEST.loved};
+let acTimer=null;
+function acInput(key){
+ clearTimeout(acTimer);
+ const inp=$('#ca_'+key);const q=(inp?inp.value:'').trim();
+ const box=$('#ac_'+key);if(!box)return;
+ if(q.length<1){box.style.display='none';box.innerHTML='';return}
+ const ql=q.toLowerCase();
+ const sel=editSel[key]||[];
+ let local=(AC_POOL[key]||[]).filter(x=>x.toLowerCase().includes(ql)&&!sel.includes(x)).slice(0,8);
+ renderAc(key,local);
+ if((key==='authors'||key==='loved')&&q.length>=3){
+   acTimer=setTimeout(async()=>{
+     try{
+       const res=await doSearch(q);
+       let live=key==='authors'?[...new Set(res.flatMap(r=>(r.a||'').split(', ')))]:res.map(r=>r.t);
+       live=live.filter(v=>v&&v.toLowerCase().includes(ql)&&!sel.includes(v));
+       const merged=[...new Set(local.concat(live))].slice(0,10);
+       if(($('#ca_'+key)||{}).value&&$('#ca_'+key).value.trim()===q)renderAc(key,merged);
+     }catch(e){}
+   },300);
+ }
+}
+function renderAc(key,list){
+ const box=$('#ac_'+key);if(!box)return;
+ if(!list.length){box.style.display='none';box.innerHTML='';return}
+ box.style.display='block';
+ box.innerHTML=list.map(v=>`<button type="button" class="acopt" data-v="${esc(v)}" onclick="pickAc('${key}',this)">${esc(v)}</button>`).join('');
+}
+function pickAc(key,btn){const v=btn.dataset.v;if(!editSel[key].includes(v))editSel[key].push(v);const inp=$('#ca_'+key);if(inp)inp.value='';const box=$('#ac_'+key);if(box){box.style.display='none';box.innerHTML=''}renderChips(key)}
 function renderChips(key){
  const el=$('#cg_'+key);if(!el)return;
  const all=[...new Set((PROFILE_SUGGEST[key]||[]).concat(editSel[key]))];
@@ -1586,7 +1621,7 @@ function openEditProfile(){
   <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
-    ${groups.map(g=>`<div class="field"><label>${g[1]}</label><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[2]}" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div></div>`).join('')}
+    ${groups.map(g=>`<div class="field"><label>${g[1]}</label><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[2]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
     <div class="row" style="gap:12px">
       <div class="field" style="flex:1;min-width:120px"><label>Ritmo (pag/giorno)</label><input id="epPace" type="number" min="0" value="${d.pace||''}"></div>
       <div class="field" style="flex:1;min-width:120px"><label>Obiettivo annuale (libri)</label><input id="epGoal" type="number" min="0" value="${d.goal||''}"></div>
