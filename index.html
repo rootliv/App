@@ -1517,35 +1517,51 @@ async function loadAiRecs(){
  const d=(profile&&profile.data)||{};
  const have=new Set(books.map(b=>(b.t||'').toLowerCase()));
  const disliked=(d.disliked||[]).map(x=>x.toLowerCase());
- let queries=[];const usedA=new Set();const usedG=new Set();
- const addA=(a,reason)=>{if(!a)return;const k=a.toLowerCase();if(usedA.has(k))return;usedA.add(k);queries.push({q:a,reason})};
- const addG=(g,reason)=>{if(!g)return;const k=g.toLowerCase();if(usedG.has(k))return;usedG.add(k);queries.push({q:g,reason})};
- // dal tuo Profilo lettore
+ const authorQs=[],genreQs=[];const usedA=new Set(),usedG=new Set();
+ const addA=(a,reason)=>{if(!a)return;const k=a.toLowerCase();if(usedA.has(k))return;usedA.add(k);authorQs.push({q:a,reason,kind:'a'})};
+ const addG=(g,reason)=>{if(!g)return;const k=g.toLowerCase();if(usedG.has(k))return;usedG.add(k);genreQs.push({q:g,reason,kind:'g'})};
+ // dal tuo Profilo lettore + da "La mia Libreria"
  (d.authors||[]).forEach(a=>addA(a,'Perché segui '+a));
- (d.genres||[]).forEach(g=>addG(g,'Perché ami il genere '+g));
- // da "La mia Libreria"
  [...new Set(books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Perché hai apprezzato '+a));
  [...new Set(books.map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Dalla tua libreria: '+a));
+ (d.genres||[]).forEach(g=>addG(g,'Perché ami il genere '+g));
  [...new Set(books.map(b=>b.g).filter(Boolean))].forEach(g=>addG(g,'Dai generi della tua libreria'));
- queries=queries.slice(0,5);
+ // alterna autori e generi (max 3 ciascuno) per avere varietà
+ const aMax=authorQs.slice(0,3),gMax=genreQs.slice(0,3);const queries=[];
+ for(let i=0;i<3;i++){if(aMax[i])queries.push(aMax[i]);if(gMax[i])queries.push(gMax[i]);}
  if(!queries.length){
    box.innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:42px">✨</div>
      <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="go('profilo')">Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">Aggiungi un libro</button></div></div>`;return;
  }
- const recs=[];const seen=new Set();
+ // raccogli alcuni candidati per ogni fonte
+ const buckets=[];
  for(const x of queries){
-   if(recs.length>=10)break;
    let r=[];try{r=await doSearch(x.q)}catch(e){r=[]}
-   r.forEach(b=>{
-     const key=(b.t||'').toLowerCase();
-     if(!b.t||seen.has(key)||have.has(key))return;
-     if(disliked.length&&disliked.some(dx=>(b.g||'').toLowerCase().includes(dx)))return;
-     seen.add(key);recs.push(Object.assign({},b,{reason:x.reason}));
-   });
+   const items=[];
+   for(const b of r){const key=(b.t||'').toLowerCase();
+     if(!b.t||have.has(key))continue;
+     if(disliked.length&&disliked.some(dx=>(b.g||'').toLowerCase().includes(dx)))continue;
+     items.push(Object.assign({},b,{reason:x.reason}));
+     if(items.length>=4)break;
+   }
+   buckets.push(items);
+ }
+ // round-robin: dedup globale e massimo 2 libri per stesso autore
+ const recs=[];const seen=new Set();const aCount={};let progress=true;
+ while(recs.length<12&&progress){
+   progress=false;
+   for(const bucket of buckets){
+     if(!bucket.length)continue;
+     const it=bucket.shift();progress=true;
+     const key=(it.t||'').toLowerCase();if(seen.has(key))continue;
+     const ak=(it.a||'').toLowerCase();if((aCount[ak]||0)>=2)continue;
+     seen.add(key);aCount[ak]=(aCount[ak]||0)+1;recs.push(it);
+     if(recs.length>=12)break;
+   }
  }
  if(!recs.length){box.innerHTML=`<div class="srch-empty">Non riesco a trovare consigli in questo momento (forse sei offline o l'archivio libri non risponde). Riprova tra poco.</div>`;return}
- const list=recs.slice(0,12);
+ const list=recs;
  searchResults=list;
  box.innerHTML=`<div class="shelf">${list.map((s,i)=>`
    <div class="book">
