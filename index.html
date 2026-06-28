@@ -1534,16 +1534,20 @@ async function loadAiRecs(){
      <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="go('profilo')">Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">Aggiungi un libro</button></div></div>`;return;
  }
- let results=[];
- try{results=await Promise.all(queries.map(x=>fromGoogle(x.q,true).then(r=>({r,reason:x.reason})).catch(()=>({r:[],reason:x.reason}))));}catch(e){}
  const recs=[];const seen=new Set();
- results.forEach(({r,reason})=>r.forEach(b=>{
-   const key=(b.t||'').toLowerCase();
-   if(!b.t||seen.has(key)||have.has(key))return;
-   if(disliked.length&&disliked.some(x=>(b.g||'').toLowerCase().includes(x)))return;
-   seen.add(key);recs.push(Object.assign({},b,{reason}));
- }));
- if(!recs.length){box.innerHTML='<div class="srch-empty">Non ho trovato nuovi titoli adatti (forse sei offline). Aggiungi qualche preferenza o riprova.</div>';return}
+ async function gather(itOnly){
+   let results=[];
+   try{results=await Promise.all(queries.map(x=>fromGoogle(x.q,itOnly).then(r=>({r,reason:x.reason})).catch(()=>({r:[],reason:x.reason}))));}catch(e){results=[]}
+   results.forEach(({r,reason})=>r.forEach(b=>{
+     const key=(b.t||'').toLowerCase();
+     if(!b.t||seen.has(key)||have.has(key))return;
+     if(disliked.length&&disliked.some(x=>(b.g||'').toLowerCase().includes(x)))return;
+     seen.add(key);recs.push(Object.assign({},b,{reason}));
+   }));
+ }
+ await gather(true);
+ if(recs.length<4)await gather(false);
+ if(!recs.length){box.innerHTML=`<div class="srch-empty">Non riesco a trovare consigli in questo momento (forse sei offline o l'archivio libri non risponde). Riprova tra poco.</div>`;return}
  const list=recs.slice(0,12);
  searchResults=list;
  box.innerHTML=`<div class="shelf">${list.map((s,i)=>`
