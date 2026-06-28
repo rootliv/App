@@ -859,7 +859,7 @@ renders.ai=()=>{
  </div>
  <div id="aiOut" style="margin-top:14px"></div>
  <div class="chatbox">
-   <input id="aiText" placeholder="Chiedi qualcosa su 'La casa degli spiriti'…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <input id="aiText" placeholder="Es. trovami Solaris, consigliami un giallo…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questo prototipo le risposte AI sono esempi pre-impostati. Collegheremo un modello AI vero in una fase successiva.</div>`;
@@ -872,12 +872,25 @@ const aiAnswers={
  'Citazioni significative':"<div class='quote'>«La memoria è fragile e il corso di una vita è molto breve.»</div><div class='quote'>«Le parole non hanno colore.»</div>",
  'Spunto di riflessione (senza spoiler, sono al cap. 8)':"🔒 <b>Sei al capitolo 8 — niente spoiler.</b><br>Fin qui, nota come la casa di città e la tenuta di campagna rappresentino due mondi opposti. Mentre leggi, chiediti: di chi è davvero la voce che narra? Tieni l'ipotesi a mente per i prossimi capitoli."
 };
-function aiAsk(q){
+async function aiAsk(q){
  if(!q||!q.trim())return;
- const out=$('#aiOut');
- const ans=aiAnswers[q]||`<b>Ottima domanda.</b> Ecco una risposta di esempio: nel prototipo l'AI riconosce le richieste principali (domande di discussione, temi, riferimenti storici, curiosità, citazioni, spunti senza spoiler). Collegando un modello reale potrà rispondere liberamente a "<i>${q}</i>".`;
- out.innerHTML=`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${ans}</div></div>`;
- const t=$('#aiText');if(t)t.value='';
+ const out=$('#aiOut');const t=$('#aiText');
+ const bubble=html=>`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${html}</div></div>`;
+ if(aiAnswers[q]){out.innerHTML=bubble(aiAnswers[q]);if(t)t.value='';out.scrollIntoView({behavior:'smooth',block:'nearest'});return;}
+ const cleaned=q.replace(/^\s*(trovami|trovam|trova|cercami|cerca|consigliami|consiglia|suggeriscimi|suggerisci|mi consigli[a]?|libri?\s+(su|di|per|come|di tipo)|qualcosa\s+(di|su|per)|voglio leggere|vorrei leggere|voglio|vorrei)\s+/i,'').replace(/[?!.]+$/,'').trim();
+ const query=cleaned||q.trim();
+ out.innerHTML=bubble('🔎 Cerco «'+esc(query)+'»…');
+ if(t)t.value='';
+ out.scrollIntoView({behavior:'smooth',block:'nearest'});
+ let res=[];try{res=await doSearch(query)}catch(e){}
+ if(!res.length){out.innerHTML=bubble('Non ho trovato nulla per «'+esc(query)+'». Prova con un titolo o un autore diverso.');return;}
+ searchResults=res;
+ const cards=res.slice(0,6).map((s,i)=>`<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">
+   ${s.coverUrl?`<img src="${esc(s.coverUrl)}" style="width:40px;height:58px;object-fit:cover;border-radius:5px;flex:none" onerror="this.style.visibility='hidden'">`:`<div style="width:40px;height:58px;border-radius:5px;flex:none;${coverStyle(i)}"></div>`}
+   <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(s.t)}</b><div class="muted" style="font-size:12px">${esc(s.a)}${s.year?' · '+s.year:''}</div></div>
+   <button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>
+ </div>`).join('');
+ out.innerHTML=bubble('Ecco cosa ho trovato per «'+esc(query)+'». Tocca <b>Aggiungi</b> per metterlo in libreria:<div style="margin-top:10px">'+cards+'</div>');
  out.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -1568,7 +1581,7 @@ function renderAiCloud(){
  </div>
  <div id="aiOut" style="margin-top:14px"></div>
  <div class="chatbox">
-   <input id="aiText" placeholder="Chiedi qualcosa all'assistente…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <input id="aiText" placeholder="Es. trovami Solaris, consigliami un giallo…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questa versione le risposte AI sono esempi. Collegando un modello AI vero diventeranno personalizzate sui tuoi libri.</div>`;
