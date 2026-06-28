@@ -187,6 +187,12 @@ input[type=range]{accent-color:var(--coral)}
 .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
 .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);transition:.15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+.chipsel{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:9px}
+.chipopt{font-family:inherit;font-size:12.5px;font-weight:600;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:7px 13px;cursor:pointer;transition:.15s}
+.chipopt:hover{border-color:var(--coral);color:var(--plum)}
+.chipopt.on{background:var(--plum);color:#fff;border-color:var(--plum)}
+.chipadd{display:flex;gap:8px}
+.chipadd input{flex:1}
 
 /* ===== MEMBERS ===== */
 .avstack{display:flex}
@@ -1558,16 +1564,29 @@ function renderProfiloCloud(){
    <div class="set-row"><div>Suggerisci ambientazioni nuove</div><div class="toggle ${d.aiNew?'on':''}" onclick="toggleAiPref('aiNew',this)"></div></div>
  </div>`;
 }
+const PROFILE_SUGGEST={
+ genres:['Romanzo','Giallo','Thriller','Fantasy','Fantascienza','Storico','Rosa','Horror','Avventura','Classici','Saggistica','Biografia','Poesia','Young Adult','Realismo magico','Distopia','Memoir','Romanzo di formazione','Umoristico','Noir'],
+ authors:['Elena Ferrante','Italo Calvino','Umberto Eco','Dino Buzzati','Isabel Allende','Gabriel García Márquez','Haruki Murakami','Jane Austen','Stephen King','Agatha Christie','J.R.R. Tolkien','Fëdor Dostoevskij','Virginia Woolf','George Orwell','Margaret Atwood','Alessandro Baricco','Niccolò Ammaniti','Banana Yoshimoto'],
+ loved:["Cent'anni di solitudine","Il nome della rosa","Orgoglio e pregiudizio","1984","Il piccolo principe","Norwegian Wood","L'amica geniale","Il Signore degli Anelli","Delitto e castigo","La casa degli spiriti","Il deserto dei Tartari","Se questo è un uomo"],
+ disliked:['Horror estremo','Splatter','Manualistica tecnica','Romance erotico','Saggistica accademica','Politica','Self-help','Fantasy molto lungo']
+};
+let editSel={genres:[],authors:[],loved:[],disliked:[]};
+function renderChips(key){
+ const el=$('#cg_'+key);if(!el)return;
+ const all=[...new Set((PROFILE_SUGGEST[key]||[]).concat(editSel[key]))];
+ el.innerHTML=all.map(v=>{const on=editSel[key].includes(v);return `<button type="button" class="chipopt${on?' on':''}" data-v="${esc(v)}" onclick="toggleChip('${key}',this)">${esc(v)}${on?' ✓':''}</button>`}).join('');
+}
+function toggleChip(key,btn){const v=btn.dataset.v;const i=editSel[key].indexOf(v);if(i>=0)editSel[key].splice(i,1);else editSel[key].push(v);renderChips(key)}
+function addCustom(key){const inp=$('#ca_'+key);const v=(inp.value||'').trim();if(!v)return;if(!editSel[key].includes(v))editSel[key].push(v);inp.value='';renderChips(key)}
 function openEditProfile(){
  const d=(profile&&profile.data)||{};
+ editSel={genres:(d.genres||[]).slice(),authors:(d.authors||[]).slice(),loved:(d.loved||[]).slice(),disliked:(d.disliked||[]).slice()};
+ const groups=[['genres','📗 Generi preferiti','Aggiungi un genere…'],['authors','✍️ Autori preferiti','Aggiungi un autore…'],['loved','💛 Libri del cuore','Aggiungi un libro…'],['disliked','🚫 Generi/temi non graditi','Aggiungi…']];
  $('#modal').innerHTML=`
   <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
-    <div class="field"><label>Generi preferiti (separati da virgola)</label><input id="epGenres" value="${esc((d.genres||[]).join(', '))}"></div>
-    <div class="field"><label>Autori preferiti</label><input id="epAuthors" value="${esc((d.authors||[]).join(', '))}"></div>
-    <div class="field"><label>Libri del cuore</label><input id="epLoved" value="${esc((d.loved||[]).join(', '))}"></div>
-    <div class="field"><label>Generi/temi non graditi</label><input id="epDis" value="${esc((d.disliked||[]).join(', '))}"></div>
+    ${groups.map(g=>`<div class="field"><label>${g[1]}</label><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[2]}" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div></div>`).join('')}
     <div class="row" style="gap:12px">
       <div class="field" style="flex:1;min-width:120px"><label>Ritmo (pag/giorno)</label><input id="epPace" type="number" min="0" value="${d.pace||''}"></div>
       <div class="field" style="flex:1;min-width:120px"><label>Obiettivo annuale (libri)</label><input id="epGoal" type="number" min="0" value="${d.goal||''}"></div>
@@ -1575,13 +1594,13 @@ function openEditProfile(){
     <button class="btn" onclick="saveProfile()">💾 Salva</button>
   </div>`;
  openOverlay();
+ ['genres','authors','loved','disliked'].forEach(renderChips);
 }
-function splitList(v){return (v||'').split(',').map(s=>s.trim()).filter(Boolean)}
 async function saveProfile(){
  const name=$('#epName').value.trim()||(profile&&profile.name)||'Lettore';
  const d=Object.assign({},(profile&&profile.data)||{},{
-   genres:splitList($('#epGenres').value),authors:splitList($('#epAuthors').value),
-   loved:splitList($('#epLoved').value),disliked:splitList($('#epDis').value),
+   genres:editSel.genres.slice(),authors:editSel.authors.slice(),
+   loved:editSel.loved.slice(),disliked:editSel.disliked.slice(),
    pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
  });
  profile=Object.assign({},profile,{name,data:d});
