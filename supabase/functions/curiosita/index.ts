@@ -54,9 +54,17 @@ Rispondi SOLO con un oggetto JSON valido, senza testo extra:
     // 1) prova con accesso al web (Google Search grounding)
     let usedWeb = true;
     let r = await call({ ...base, tools: [{ google_search: {} }] });
-    // 2) se il grounding non è disponibile sul progetto, riprova senza
-    if (!r.ok) { usedWeb = false; r = await call(base); }
-    if (!r.ok) return json({ error: "gemini " + r.status, detail: await r.text() }, 502);
+    // 2) riprova SENZA grounding solo se il problema è il grounding (400/403),
+    //    NON su 429 (rate limit): in quel caso un secondo tentativo è inutile e spreca quota
+    if (!r.ok && (r.status === 400 || r.status === 403)) { usedWeb = false; r = await call(base); }
+    if (!r.ok) {
+      const status = r.status;
+      const detail = await r.text();
+      const msg = status === 429
+        ? "Limite di richieste Gemini raggiunto: riprova tra poco (la curiosità è settimanale, in uso normale non accade)."
+        : ("gemini " + status);
+      return json({ error: msg, status, detail }, status === 429 ? 429 : 502);
+    }
     const d = await r.json();
     const raw = (d?.candidates?.[0]?.content?.parts || [])
       .map((p: { text?: string }) => p.text || "").join("").trim();
