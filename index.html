@@ -502,6 +502,50 @@ input[type=range]{accent-color:var(--coral)}
 .club-set summary::-webkit-details-marker{display:none}
 .club-set summary::before{content:"▸";color:var(--ink-faint)}
 .club-set[open] summary::before{content:"▾"}
+
+/* ---- CLUB — restyling editoriale ---- */
+.club-strip{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 10px;margin-bottom:18px;scrollbar-width:none}
+.club-strip::-webkit-scrollbar{display:none}
+.club-tab{flex:0 0 auto;display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+  border-radius:16px;padding:10px 18px 10px 11px;cursor:pointer;font-family:inherit;text-align:left;transition:.18s;box-shadow:var(--shadow-sm);min-width:172px}
+.club-tab:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.club-tab.active{border-color:transparent;box-shadow:0 0 0 2px var(--coral) inset, var(--shadow)}
+.club-tab-em{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:var(--surface2);flex:none}
+.club-tab b{font-family:'Fraunces',serif;font-size:15px;display:block;line-height:1.12;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.club-tab small{font-size:11.5px;color:var(--ink-faint)}
+.club-tab.add{border-style:dashed;background:transparent;box-shadow:none;color:var(--ink-soft)}
+.club-tab.add .club-tab-em{background:transparent;border:1px dashed var(--line)}
+
+.club-banner{position:relative;overflow:hidden;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+  background:var(--brand-grad);color:#fff;border-radius:22px;padding:26px 28px;box-shadow:var(--shadow)}
+.club-banner::after{content:"";position:absolute;inset:0;opacity:.16;pointer-events:none;
+  background:radial-gradient(380px 200px at 88% -25%,#fff,transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 2px,transparent 2px 11px)}
+.club-mono{width:74px;height:74px;border-radius:20px;display:grid;place-items:center;font-size:38px;flex:none;position:relative;z-index:1;
+  background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+.club-banner .club-eyebrow{font-size:10.5px;letter-spacing:2.6px;text-transform:uppercase;font-weight:700;opacity:.85;position:relative;z-index:1}
+.club-banner h2{font-family:'Fraunces',serif;font-size:30px;font-weight:600;line-height:1.05;margin:5px 0 4px;color:#fff;position:relative;z-index:1}
+.club-banner p{font-size:13.5px;opacity:.92;max-width:60ch;position:relative;z-index:1}
+.role-chip{position:relative;z-index:1;align-self:flex-start;background:rgba(255,255,255,.18);color:#fff;font-weight:700;font-size:12px;
+  padding:7px 13px;border-radius:30px;border:1px solid rgba(255,255,255,.3)}
+.avstack{display:flex;align-items:center;margin-top:14px;position:relative;z-index:1}
+.avstack .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;
+  border:2px solid rgba(255,255,255,.9);margin-left:-9px;box-shadow:0 2px 6px rgba(0,0,0,.22)}
+.avstack .av:first-child{margin-left:0}
+.avstack .av.more{background:rgba(255,255,255,.28)}
+.avstack .avlabel{margin-left:12px;font-size:12.5px;opacity:.94;font-weight:600}
+
+.club-cols{display:grid;grid-template-columns:1.7fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:760px){.club-cols{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow-sm)}
+.panel.feat{background:linear-gradient(180deg,var(--surface2),var(--surface))}
+.panel-title{font-size:11px;text-transform:uppercase;letter-spacing:1.6px;font-weight:700;color:var(--ink-soft);margin-bottom:14px}
+.code-row{display:flex;align-items:center;gap:9px;margin-top:13px;flex-wrap:wrap}
+
+.member-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.member-chip{display:flex;align-items:center;gap:11px;background:var(--surface2);border:1px solid var(--line);border-radius:13px;padding:9px 12px}
+.member-chip .av{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex:none}
+.member-chip b{font-size:13.5px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.member-chip small{font-size:11.5px;color:var(--ink-faint)}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -1286,7 +1330,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v11 (club: codice + join + elimina)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v12 (club editoriale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1608,51 +1652,59 @@ function renderClubCloud(){
  const c=myClubs.find(x=>x.id===clubSel)||myClubs[0];clubSel=c.id;
  const role=myRoles[c.id]||'membro';
  view.innerHTML=`
-  <div class="row" style="margin-bottom:6px">
-   ${myClubs.map(cl=>`<div class="card pad" style="flex:1;min-width:200px;cursor:pointer;${cl.id===clubSel?'border:2px solid var(--coral)':''}" onclick="clubSel=${cl.id};renderClubCloud()">
-     <div style="font-size:28px">${cl.emoji||'📖'}</div>
-     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${cl.name}</b>
-     <div class="muted" style="font-size:12.5px">${myRoles[cl.id]||'membro'}</div></div>`).join('')}
-   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;display:grid;place-items:center;border-style:dashed;background:transparent" onclick="openClubModal()">
-     <div style="text-align:center;color:var(--ink-soft)"><div style="font-size:28px">＋</div>Crea o unisciti</div></div>
+  <div class="club-strip">
+   ${myClubs.map(cl=>`<button class="club-tab ${cl.id===clubSel?'active':''}" onclick="clubSel=${cl.id};renderClubCloud()">
+     <span class="club-tab-em">${cl.emoji||'📖'}</span>
+     <span style="min-width:0"><b>${cl.name}</b><small>${myRoles[cl.id]||'membro'}</small></span>
+   </button>`).join('')}
+   <button class="club-tab add" onclick="openClubModal()"><span class="club-tab-em">＋</span><span><b>Crea o unisciti</b><small>nuovo club</small></span></button>
   </div>
-  <div class="card pad" style="margin-top:18px">
-   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-     <div><h2 style="font-size:23px">${c.emoji||'📖'} ${c.name}</h2><div class="muted">${c.description||''}</div></div>
-     <span class="pill gold">Tuo ruolo: ${role}</span>
+
+  <div class="club-banner">
+   <div class="club-mono">${c.emoji||'📖'}</div>
+   <div style="flex:1;min-width:0">
+     <div class="club-eyebrow">Club del libro</div>
+     <h2>${c.name}</h2>
+     ${c.description?`<p>${c.description}</p>`:''}
+     <div class="avstack" id="clubAvs"></div>
    </div>
-   <hr>
-   <div class="row">
-     <div style="flex:2;min-width:240px">
-       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📖 Libro del mese</div>
-       <div id="selPanel"><div class="muted" style="font-size:13px">Carico…</div></div>
-     </div>
-     <div style="flex:1;min-width:220px">
-       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">✉️ Invita al club</div>
-       <button class="btn gold sm" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
-       <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
-         <span class="muted" style="font-size:12px">oppure codice</span>
-         <code class="codechip" onclick="copyCode('${clubCode(c.id)}',this)" title="Tocca per copiare">${clubCode(c.id)}</code>
-       </div>
-       <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.55">Con il <b>link</b> si entra subito. Con il <b>codice</b>, l'altra persona va su <b>Club del libro → "Crea o unisciti" → "Unisciti con un codice"</b> e lo incolla.</div>
-     </div>
+   <span class="role-chip">${role==='admin'?'★ Admin':'Membro'}</span>
+  </div>
+
+  <div class="club-cols">
+   <div class="panel feat">
+     <div class="panel-title">📖 Libro del mese</div>
+     <div id="selPanel"><div class="muted" style="font-size:13px">Carico…</div></div>
    </div>
-   <hr>
-   <h3 style="font-size:16px;margin-bottom:6px">👥 Membri</h3>
-   <div id="clubMembers"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
-   ${c.current_title?`<hr><button class="btn" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
-   <hr>
+   <div class="panel">
+     <div class="panel-title">✉️ Invita al club</div>
+     <button class="btn gold sm" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
+     <div class="code-row"><span class="muted" style="font-size:12px">oppure codice</span><code class="codechip" onclick="copyCode('${clubCode(c.id)}',this)" title="Tocca per copiare">${clubCode(c.id)}</code></div>
+     <div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.55">Con il <b>link</b> si entra subito. Con il <b>codice</b>: l'altra persona va su <b>"Crea o unisciti" → "Unisciti con un codice"</b> e lo incolla.</div>
+   </div>
+  </div>
+
+  <div class="panel" style="margin-top:16px">
+   <div class="panel-title">👥 Membri</div>
+   <div id="clubMembers" class="member-grid"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
+  </div>
+
+  ${c.current_title?`<button class="btn" style="margin-top:16px" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
+
+  <div class="panel" style="margin-top:16px">
    ${c.owner===authUser.id
      ? `<details class="club-set"><summary>⚙️ Impostazioni club</summary>
           <div class="muted" style="font-size:12.5px;margin:12px 0 14px;line-height:1.55">Solo l'amministratore può eliminare il club. L'azione è <b>definitiva</b>: rimuove anche membri, proposte, incontri e note collegate.</div>
           <button class="btn danger sm" onclick="deleteClub(${c.id})">🗑 Elimina club</button>
         </details>`
-     : `<button class="btn ghost sm" onclick="leaveClub(${c.id})">🚪 Esci dal club</button>`}
+     : `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="muted" style="font-size:13px">Vuoi lasciare questo club?</span><button class="btn ghost sm" onclick="leaveClub(${c.id})">🚪 Esci dal club</button></div>`}
   </div>`;
  loadMembers(c.id).then(list=>{
    const mEl=$('#clubMembers');
-   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member"><div class="av" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</div>
-     <div style="flex:1"><b style="font-size:14px">${m.name}${m.id===authUser.id?' (tu)':''}</b><div class="muted" style="font-size:12.5px">${m.username?'@'+m.username+' · ':''}${m.role}</div></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
+   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</div>
+     <div style="min-width:0"><b>${m.name}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+m.username+' · ':''}${m.role}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
+   const av=$('#clubAvs');
+   if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'}</span>`;
    const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
    if(c.selection_mode==='voting')loadAndRenderProposals(c.id);
  }).catch(()=>{});
