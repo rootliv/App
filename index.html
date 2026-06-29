@@ -667,7 +667,7 @@ renders.home=()=>{
    </div>`).join('')}
  </div>
 
- <div class="sec-title">📚 Curiosità del giorno</div>
+ <div class="sec-title">📚 Curiosità della settimana</div>
  <div id="curioCard"></div>
 
  <div class="sec-title">✨ Il consiglio AI di oggi</div>
@@ -1181,7 +1181,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v6 (Curiosità del giorno + Google Books key)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v8 (Curiosità settimanale + AI web)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2007,6 +2007,9 @@ function loadCurioState(){try{return JSON.parse(localStorage.getItem(curioKey())
 function saveCurioState(s){try{localStorage.setItem(curioKey(),JSON.stringify(s))}catch(e){}}
 function curioTodayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function curioDayIndex(){const d=new Date();return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()))/86400000)}
+// chiave/indice SETTIMANALI: la curiosità resta stabile per tutta la settimana e cambia la successiva
+function curioWeekIndex(){return Math.floor((curioDayIndex()+3)/7)} // +3: settimane allineate al lunedì (epoch = giovedì)
+function curioWeekKey(){const d=new Date();const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-day+3);const firstThu=new Date(Date.UTC(t.getUTCFullYear(),0,4));const week=1+Math.round(((t-firstThu)/86400000-3+((firstThu.getUTCDay()+6)%7))/7);return t.getUTCFullYear()+'-W'+String(week).padStart(2,'0')}
 
 // --- selezione libro per priorità (sezione 4) ---
 function curiosityCandidates(){
@@ -2062,8 +2065,45 @@ async function wikiSearchHits(q,limit){try{const s=await fetch('https://it.wikip
 async function wikiPageExtract(title){try{const ex=await fetch('https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles='+encodeURIComponent(title));if(!ex.ok)return'';const ed=await ex.json();const p=Object.values((ed.query&&ed.query.pages)||{})[0];return stripHtml((p&&p.extract)||'')}catch(e){return''}}
 
 // --- una curiosità per categoria (sezione 2 + 7, prudente) ---
-async function curiosityFor(cat,b){
- const author=b.a||'',title=b.t||'';
+// trova (e mette in cache) la pagina Wikipedia del LIBRO (non dell'autore)
+async function findBookWiki(b){
+ if(b._wiki!==undefined)return b._wiki;
+ const title=b.t||'',author=b.a||'';
+ const hits=(await wikiSearchHits('"'+title+'" '+author,6)).filter(h=>normKey(h.title)!==normKey(author));
+ for(const h of hits.slice(0,4)){
+   const ex=await wikiPageExtract(h.title);if(!validTrama(ex))continue;
+   const looksBook=/\b(romanzo|libro|saga|racconto|opera|raccolta|saggio|fumetto|poema)\b/i.test(ex);
+   const looksBio=/^[^()]{0,70}\([^)]*\b(1[5-9]\d\d|20\d\d)\b[^)]*\)\s*(è (stato|stata)|fu)\b/i.test(ex);
+   if(looksBook&&!looksBio){b._wiki={title:h.title,extract:ex};return b._wiki}
+ }
+ b._wiki=null;return null;
+}
+// QID Wikidata dalla pagina Wikipedia IT
+async function wikiQid(pageTitle){try{const r=await fetch('https://it.wikipedia.org/w/api.php?action=query&prop=pageprops&ppprop=wikibase_item&redirects=1&format=json&origin=*&titles='+encodeURIComponent(pageTitle));if(!r.ok)return'';const d=await r.json();const p=Object.values((d.query&&d.query.pages)||{})[0];return(p&&p.pageprops&&p.pageprops.wikibase_item)||''}catch(e){return''}}
+// fatti strutturati e verificati da Wikidata: adattamenti, premi, anno, genere
+async function wikidataFacts(qid){
+ const q='SELECT ?genreLabel ?awardLabel ?pub ?adaptLabel ?adaptDate WHERE {'
+  +' OPTIONAL { wd:'+qid+' wdt:P577 ?pub. }'
+  +' OPTIONAL { wd:'+qid+' wdt:P136 ?genre. }'
+  +' OPTIONAL { wd:'+qid+' wdt:P166 ?award. }'
+  +' OPTIONAL { ?adapt wdt:P144 wd:'+qid+'. ?adapt wdt:P31/wdt:P279* wd:Q2431196. OPTIONAL { ?adapt wdt:P577 ?adaptDate. } }'
+  +' SERVICE wikibase:label { bd:serviceParam wikibase:language "it,en". } } LIMIT 60';
+ try{
+   const r=await fetch('https://query.wikidata.org/sparql?format=json&query='+encodeURIComponent(q),{headers:{'Accept':'application/sparql-results+json'}});
+   if(!r.ok)return null;const d=await r.json();const rows=(d.results&&d.results.bindings)||[];
+   const out={pubYear:'',genres:[],awards:[],adaptations:[]};const gs=new Set(),as=new Set(),ad=new Set();
+   const isQ=v=>/^Q\d+$/.test(v);
+   rows.forEach(x=>{
+     if(!out.pubYear&&x.pub)out.pubYear=(x.pub.value||'').slice(0,4);
+     if(x.genreLabel){const v=x.genreLabel.value;if(v&&!isQ(v)&&!gs.has(v)){gs.add(v);out.genres.push(v)}}
+     if(x.awardLabel){const v=x.awardLabel.value;if(v&&!isQ(v)&&!as.has(v)){as.add(v);out.awards.push(v)}}
+     if(x.adaptLabel){const v=x.adaptLabel.value;if(v&&!isQ(v)&&!ad.has(v)){ad.add(v);out.adaptations.push({label:v,year:(x.adaptDate&&x.adaptDate.value||'').slice(0,4)})}}
+   });
+   return out;
+ }catch(e){return null}
+}
+async function curiosityFor(cat,b,seed){
+ const author=b.a||'',title=b.t||'';seed=seed||0;
  if(cat==='titolo'){
    if(b.originalTitle&&normKey(b.originalTitle)!==normKey(title))
      return mkCurio(b,'Titolo','Titolo originale','In lingua originale «'+title+'» si intitola «'+b.originalTitle+'». I titoli vengono spesso riadattati nella traduzione italiana per renderli più evocativi per il pubblico.','metadati');
@@ -2080,18 +2120,24 @@ async function curiosityFor(cat,b){
    const txt=curioSentences(ex).slice(0,2).join(' ');           // biografia: incipit, non spoiler
    return txt?mkCurio(b,'Autore',author,txt,'Wikipedia'):null;
  }
+ if(cat==='fatti'){           // Wikidata: adattamenti, premi, prima pubblicazione (sempre non-spoiler)
+   const w=await findBookWiki(b);if(!w)return null;
+   const qid=await wikiQid(w.title);if(!qid)return null;
+   const f=await wikidataFacts(qid);if(!f)return null;
+   const variants=[];
+   if(f.adaptations.length){const a=f.adaptations[0];variants.push(['Adattamenti','Da «'+title+'» è stato tratto un adattamento per lo schermo'+(a.year?(' nel '+a.year):'')+': «'+a.label+'».']);}
+   if(f.awards.length)variants.push(['Riconoscimenti','«'+title+'» ha ottenuto un riconoscimento letterario: '+f.awards.slice(0,2).join(', ')+'.']);
+   if(f.pubYear)variants.push(['Pubblicazione','«'+title+'» è stato pubblicato per la prima volta nel '+f.pubYear+(f.genres.length?(', tra le opere di '+f.genres[0].toLowerCase()):'')+'.']);
+   if(!variants.length)return null;
+   const v=variants[((seed%variants.length)+variants.length)%variants.length];
+   return mkCurio(b,v[0],title,v[1],'Wikidata');
+ }
  if(cat==='contesto'){
-   const hits=(await wikiSearchHits('"'+title+'" '+author,6)).filter(h=>normKey(h.title)!==normKey(author));
-   for(const h of hits.slice(0,4)){
-     const ex=await wikiPageExtract(h.title);if(!validTrama(ex))continue;
-     const looksBook=/\b(romanzo|libro|saga|racconto|opera|raccolta|saggio|fumetto|poema)\b/i.test(ex);
-     const looksBio=/^[^()]{0,70}\([^)]*\b(1[5-9]\d\d|20\d\d)\b[^)]*\)\s*(è (stato|stata)|fu)\b/i.test(ex);
-     if(!looksBook||looksBio)continue;
-     const safe=curioSafeSentences(ex);if(!safe.length)continue;
-     const extra=safe.slice(1).find(s=>/\b(pubblicat|success|premi|tradot|edizion|ispirat|ambientat|scritt|accoglienz|vendut|bestseller|critica|adatt)\b/i.test(s));
-     const txt=[safe[0],extra].filter(Boolean).slice(0,2).join(' ');
-     if(txt&&txt.length>40)return mkCurio(b,'Dietro le quinte',title,txt,'Wikipedia');
-   }
+   const w=await findBookWiki(b);if(!w)return null;
+   const safe=curioSafeSentences(w.extract);if(!safe.length)return null;
+   const extra=safe.slice(1).find(s=>/\b(pubblicat|success|premi|tradot|edizion|ispirat|ambientat|scritt|accoglienz|vendut|bestseller|critica|adatt)\b/i.test(s));
+   const txt=[safe[0],extra].filter(Boolean).slice(0,2).join(' ');
+   if(txt&&txt.length>40)return mkCurio(b,'Dietro le quinte',title,txt,'Wikipedia');
    return null;
  }
  return null;
@@ -2100,24 +2146,38 @@ function curioFallback(b){
  if(b.pg)return mkCurio(b,'Lettura',b.t,'«'+b.t+'» di '+b.a+' conta circa '+b.pg+' pagine: dividerle per i giorni a disposizione è un modo semplice per darti un ritmo di lettura.','metadati');
  return mkCurio(b,'Libreria',b.t,'«'+b.t+'» di '+b.a+' è nella tua libreria: aprilo per scoprirne trama e dettagli.','app');
 }
+// AI con accesso al web (Gemini + Google Search) via Supabase Edge Function: chiave LLM solo lato server
+async function aiCuriosity(b){
+ if(typeof supa==='undefined'||!supa||typeof mode==='undefined'||mode!=='cloud')return null;
+ if(window.__aiCurioOff)return null;                                  // disattivata se la function non è deployata
+ try{
+   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||''}});
+   if(error){if((error.message||'').match(/not found|404/i))window.__aiCurioOff=true;return null;}
+   if(!data||!data.testo)return null;
+   let t=stripHtml(data.testo);
+   if(!validTrama(t)||SPOILER_RE.test(t))return null;                  // doppio controllo anti-spoiler lato client
+   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,'AI + ricerca web');
+ }catch(e){return null}
+}
 async function buildCuriosity(b,seed){
- const order=['contesto','autore','titolo','genere'];
+ const ai=await aiCuriosity(b);if(ai)return ai;                        // 1ª scelta: AI con ricerca web
+ const order=['fatti','contesto','autore','titolo','genere'];          // fallback: fonti verificabili aperte
  const k=((seed%order.length)+order.length)%order.length;
  const rot=order.slice(k).concat(order.slice(0,k));
- for(const cat of rot){try{const c=await curiosityFor(cat,b);if(c)return c}catch(e){}}
+ for(const cat of rot){try{const c=await curiosityFor(cat,b,seed);if(c)return c}catch(e){}}
  return curioFallback(b);
 }
 
 // --- UI ---
-function curioPillColor(cat){return({'Autore':'sky','Dietro le quinte':'plum','Genere':'gold','Titolo':'coral','Adattamenti':'sky','Lettura':'gold','Libreria':'plum'})[cat]||'plum'}
-function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">✨ Preparo la curiosità di oggi…</div></div>'}
-function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni giorno una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
+function curioPillColor(cat){return({'Autore':'sky','Dietro le quinte':'plum','Genere':'gold','Titolo':'coral','Adattamenti':'sky','Riconoscimenti':'gold','Pubblicazione':'plum','Lettura':'gold','Libreria':'plum'})[cat]||'plum'}
+function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">✨ Preparo la curiosità della settimana…</div></div>'}
+function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni settimana una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
 function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
  const notifBtn=('Notification' in window)
    ?((st.notif&&Notification.permission==='granted')
        ?'<button class="btn ghost sm" onclick="curioDisableNotif()">🔕 Promemoria attivi</button>'
-       :'<button class="btn ghost sm" onclick="curioEnableNotif()">🔔 Promemoria giornaliero</button>')
+       :'<button class="btn ghost sm" onclick="curioEnableNotif()">🔔 Promemoria settimanale</button>')
    :'';
  box.innerHTML='<div class="card pad" style="position:relative">'
   +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
@@ -2138,29 +2198,29 @@ function paintCuriosity(box,p,st){
 }
 async function renderCuriosity(){
  const box=$('#curioCard');if(!box)return;
- const tk=curioTodayKey();let st=loadCurioState();
- if(!curioOverride&&st.date===tk&&st.payload){paintCuriosity(box,st.payload,st);return;}
+ const wk=curioWeekKey();let st=loadCurioState();
+ if(!curioOverride&&st.week===wk&&st.payload){paintCuriosity(box,st.payload,st);return;}  // stabile per tutta la settimana
  box.innerHTML=curioSkeleton();
  const cand=curiosityCandidates();
  if(!cand.length){box.innerHTML=curioEmptyCard();return;}
- const seed=curioDayIndex()+curioOverride;
+ const seed=curioWeekIndex()+curioOverride;                                                // cambia ogni settimana
  const b=cand[((seed%cand.length)+cand.length)%cand.length];
  let payload;try{payload=await buildCuriosity(b,seed)}catch(e){payload=curioFallback(b)}
  if(!$('#curioCard'))return;                 // utente ha cambiato pagina
  if(!curioOverride){
-   st=loadCurioState();st.date=tk;st.payload=payload;st.seen=false;
-   st.history=(st.history||[]);st.history.unshift({d:tk,k:payload.key});st.history=st.history.slice(0,30);
+   st=loadCurioState();st.week=wk;st.payload=payload;st.seen=false;
+   st.history=(st.history||[]);st.history.unshift({w:wk,k:payload.key});st.history=st.history.slice(0,30);
    saveCurioState(st);
-   if(st.notif&&('Notification' in window)&&Notification.permission==='granted'&&st.notifiedDate!==tk){
-     try{new Notification('📚 La tua curiosità del giorno è pronta',{body:payload.category+' · '+payload.title})}catch(e){}
-     st.notifiedDate=tk;saveCurioState(st);
+   if(st.notif&&('Notification' in window)&&Notification.permission==='granted'&&st.notifiedWeek!==wk){
+     try{new Notification('📚 La tua curiosità della settimana è pronta',{body:payload.category+' · '+payload.title})}catch(e){}
+     st.notifiedWeek=wk;saveCurioState(st);
    }
  }
  paintCuriosity($('#curioCard'),payload,st);
 }
 function curioAnother(){curioOverride++;renderCuriosity();}
-function curioDismiss(id){const s=loadCurioState();s.disliked=(s.disliked||[]);if(!s.disliked.includes(id))s.disliked.push(id);s.date=null;s.payload=null;saveCurioState(s);curioOverride=0;renderCuriosity();}
-function curioEnableNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(perm=>{const s=loadCurioState();s.notif=(perm==='granted');saveCurioState(s);if(perm==='granted'){try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò quando c\'è una nuova curiosità del giorno.'})}catch(e){}}renderCuriosity();})}
+function curioDismiss(id){const s=loadCurioState();s.disliked=(s.disliked||[]);if(!s.disliked.includes(id))s.disliked.push(id);s.week=null;s.payload=null;saveCurioState(s);curioOverride=0;renderCuriosity();}
+function curioEnableNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(perm=>{const s=loadCurioState();s.notif=(perm==='granted');saveCurioState(s);if(perm==='granted'){try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò quando c\'è una nuova curiosità della settimana.'})}catch(e){}}renderCuriosity();})}
 function curioDisableNotif(){const s=loadCurioState();s.notif=false;saveCurioState(s);renderCuriosity();}
 
 function renderHomeCloud(){
@@ -2185,7 +2245,7 @@ function renderHomeCloud(){
  </div>
  ${reading.length?`<div class="sec-title">📖 Continua a leggere</div>
  <div class="row">${reading.map(b=>`<div class="card pad" style="flex:1;min-width:280px;cursor:pointer" onclick="openBook(${b.id})"><div style="display:flex;gap:16px"><div style="width:66px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div><div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${b.t}</b><div class="muted" style="font-size:13px;margin:2px 0 10px">${b.a}</div><div class="bar"><i style="width:${b.prog||0}%"></i></div></div></div></div>`).join('')}</div>`:''}
- <div class="sec-title">📚 Curiosità del giorno</div>
+ <div class="sec-title">📚 Curiosità della settimana</div>
  <div id="curioCard"></div>
  <div class="sec-title">🔔 Ti aspettano</div>
  <div class="card pad">
