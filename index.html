@@ -1173,6 +1173,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
+console.log('%cPàgina build: trama-fix-v3','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
 function httpsImg(u){return(u||'').replace(/^http:\/\//,'https://')}
 function validTrama(t){return!!t&&t.trim().length>5&&!/non disponibile/i.test(t)}
