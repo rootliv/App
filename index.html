@@ -493,6 +493,15 @@ input[type=range]{accent-color:var(--coral)}
 /* conteggi dentro i filtri */
 .tabs .tabn{font-style:normal;font-size:11px;font-weight:700;opacity:.55;margin-left:4px}
 .tabs button.active .tabn{opacity:.95}
+
+/* ---- Codice invito club + impostazioni ---- */
+.codechip{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:3px;
+  color:var(--plum);background:var(--coral-soft);border:1px dashed var(--coral);border-radius:9px;padding:6px 12px;cursor:pointer;transition:.15s}
+.codechip:hover{background:var(--surface);border-style:solid;transform:translateY(-1px)}
+.club-set summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--ink);list-style:none;display:flex;align-items:center;gap:8px}
+.club-set summary::-webkit-details-marker{display:none}
+.club-set summary::before{content:"▸";color:var(--ink-faint)}
+.club-set[open] summary::before{content:"▾"}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -1277,7 +1286,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v10 (vista a scaffale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v11 (club: codice + join + elimina)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1544,7 +1553,9 @@ async function enrichCovers(){
 
 /* ============ CLUB CLOUD (reali e condivisi) ============ */
 let myClubs=[],clubsLoaded=false,clubSel=null,myRoles={},noteAuthors={},cloudNotes=[],myMeetings=[];
-function clubCode(id){return Number(id).toString(36).toUpperCase()}
+const CLUB_CODE_KEY=58291;
+function clubCode(id){return (Number(id)^CLUB_CODE_KEY).toString(36).toUpperCase()}                 // id -> codice alfanumerico (es. "18Z3")
+function clubCodeToId(code){const n=parseInt((code||'').trim().toLowerCase().replace(/[^0-9a-z]/g,''),36);return n>0?(n^CLUB_CODE_KEY):0}
 function copyCode(code,btn){try{navigator.clipboard.writeText(code)}catch(e){}if(btn){btn.textContent='Copiato!';setTimeout(()=>btn.textContent='Copia',1500)}}
 async function cloudLoadClubs(){
  const {data:mem}=await supa.from('club_members').select('club_id,role').eq('user_id',authUser.id);
@@ -1619,14 +1630,24 @@ function renderClubCloud(){
      <div style="flex:1;min-width:220px">
        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">✉️ Invita al club</div>
        <button class="btn gold sm" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
-       <div class="muted" style="font-size:12px;margin-top:8px">oppure codice: <b style="letter-spacing:2px;color:var(--plum)">${clubCode(c.id)}</b></div>
-       <div class="muted" style="font-size:11.5px;margin-top:6px">Chi apre il link entra nel club (registrandosi se serve).</div>
+       <div style="display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap">
+         <span class="muted" style="font-size:12px">oppure codice</span>
+         <code class="codechip" onclick="copyCode('${clubCode(c.id)}',this)" title="Tocca per copiare">${clubCode(c.id)}</code>
+       </div>
+       <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.55">Con il <b>link</b> si entra subito. Con il <b>codice</b>, l'altra persona va su <b>Club del libro → "Crea o unisciti" → "Unisciti con un codice"</b> e lo incolla.</div>
      </div>
    </div>
    <hr>
    <h3 style="font-size:16px;margin-bottom:6px">👥 Membri</h3>
    <div id="clubMembers"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
    ${c.current_title?`<hr><button class="btn" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
+   <hr>
+   ${c.owner===authUser.id
+     ? `<details class="club-set"><summary>⚙️ Impostazioni club</summary>
+          <div class="muted" style="font-size:12.5px;margin:12px 0 14px;line-height:1.55">Solo l'amministratore può eliminare il club. L'azione è <b>definitiva</b>: rimuove anche membri, proposte, incontri e note collegate.</div>
+          <button class="btn danger sm" onclick="deleteClub(${c.id})">🗑 Elimina club</button>
+        </details>`
+     : `<button class="btn ghost sm" onclick="leaveClub(${c.id})">🚪 Esci dal club</button>`}
   </div>`;
  loadMembers(c.id).then(list=>{
    const mEl=$('#clubMembers');
@@ -1649,7 +1670,7 @@ function openClubModal(){
     <button class="btn" onclick="createClub()">Crea club</button>
     <hr>
     <h3 style="font-size:16px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
-    <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 1F)" autocapitalize="off"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
+    <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
     <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
  openOverlay();
@@ -1664,7 +1685,7 @@ async function createClub(){
  clubsLoaded=false;clubSel=data.id;closeModal();go('club');
 }
 async function joinClub(){
- const code=($('#joinCode').value||'').trim();const id=parseInt(code,36);
+ const code=($('#joinCode').value||'').trim();const id=clubCodeToId(code);
  if(!code||!id)return clubMsg('Codice non valido.');
  const {data:cl}=await supa.from('clubs').select('id,name').eq('id',id).maybeSingle();
  if(!cl)return clubMsg('Nessun club trovato con questo codice.');
@@ -1789,12 +1810,28 @@ async function closeVoting(clubId){
 function inviteLink(id){const base=location.href.split('#')[0].split('?')[0];return base+'?club='+clubCode(id)}
 function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.textContent;btn.textContent='✓ Link copiato!';setTimeout(()=>btn.textContent=t,1700)}}
 async function joinByCode(code){
- const id=parseInt(code,36);if(!id)return false;
+ const id=clubCodeToId(code);if(!id)return false;
  try{const {data:cl}=await supa.from('clubs').select('id').eq('id',id).maybeSingle();
    if(!cl)return false;
    await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
    clubSel=id;clubsLoaded=false;return true;
  }catch(e){return false}
+}
+async function deleteClub(id){
+ const c=myClubs.find(x=>x.id===id);
+ if(!c||c.owner!==authUser.id){alert('Solo l\'amministratore può eliminare il club.');return}
+ if(!confirm('Eliminare definitivamente il club "'+c.name+'"?\nVerranno rimossi membri, proposte, incontri e note collegate. Operazione non reversibile.'))return;
+ const del=async t=>{try{await supa.from(t).delete().eq('club_id',id)}catch(e){}};
+ await del('proposals');await del('meetings');await del('notes');await del('club_members');
+ const {error}=await supa.from('clubs').delete().eq('id',id);
+ if(error){alert('Non riesco a eliminare il club: '+error.message);return}
+ clubsLoaded=false;clubSel=null;go('club');
+}
+async function leaveClub(id){
+ const c=myClubs.find(x=>x.id===id);
+ if(!confirm('Vuoi uscire dal club'+(c?' "'+c.name+'"':'')+'?'))return;
+ try{await supa.from('club_members').delete().eq('club_id',id).eq('user_id',authUser.id)}catch(e){alert('Errore: '+e.message);return}
+ clubsLoaded=false;clubSel=null;go('club');
 }
 async function handlePendingJoin(){
  if(!pendingJoin)return false;const code=pendingJoin;pendingJoin=null;
