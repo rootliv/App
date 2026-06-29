@@ -1173,12 +1173,12 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: trama-fix-v4 (Google Books key)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: trama-fix-v5 (Google Books key attiva)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
    localStorage.setItem('gbkey','LA_TUA_CHIAVE') e ricarica.                       */
-let GB_KEY='';
+let GB_KEY='AIzaSyD8nDA3GWeUMOOOhB2NKeHRmh3SK30aR0Q';
 try{const k=(localStorage.getItem('gbkey')||'').trim();if(k)GB_KEY=k;}catch(e){}
 function gbKey(){return GB_KEY?('&key='+encodeURIComponent(GB_KEY)):''}
 function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
