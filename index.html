@@ -70,6 +70,8 @@ body{font-family:'Inter',sans-serif;color:var(--ink);-webkit-font-smoothing:anti
 h1,h2,h3,h4,.serif{font-family:'Fraunces',serif;letter-spacing:-.01em}
 a{color:inherit}
 ::selection{background:var(--coral-soft)}
+input,textarea,select{color:var(--ink)}
+input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .app{display:flex;min-height:100vh}
 
 /* ===== SIDEBAR ===== */
@@ -1086,21 +1088,11 @@ function openBook(id){
       ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn" onclick="saveBookNote(${b.id},this)">💾 Salva</button>
-      <button class="btn ghost" onclick="refreshCover(${b.id},this)">🔄 Aggiorna copertina (IT)</button>
+      <button class="btn" onclick="saveBookNote(${b.id},this)">💾 Salva nota</button>
       <button class="btn ghost" onclick="removeBook(${b.id})">🗑 Rimuovi</button>
     </div>
   </div>`;
  openOverlay();
-}
-async function refreshCover(id,btn){
- const b=book(id);if(btn){btn.textContent='⏳ Cerco…';btn.disabled=true}
- let img='';
- try{const g=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,true);img=g[0]&&g[0].coverUrl}catch(e){}
- if(!img){try{const g2=await fromGoogle('intitle:'+b.t+' inauthor:'+b.a,false);img=g2[0]&&g2[0].coverUrl}catch(e){}}
- if(!img){try{const o=await fromOpenLib(b.t+' '+b.a);img=o[0]&&o[0].coverUrl}catch(e){}}
- if(img){b.coverUrl=img;persistBook(id,{cover_url:img});openBook(id)}
- else if(btn){btn.textContent='Nessuna copertina trovata';setTimeout(()=>{btn.textContent='🔄 Aggiorna copertina (IT)';btn.disabled=false},1800)}
 }
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
@@ -1137,14 +1129,14 @@ let searchTimer=null;
 function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
 function httpsImg(u){return(u||'').replace(/^http:\/\//,'https://')}
 async function fromGoogle(q,itOnly){
- const lang=itOnly?'&langRestrict=it':'';
- const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&maxResults=12&country=IT'+lang);
+ const extra=itOnly?'&langRestrict=it&maxResults=20':'&maxResults=12';
+ const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&country=IT'+extra);
  if(!r.ok)throw new Error('google');
  const d=await r.json();
  return(d.items||[]).map(it=>{const v=it.volumeInfo||{};
    return{t:v.title||'Senza titolo',a:(v.authors&&v.authors.join(', '))||'Autore sconosciuto',
      year:(v.publishedDate||'').slice(0,4),trama:stripHtml(v.description)||'Trama non disponibile.',
-     pg:v.pageCount||0,g:(v.categories&&v.categories[0])||'Narrativa',
+     pg:v.pageCount||0,g:(v.categories&&v.categories[0])||'Narrativa',lang:v.language||'',
      coverUrl:httpsImg(v.imageLinks&&(v.imageLinks.thumbnail||v.imageLinks.smallThumbnail))};
  });
 }
@@ -1164,11 +1156,16 @@ function liveSearch(q){
  if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere per vedere i suggerimenti…</div>';return}
  searchTimer=setTimeout(()=>searchBooks(q),350);
 }
-async function doSearch(q){let res=[];
+async function doSearch(q){
+ let res=[];
  try{res=await fromGoogle(q,true)}catch(e){}
- if(!res.length){try{res=await fromGoogle(q,false)}catch(e){}}
- if(!res.length){try{res=await fromOpenLib(q)}catch(e){}}
- return res;
+ let it=res.filter(b=>b.lang==='it');
+ if(it.length)return it;
+ try{res=await fromGoogle(q,false)}catch(e){}
+ it=res.filter(b=>b.lang==='it');
+ if(it.length)return it.concat(res.filter(b=>b.lang!=='it'));
+ if(res.length)return res;
+ try{return await fromOpenLib(q)}catch(e){return []}
 }
 function renderResults(btnFor){
  const box=$('#searchResults');if(!box)return;
