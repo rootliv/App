@@ -220,6 +220,11 @@ input[type=range]{accent-color:var(--coral)}
 .kv{font-size:14px;line-height:1.75}
 .kv b{color:var(--plum)}
 .quote{border-left:3px solid var(--coral);padding:10px 16px;font-family:'Fraunces';font-style:italic;font-size:15px;color:var(--ink);background:var(--quote-bg);border-radius:0 12px 12px 0;margin:12px 0}
+.usernote{font-family:'Fraunces',serif;font-style:italic;font-size:15.5px;line-height:1.6;color:var(--ink);background:var(--surface2);border-left:3px solid var(--coral);border-radius:0 10px 10px 0;padding:12px 16px;white-space:pre-wrap}
+.btn.danger{background:transparent;color:#c0392b;border:1.5px solid var(--line);box-shadow:none}
+.btn.danger:hover{background:#fceae8;border-color:#e3a8a3;transform:none;box-shadow:none}
+[data-theme="dark"] .btn.danger{color:#f0928a}
+[data-theme="dark"] .btn.danger:hover{background:#3a201d;border-color:#5a2a26}
 .field{margin-bottom:15px}
 .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px}
 .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);transition:.15s}
@@ -1077,25 +1082,33 @@ function openBook(id){
     </div>
   </div>
   <div class="modal-body">
-    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${b.trama||'Trama non disponibile.'}</p>
+    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${(b.trama&&!/non disponibile/i.test(b.trama))?b.trama:'<span class="muted">Trama non ancora disponibile.</span>'}</p>
     ${b.set&&b.set.length?`<p class="kv"><b>Ambientazione.</b> ${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')} 🗺️</p>`:''}
     ${b.cur?`<p class="kv"><b>Curiosità.</b> ${b.cur}</p>`:''}
     ${b.quote?`<div class="quote">${b.quote}</div>`:''}
-    <div class="field" style="margin-top:18px"><label>📝 Le tue note personali</label>
-      ${(b.note && !noteEditing)
-        ? `<div class="note" style="margin:0;white-space:pre-wrap">${esc(b.note)}</div><button class="btn ghost sm" style="margin-top:10px" onclick="editNote(${b.id})">✏️ Modifica nota</button>`
-        : `<textarea id="bookNote" rows="3" placeholder="Scrivi qui pensieri, evidenziazioni, citazioni…">${esc(b.note||'')}</textarea><button class="btn sm" style="margin-top:10px" onclick="saveBookNote(${b.id})">💾 Salva nota</button>`}
+    <hr>
+    <div class="field" style="margin:0"><label>📝 Le tue note personali</label>
+      ${noteEditing
+        ? `<textarea id="bookNote" rows="4" placeholder="Scrivi qui un pensiero, una citazione, una riflessione…">${esc(b.note||'')}</textarea>
+           <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" onclick="saveBookNote(${b.id})">💾 Salva nota</button><button class="btn ghost sm" onclick="cancelNote(${b.id})">Annulla</button></div>`
+        : (b.note
+           ? `<div class="usernote">“${esc(b.note)}”</div><button class="btn ghost sm" style="margin-top:10px" onclick="editNote(${b.id})">✏️ Modifica nota</button>`
+           : `<div class="muted" style="font-size:13.5px;padding:2px 0 4px">Non hai ancora scritto note per questo libro.</div><button class="btn ghost sm" onclick="editNote(${b.id})">＋ Aggiungi nota</button>`)}
     </div>
-    <div class="field"><label>⭐ La tua valutazione</label><div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
-      ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Rimetti tra "da leggere"</button>`:''}
-      ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
+    <div class="field" style="margin-top:18px"><label>⭐ La tua valutazione</label><div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div></div>
+    <hr>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
+        ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Da leggere</button>`:''}
+        ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
+      </div>
+      <button class="btn danger sm" onclick="removeBook(${b.id})">🗑 Rimuovi</button>
     </div>
-    <button class="btn ghost" onclick="removeBook(${b.id})">🗑 Rimuovi dalla libreria</button>
-    <div class="muted" style="font-size:11.5px;margin-top:10px">Valutazione e stato si salvano automaticamente. La nota si salva con il pulsante.</div>
+    <div class="muted" style="font-size:11.5px;margin-top:12px">Valutazione e stato si salvano automaticamente.</div>
   </div>`;
  openOverlay();
+ enrichBook(b).then(ch=>{if(ch&&!noteEditing&&$('#overlay').classList.contains('open'))openBook(id)});
 }
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
@@ -1106,6 +1119,24 @@ function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars'
 let noteEditing=false,noteBookId=null;
 function saveBookNote(id){const b=book(id);const ta=$('#bookNote');if(ta)b.note=(ta.value||'').trim();persistBook(id,{note:b.note||''});noteEditing=false;openBook(id)}
 function editNote(id){noteEditing=true;openBook(id)}
+function cancelNote(id){noteEditing=false;openBook(id)}
+async function enrichBook(b){
+ if(b.enriched)return false;b.enriched=true;
+ if(b.set&&b.set.length)return false; // libri d'esempio già curati
+ const q=(b.t||'')+' '+(b.a||'');
+ let res=[];
+ try{const a=await fromGoogle(q,true);const c=await fromGoogle(q,false);res=a.concat(c)}catch(e){}
+ if(!res.length)return false;
+ const itItem=res.find(x=>x.lang==='it');
+ const tramaCand=(itItem&&itItem.trama&&!/non disponibile/i.test(itItem.trama))?itItem.trama
+   :((res.find(x=>x.trama&&!/non disponibile/i.test(x.trama))||{}).trama);
+ let changed=false;
+ if(itItem&&itItem.t&&itItem.t!==b.t){b.t=itItem.t;changed=true;}
+ if((!b.trama||/non disponibile/i.test(b.trama))&&tramaCand){b.trama=tramaCand;changed=true;}
+ if(!b.coverUrl){const cv=(itItem&&itItem.coverUrl)||((res.find(x=>x.coverUrl)||{}).coverUrl);if(cv){b.coverUrl=cv;changed=true;}}
+ if(changed)persistBook(b.id,{title:b.t,plot:b.trama,cover_url:b.coverUrl||null});
+ return changed;
+}
 function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&!b.prog)b.prog=0;persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
 function openAi(id){
  const s=aiSuggest.find(x=>x.id===id);
