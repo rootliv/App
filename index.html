@@ -2156,7 +2156,7 @@ async function aiCuriosity(b){
    if(!data||!data.testo)return null;
    let t=stripHtml(data.testo);
    if(!validTrama(t)||SPOILER_RE.test(t))return null;                  // doppio controllo anti-spoiler lato client
-   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,'AI + ricerca web');
+   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,data.web===false?'AI':'AI + ricerca web');
  }catch(e){return null}
 }
 async function buildCuriosity(b,seed){

@@ -43,19 +43,19 @@ Regole tassative:
 Rispondi SOLO con un oggetto JSON valido, senza testo extra:
 {"categoria":"<una delle categorie>","testo":"<la curiosità>"}`;
 
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          tools: [{ google_search: {} }], // grounding: AI con accesso al web
-          generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
-        }),
-      },
-    );
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+    const base = {
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
+    };
+    const call = (body: unknown) =>
+      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
+    // 1) prova con accesso al web (Google Search grounding)
+    let usedWeb = true;
+    let r = await call({ ...base, tools: [{ google_search: {} }] });
+    // 2) se il grounding non è disponibile sul progetto, riprova senza
+    if (!r.ok) { usedWeb = false; r = await call(base); }
     if (!r.ok) return json({ error: "gemini " + r.status, detail: await r.text() }, 502);
     const d = await r.json();
     const raw = (d?.candidates?.[0]?.content?.parts || [])
@@ -67,7 +67,7 @@ Rispondi SOLO con un oggetto JSON valido, senza testo extra:
     if (!out.testo) out = { categoria: "Curiosità", testo: raw.replace(/```json|```/g, "").trim() };
 
     if (!out.testo) return json({ error: "vuota" }, 502);
-    return json({ categoria: out.categoria || "Curiosità", testo: out.testo });
+    return json({ categoria: out.categoria || "Curiosità", testo: out.testo, web: usedWeb });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
