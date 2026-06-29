@@ -1224,17 +1224,24 @@ async function fromOpenLib(q){
 // Trama in ITALIANO da Wikipedia (CORS abilitato con origin=*, nessuna quota: funziona anche da file://)
 async function wikiDescIt(target){
  try{
-   const q=((target.t||'')+' '+(target.a||'')).trim();
-   const s=await fetch('https://it.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=3&srsearch='+encodeURIComponent(q));
+   const author=target.a||'',aKey=normKey(author),aSurname=(author.trim().split(/\s+/).pop()||'').toLowerCase();
+   const q=('"'+(target.t||'')+'" '+author).trim();
+   const s=await fetch('https://it.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=6&srsearch='+encodeURIComponent(q));
    if(!s.ok)return''; const sd=await s.json();
-   const hits=(sd.query&&sd.query.search)||[]; if(!hits.length)return'';
-   // preferisci una pagina che somigli al titolo del libro
-   let pick=hits.find(h=>simRatio(h.title,target.t||'')>=0.5)||hits[0];
-   const ex=await fetch('https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles='+encodeURIComponent(pick.title));
-   if(!ex.ok)return''; const ed=await ex.json();
-   const pages=(ed.query&&ed.query.pages)||{}; const p=Object.values(pages)[0];
-   let t=(p&&p.extract)||''; t=stripHtml(t).split('\n').filter(x=>x.trim()).slice(0,3).join(' ');
-   return validTrama(t)?t.slice(0,1500):'';
+   // scarta la pagina dell'autore (es. "Carlos Ruiz Zafón")
+   const hits=((sd.query&&sd.query.search)||[]).filter(h=>normKey(h.title)!==aKey);
+   if(!hits.length)return'';
+   for(const h of hits.slice(0,5)){
+     const ex=await fetch('https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles='+encodeURIComponent(h.title));
+     if(!ex.ok)continue; const ed=await ex.json();
+     const p=Object.values((ed.query&&ed.query.pages)||{})[0];
+     let t=stripHtml((p&&p.extract)||''); if(!validTrama(t))continue;
+     // biografia di persona: "Nome (… anno …) è stato/è stata/fu …"
+     const looksBio=/^[^()]{0,70}\([^)]*\b(1[5-9]\d\d|20\d\d)\b[^)]*\)\s*(è (stato|stata)|fu)\b/i.test(t);
+     const looksBook=/\b(romanzo|libro|saga|racconto|opera|narrativa|pubblicat|raccolta|saggio|fumetto)\b/i.test(t)||simRatio(h.title,target.t||'')>=0.5||(aSurname&&aSurname.length>2&&t.toLowerCase().includes(aSurname));
+     if(looksBook&&!looksBio){return t.split('\n').filter(x=>x.trim()).slice(0,3).join(' ').slice(0,1500);}
+   }
+   return '';
  }catch(e){return''}
 }
 // Trama da Open Library (fallback affidabile quando Google non risponde o è limitato)
@@ -1297,8 +1304,9 @@ async function normalizeBook(target){
 
  const isbn=(it.find(c=>c.isbn&&c.isbn[0])||{}).isbn?.[0]||(pool.find(c=>c.isbn&&c.isbn[0])||{}).isbn?.[0]||cleanIsbn(target.isbn)||'';
 
- // TITOLO: italiano prioritario, originale solo come riferimento
+ // TITOLO/AUTORE: italiano prioritario, originale solo come riferimento
  const title=(bestIt&&bestIt.t)||(best&&best.t)||target.t;
+ const author=(bestIt&&bestIt.a)||(best&&best.a)||target.a||'';
  let originalTitle=target.originalTitle||'';
  const nonIt=pool.find(c=>c.lang&&c.lang!==APP_LANG&&normKey(c.t)!==normKey(title));
  if(!originalTitle&&bestIt&&nonIt)originalTitle=nonIt.t;
@@ -1320,8 +1328,7 @@ async function normalizeBook(target){
  coverUrl=coverUrl||target.coverUrl||'';
 
  return{
-   title,originalTitle,
-   author:(bestIt&&bestIt.a)||(best&&best.a)||target.a,
+   title,originalTitle,author,
    description,descLang,
    coverUrl,coverIsItalian,
    language:bestIt?'it':((best&&best.lang)||target.language||''),
