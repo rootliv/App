@@ -51,12 +51,13 @@ Rispondi SOLO con un oggetto JSON valido, senza testo extra:
     const call = (body: unknown) =>
       fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
 
-    // 1) prova con accesso al web (Google Search grounding)
-    let usedWeb = true;
-    let r = await call({ ...base, tools: [{ google_search: {} }] });
-    // 2) la ricerca web (grounding) sul piano gratuito spesso dà 429/400/403:
-    //    in tal caso riprova SENZA web, così l'AI funziona comunque
-    if (!r.ok && (r.status === 400 || r.status === 403 || r.status === 429)) {
+    // USE_WEB=false → AI senza web (gratis, veloce). Metti true solo se attivi la
+    // fatturazione su Google AI Studio: allora userà la ricerca web (Google Search grounding).
+    const USE_WEB = false;
+    let usedWeb = USE_WEB;
+    let r = USE_WEB ? await call({ ...base, tools: [{ google_search: {} }] }) : await call(base);
+    // se il web grounding fallisce (tipico sul piano gratuito: 429/400/403), riprova senza web
+    if (USE_WEB && !r.ok && (r.status === 400 || r.status === 403 || r.status === 429)) {
       usedWeb = false;
       r = await call(base);
     }
