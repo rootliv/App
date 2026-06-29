@@ -1122,10 +1122,11 @@ function saveBookNote(id){const b=book(id);const ta=$('#bookNote');if(ta)b.note=
 function editNote(id){noteEditing=true;openBook(id)}
 function cancelNote(id){noteEditing=false;openBook(id)}
 async function enrichBook(b){
- if(b.enriched)return false;b.enriched=true;
- if(b.set&&b.set.length)return false; // libri d'esempio già curati
- let n;try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}catch(e){return false}
- if(!n)return false;
+ if(b.enriched)return false;
+ if(b.set&&b.set.length){b.enriched=true;return false;} // libri d'esempio già curati
+ b._tries=(b._tries||0)+1;
+ let n;try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}catch(e){if(b._tries>=3)b.enriched=true;return false}
+ if(!n){if(b._tries>=3)b.enriched=true;return false}
  let changed=false;
  // TITOLO: preferisci sempre l'edizione italiana (non mostrare l'originale se esiste l'italiano)
  if(n.hasItalian&&n.title&&normKey(n.title)!==normKey(b.t)){
@@ -1139,6 +1140,8 @@ async function enrichBook(b){
  if(n.coverUrl&&n.coverUrl!==b.coverUrl&&(!b.coverUrl||n.coverIsItalian)){b.coverUrl=n.coverUrl;changed=true;}
  if(n.pages&&!b.pg){b.pg=n.pages;changed=true;}
  if(n.isbn&&!b.isbn)b.isbn=n.isbn; // in memoria (vedi nota: aggiungere colonna isbn per persistere)
+ // smetti di riprovare se abbiamo i dati utili, oppure dopo 3 tentativi (transitori di rete/limit)
+ if((validTrama(b.trama)&&!!b.coverUrl)||b._tries>=3)b.enriched=true;
  if(changed)persistBook(b.id,{title:b.t,plot:b.trama,cover_url:b.coverUrl||null,pages:b.pg||null});
  return changed;
 }
@@ -1204,15 +1207,28 @@ async function fetchVolume(id){try{const r=await fetch('https://www.googleapis.c
 async function fetchDescription(id){const v=await fetchVolume(id);return v?v.trama:''}
 async function googleByIsbn(isbn){try{return await fromGoogle('isbn:'+cleanIsbn(isbn),false)}catch(e){return[]}}
 async function fromOpenLib(q){
- const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=12&fields=title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,language,isbn');
+ const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=12&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,language,isbn');
  if(!r.ok)throw new Error('openlib');
  const d=await r.json();
- return(d.docs||[]).map(x=>({t:x.title||'Senza titolo',a:(x.author_name&&x.author_name.join(', '))||'Autore sconosciuto',authors:x.author_name||[],
+ return(d.docs||[]).map(x=>({id:x.key||'',workKey:x.key||'',t:x.title||'Senza titolo',a:(x.author_name&&x.author_name.join(', '))||'Autore sconosciuto',authors:x.author_name||[],
    year:x.first_publish_year||'',trama:'',
    pg:x.number_of_pages_median||0,g:(x.subject&&x.subject[0])||'Narrativa',categories:x.subject||[],
    lang:(x.language&&(x.language.includes('ita')?'it':langCode(x.language[0])))||'',
    isbn:(x.isbn||[]).slice(0,6).map(cleanIsbn),
    coverUrl:x.cover_i?`https://covers.openlibrary.org/b/id/${x.cover_i}-L.jpg`:'',source:'openlibrary'}));
+}
+// Trama da Open Library (fallback affidabile quando Google non risponde o è limitato)
+async function openLibDesc(target){
+ try{
+   let docs=[];
+   try{const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(((target.t||'')+' '+(target.a||'')).trim())+'&limit=4&fields=key,language');if(r.ok){const d=await r.json();docs=d.docs||[]}}catch(e){}
+   for(const doc of docs){if(!doc.key)continue;
+     try{const wr=await fetch('https://openlibrary.org'+doc.key+'.json');if(!wr.ok)continue;const w=await wr.json();
+       let desc=w.description;if(desc&&desc.value)desc=desc.value;
+       if(validTrama(desc))return stripHtml(desc);}catch(e){}
+   }
+ }catch(e){}
+ return '';
 }
 
 /* ===== MATCHING: punteggio invece di "primo risultato" ===== */
@@ -1233,18 +1249,20 @@ function scoreCandidate(c,target){
 }
 
 /* ===== RECUPERO MULTI-FONTE / MULTI-TENTATIVO ===== */
+// Sequenziale con uscita anticipata: limita le chiamate (evita il rate-limit di Google)
 async function gatherCandidates(target){
  const out=[],seen=new Set();
  const push=arr=>{(arr||[]).forEach(c=>{const k=(c.id||'')+'|'+normKey(c.t)+'|'+normKey(c.a);if(!seen.has(k)){seen.add(k);out.push(c)}})};
  const title=target.t||'',author=target.a||'',orig=target.originalTitle||'';
- const tries=[];
- if(target.isbn)tries.push(googleByIsbn(target.isbn));                                              // 1. ISBN
- tries.push(fromGoogle('intitle:'+title+(author?' inauthor:'+author:''),true).catch(()=>[]));      // 2. titolo+autore in italiano
- if(orig&&orig!==title)tries.push(fromGoogle('intitle:'+orig+(author?' inauthor:'+author:''),true).catch(()=>[])); // 3. titolo originale+autore in italiano
- tries.push(fromGoogle('intitle:'+title+(author?' inauthor:'+author:''),false).catch(()=>[]));     // 4. titolo+autore senza restrizione
- tries.push(fromGoogle(((title||orig)+' '+author).trim(),true).catch(()=>[]));                     // 5. ricerca generica italiana
- (await Promise.all(tries)).forEach(push);
- try{push(await fromOpenLib(((title||orig)+' '+author).trim()))}catch(e){}                          // 6. fonte aggiuntiva (Open Library)
+ const goodIt=()=>out.some(c=>c.lang===APP_LANG&&validTrama(c.trama));   // edizione it con trama
+ const haveIt=()=>out.some(c=>c.lang===APP_LANG);                        // almeno un'edizione it
+ const step=async p=>{try{push(await p)}catch(e){}};
+ if(target.isbn)await step(googleByIsbn(target.isbn));                                               // 1. ISBN
+ await step(fromGoogle('intitle:'+title+(author?' inauthor:'+author:''),true));                     // 2. titolo+autore in italiano
+ if(!goodIt()&&orig&&orig!==title)await step(fromGoogle('intitle:'+orig+(author?' inauthor:'+author:''),true)); // 3. titolo originale in italiano
+ if(!goodIt())await step(fromGoogle('intitle:'+title+(author?' inauthor:'+author:''),false));       // 4. senza restrizione (per la trama)
+ if(!out.length)await step(fromGoogle(((title||orig)+' '+author).trim(),true));                     // 5. ricerca generica italiana
+ if(!haveIt()||!out.length)await step(fromOpenLib(((title||orig)+' '+author).trim()));              // 6. Open Library
  return out;
 }
 
@@ -1271,7 +1289,8 @@ async function normalizeBook(target){
  if(itTrama){description=itTrama.trama;descLang='it';}
  if(!description)for(const c of it.slice(0,4)){if(!c.id)continue;const v=await fetchVolume(c.id);if(v&&validTrama(v.trama)){description=v.trama;descLang='it';break;}}
  if(!description){const any=pool.find(c=>validTrama(c.trama));if(any){description=any.trama;descLang=any.lang||'';}}
- if(!description)for(const c of pool.slice(0,5)){if(!c.id)continue;const v=await fetchVolume(c.id);if(v&&validTrama(v.trama)){description=v.trama;descLang=v.lang||'';break;}}
+ if(!description)for(const c of pool.slice(0,5)){if(!c.id||/^\/works\//.test(c.id))continue;const v=await fetchVolume(c.id);if(v&&validTrama(v.trama)){description=v.trama;descLang=v.lang||'';break;}}
+ if(!description){const od=await openLibDesc({t:title,a:author});if(validTrama(od)){description=od;descLang='ol';}} // fallback Open Library
 
  // COPERTINA: italiana prioritaria → affidabile → originale → per ISBN → placeholder
  let coverUrl=(it.find(c=>c.coverUrl)||{}).coverUrl||(pool.find(c=>c.coverUrl)||{}).coverUrl||'';
@@ -1368,18 +1387,18 @@ function openAddBook(){
 async function enrichCovers(){
  const todo=books.filter(b=>!b.coverUrl);
  if(!todo.length)return;
- await Promise.all(todo.map(async b=>{
-   try{
-     const target={t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn};
-     const cands=await gatherCandidates(target);
-     const ranked=cands.map(c=>({c,s:scoreCandidate(c,target)})).sort((a,b)=>b.s-a.s);
-     const pool=ranked.filter(x=>x.s>=20).map(x=>x.c);const use=pool.length?pool:cands;
-     // copertina italiana prioritaria, poi qualunque affidabile, poi per ISBN
-     let img=(use.find(c=>c.lang===APP_LANG&&c.coverUrl)||{}).coverUrl||(use.find(c=>c.coverUrl)||{}).coverUrl||'';
-     if(!img){const wi=use.find(c=>c.isbn&&c.isbn[0]);if(wi)img=openLibCoverByIsbn(wi.isbn[0])}
-     if(img){b.coverUrl=img;if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:img}).eq('id',b.id)}catch(e){}}}
-   }catch(e){}
- }));
+ // poche chiamate per libro + concorrenza limitata: NON tempestare l'API (evita il rate-limit)
+ let idx=0;
+ async function oneCover(b){
+   let cands=[];
+   try{cands=await fromGoogle('intitle:'+b.t+(b.a?' inauthor:'+b.a:''),true)}catch(e){}                 // 1. edizione italiana
+   if(!cands.some(c=>c.coverUrl)){try{cands=cands.concat(await fromOpenLib((b.t+' '+b.a).trim()))}catch(e){}} // 2. Open Library
+   let img=(cands.find(c=>c.lang===APP_LANG&&c.coverUrl)||{}).coverUrl||(cands.find(c=>c.coverUrl)||{}).coverUrl||'';
+   if(!img){const wi=cands.find(c=>c.isbn&&c.isbn[0]);if(wi)img=openLibCoverByIsbn(wi.isbn[0])}
+   if(img){b.coverUrl=img;if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:img}).eq('id',b.id)}catch(e){}}}
+ }
+ async function worker(){while(idx<todo.length){const b=todo[idx++];try{await oneCover(b)}catch(e){}}}
+ await Promise.all([worker(),worker()]); // max 2 in parallelo
  if(mode==='demo')save();if(renders[current])renders[current]();
 }
 
