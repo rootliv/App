@@ -1173,7 +1173,14 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: trama-fix-v3','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: trama-fix-v4 (Google Books key)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+/* ===== CHIAVE API GOOGLE BOOKS =====
+   Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
+   In alternativa, per provarla SENZA pubblicare: apri la Console e digita
+   localStorage.setItem('gbkey','LA_TUA_CHIAVE') e ricarica.                       */
+let GB_KEY='';
+try{const k=(localStorage.getItem('gbkey')||'').trim();if(k)GB_KEY=k;}catch(e){}
+function gbKey(){return GB_KEY?('&key='+encodeURIComponent(GB_KEY)):''}
 function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
 function httpsImg(u){return(u||'').replace(/^http:\/\//,'https://')}
 function validTrama(t){return!!t&&t.trim().length>5&&!/non disponibile/i.test(t)}
@@ -1194,7 +1201,7 @@ function openLibCoverByIsbn(isbn){isbn=cleanIsbn(isbn);return isbn?`https://cove
 async function fromGoogle(q,itOnly){
  if(GBLOCK)throw new Error('gb-quota');               // quota Google esaurita: non insistere
  const extra=itOnly?'&langRestrict=it&maxResults=20':'&maxResults=20';
- const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&country=IT'+extra);
+ const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&country=IT'+extra+gbKey());
  if(r.status===429||r.status===403){GBLOCK=true;throw new Error('gb-quota');}
  if(!r.ok)throw new Error('google');
  const d=await r.json();
@@ -1207,7 +1214,7 @@ async function fromGoogle(q,itOnly){
      source:'google'+(itOnly?':it':'')};
  });
 }
-async function fetchVolume(id){if(GBLOCK||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT');if(r.status===429||r.status===403){GBLOCK=true;return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
+async function fetchVolume(id){if(GBLOCK||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){GBLOCK=true;return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
   return{trama:stripHtml(v.description),lang:langCode(v.language),coverUrl:httpsImg(im.large||im.medium||im.thumbnail||im.smallThumbnail||''),isbn:(v.industryIdentifiers||[]).map(x=>cleanIsbn(x.identifier)).filter(Boolean)}}catch(e){return null}}
 async function fetchDescription(id){const v=await fetchVolume(id);return v?v.trama:''}
 async function googleByIsbn(isbn){try{return await fromGoogle('isbn:'+cleanIsbn(isbn),false)}catch(e){return[]}}
