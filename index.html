@@ -1128,12 +1128,17 @@ async function enrichBook(b){
  try{const a=await fromGoogle(q,true);const c=await fromGoogle(q,false);res=a.concat(c)}catch(e){}
  if(!res.length)return false;
  const itItem=res.find(x=>x.lang==='it');
- const tramaCand=(itItem&&itItem.trama&&!/non disponibile/i.test(itItem.trama))?itItem.trama
-   :((res.find(x=>x.trama&&!/non disponibile/i.test(x.trama))||{}).trama);
  let changed=false;
  if(itItem&&itItem.t&&itItem.t!==b.t){b.t=itItem.t;changed=true;}
- if((!b.trama||/non disponibile/i.test(b.trama))&&tramaCand){b.trama=tramaCand;changed=true;}
  if(!b.coverUrl){const cv=(itItem&&itItem.coverUrl)||((res.find(x=>x.coverUrl)||{}).coverUrl);if(cv){b.coverUrl=cv;changed=true;}}
+ // trama: prima dalla lista, poi dalla scheda completa del volume (italiano prima)
+ let trama=(itItem&&validTrama(itItem.trama))?itItem.trama:'';
+ if(!trama){const fl=res.find(x=>validTrama(x.trama));if(fl)trama=fl.trama;}
+ if(!trama){
+   const ids=[];if(itItem&&itItem.id)ids.push(itItem.id);res.forEach(x=>{if(x.id&&!ids.includes(x.id))ids.push(x.id)});
+   for(const id of ids.slice(0,5)){const d=await fetchDescription(id);if(validTrama(d)){trama=d;break;}}
+ }
+ if(trama&&!validTrama(b.trama)){b.trama=trama;changed=true;}
  if(changed)persistBook(b.id,{title:b.t,plot:b.trama,cover_url:b.coverUrl||null});
  return changed;
 }
@@ -1170,12 +1175,14 @@ async function fromGoogle(q,itOnly){
  if(!r.ok)throw new Error('google');
  const d=await r.json();
  return(d.items||[]).map(it=>{const v=it.volumeInfo||{};
-   return{t:v.title||'Senza titolo',a:(v.authors&&v.authors.join(', '))||'Autore sconosciuto',
+   return{id:it.id,t:v.title||'Senza titolo',a:(v.authors&&v.authors.join(', '))||'Autore sconosciuto',
      year:(v.publishedDate||'').slice(0,4),trama:stripHtml(v.description)||'Trama non disponibile.',
      pg:v.pageCount||0,g:(v.categories&&v.categories[0])||'Narrativa',lang:v.language||'',
      coverUrl:httpsImg(v.imageLinks&&(v.imageLinks.thumbnail||v.imageLinks.smallThumbnail))};
  });
 }
+function validTrama(t){return t&&!/non disponibile/i.test(t)}
+async function fetchDescription(id){try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT');if(!r.ok)return'';const d=await r.json();return stripHtml(d.volumeInfo&&d.volumeInfo.description)||''}catch(e){return''}}
 async function fromOpenLib(q){
  const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=12&fields=title,author_name,first_publish_year,cover_i,number_of_pages_median,subject');
  if(!r.ok)throw new Error('openlib');
