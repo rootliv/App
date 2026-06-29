@@ -475,6 +475,24 @@ input[type=range]{accent-color:var(--coral)}
 @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .view>*{animation:viewIn .35s both}
 @media(prefers-reduced-motion:reduce){.view>*{animation:none}}
+
+/* ---- VISTA A SCAFFALE (Libreria) ---- */
+:root{--shelf:#ece2cf;--shelf-edge:#cdba94;--shelf-shadow:rgba(70,48,24,.30)}
+[data-theme="dark"]{--shelf:#2c2720;--shelf-edge:#15110b;--shelf-shadow:rgba(0,0,0,.62)}
+.shelf.case{gap:38px 16px}
+.shelf.case .book{display:flex;flex-direction:column}
+.shelf.case .cover{position:relative;z-index:1}
+/* la mensola su cui poggiano le copertine */
+.shelf.case .ledge{height:13px;margin:0 -8px;border-radius:0 0 2px 2px;position:relative;z-index:0;
+  background:linear-gradient(180deg,var(--shelf) 0 50%,var(--shelf-edge));
+  box-shadow:0 13px 16px -8px var(--shelf-shadow), inset 0 1px 0 rgba(255,255,255,.25)}
+.shelf.case .meta{margin-top:14px}
+/* all'hover il libro si "sfila" dallo scaffale */
+.shelf.case .book:hover .cover{transform:translateY(-11px) scale(1.045) rotate(-.6deg)}
+
+/* conteggi dentro i filtri */
+.tabs .tabn{font-style:normal;font-size:11px;font-weight:700;opacity:.55;margin-left:4px}
+.tabs button.active .tabn{opacity:.95}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -669,6 +687,7 @@ function coverEl(i,t,a,badge,url){return`<div class="cover" style="${coverStyle(
 function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'✓':'🔖';
  return`<div class="book" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
+   <div class="ledge"></div>
    <div class="meta"><b>${b.t}</b><span>${b.a}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}</div>
  </div>`}
 
@@ -810,20 +829,16 @@ renders.profilo=()=>{
 
 let libTab='all';
 renders.libreria=()=>{
- const tabs=[['all','Tutti'],['reading','In lettura'],['toread','Da leggere'],['read','Letti'],['ai','Consigliati AI']];
- const list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
  const nReading=books.filter(b=>b.status==='reading').length;
+ const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
+ const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead],['ai','Consigliati AI',null]];
+ const list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
  view.innerHTML=`
- <div class="lib-hero">
-   <div>
-     <div class="eyebrow">La tua collezione</div>
-     <h1>La mia libreria</h1>
-     <div class="lib-sub"><b>${books.length}</b> ${books.length===1?'volume':'volumi'} · <b>${nReading}</b> in lettura · <b>${nRead}</b> letti</div>
-   </div>
+ <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:2px 0 24px">
+   <div class="tabs">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}${t[2]!=null?` <i class="tabn">${t[2]}</i>`:''}</button>`).join('')}</div>
    <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
- </div>
- <div class="tabs" style="margin-bottom:22px">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}</button>`).join('')}</div>`+`
+ </div>`+`
  ${libTab==='ai'
   ? (mode==='cloud'
      ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Consigli generati dai tuoi gusti (profilo) e dalla tua libreria.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
@@ -832,7 +847,7 @@ renders.libreria=()=>{
        ${coverEl(s.ci,s.t,s.a,'✨')}
        <div class="meta"><b>${s.t}</b><span>${s.a}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
      </div>`).join('')}</div>`)
-  : (list.length?`<div class="shelf">${list.map(b=>bookCard(b)).join('')}</div>`
+  : (list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad" style="text-align:center;padding:48px 20px">
         <div style="font-size:46px">📚</div>
         <h2 style="font-size:21px;margin:10px 0 6px">${libTab==='all'?'La tua libreria è vuota':'Niente qui, per ora'}</h2>
@@ -1262,7 +1277,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v9 (restyling editoriale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v10 (vista a scaffale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
