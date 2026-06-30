@@ -625,6 +625,9 @@ input[type=range]{accent-color:var(--coral)}
   box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .28s;
   display:flex;gap:9px;align-items:center;max-width:86vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.ai-typing i{font-style:normal;animation:blink 1.2s infinite}
+.ai-typing i:nth-child(2){animation-delay:.2s}.ai-typing i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
 
 /* ---- MOBILE: più aria e leggibilità ---- */
 @media(max-width:640px){
@@ -1170,25 +1173,42 @@ const aiAnswers={
  'Citazioni significative':"<div class='quote'>«La memoria è fragile e il corso di una vita è molto breve.»</div><div class='quote'>«Le parole non hanno colore.»</div>",
  'Spunto di riflessione (senza spoiler, sono al cap. 8)':"🔒 <b>Sei al capitolo 8 — niente spoiler.</b><br>Fin qui, nota come la casa di città e la tenuta di campagna rappresentino due mondi opposti. Mentre leggi, chiediti: di chi è davvero la voce che narra? Tieni l'ipotesi a mente per i prossimi capitoli."
 };
-async function aiAsk(q){
- if(!q||!q.trim())return;
- const out=$('#aiOut');const t=$('#aiText');
- const bubble=html=>`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${html}</div></div>`;
- if(aiAnswers[q]){out.innerHTML=bubble(aiAnswers[q]);if(t)t.value='';out.scrollIntoView({behavior:'smooth',block:'nearest'});return;}
- const cleaned=q.replace(/^\s*(trovami|trovam|trova|cercami|cerca|consigliami|consiglia|suggeriscimi|suggerisci|mi consigli[a]?|libri?\s+(su|di|per|come|di tipo)|qualcosa\s+(di|su|per)|voglio leggere|vorrei leggere|voglio|vorrei)\s+/i,'').replace(/[?!.]+$/,'').trim();
- const query=cleaned||q.trim();
- out.innerHTML=bubble('🔎 Cerco «'+esc(query)+'»…');
- if(t)t.value='';
- out.scrollIntoView({behavior:'smooth',block:'nearest'});
+function mdLite(s){s=esc(s||'');
+ s=s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*(.+?)\*(?=[\s).,;:!?]|$)/g,'$1<i>$2</i>');
+ s=s.replace(/^\s*[-*]\s+/gm,'• ').replace(/^\s*\d+\.\s+/gm,m=>m.trim()+' ');
+ return s.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');}
+async function aiSearchCards(query){
  let res=[];try{res=await doSearch(query)}catch(e){}
- if(!res.length){out.innerHTML=bubble('Non ho trovato nulla per «'+esc(query)+'». Prova con un titolo o un autore diverso.');return;}
- searchResults=res;
- const cards=res.slice(0,6).map((s,i)=>`<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">
+ if(!res.length)return '';searchResults=res;
+ return '<div style="margin-top:10px">'+res.slice(0,6).map((s,i)=>`<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">
    ${s.coverUrl?`<img src="${esc(s.coverUrl)}" style="width:40px;height:58px;object-fit:cover;border-radius:5px;flex:none" onerror="this.style.visibility='hidden'">`:`<div style="width:40px;height:58px;border-radius:5px;flex:none;${coverStyle(i)}"></div>`}
    <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(s.t)}</b><div class="muted" style="font-size:12px">${esc(s.a)}${s.year?' · '+s.year:''}</div></div>
    <button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>
- </div>`).join('');
- out.innerHTML=bubble('Ecco cosa ho trovato per «'+esc(query)+'». Tocca <b>Aggiungi</b> per metterlo in libreria:<div style="margin-top:10px">'+cards+'</div>');
+ </div>`).join('')+'</div>';
+}
+async function aiAsk(q){
+ if(!q||!q.trim())return;q=q.trim();
+ const out=$('#aiOut');const t=$('#aiText');
+ const bubble=html=>`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${html}</div></div>`;
+ out.innerHTML=bubble('<span class="ai-typing">Pàgina AI sta scrivendo<i>.</i><i>.</i><i>.</i></span>');
+ if(t)t.value='';out.scrollIntoView({behavior:'smooth',block:'nearest'});
+ const d=(typeof profile!=='undefined'&&profile&&profile.data)||{};
+ const reading=books.find(b=>b.status==='reading');
+ const ctx={reading:reading?{title:reading.t,author:reading.a}:null,genres:d.genres||[],authors:d.authors||[],library:books.slice(0,40).map(b=>b.t)};
+ let answer='';
+ try{
+   if(typeof supa!=='undefined'&&supa){const {data,error}=await supa.functions.invoke('assistente',{body:{message:q,context:ctx}});
+     if(!error&&data&&data.answer)answer=data.answer;}
+ }catch(e){}
+ if(answer){
+   // se la domanda è "trovami/cerca un libro", aggiungo le card per metterlo in libreria
+   let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''));}
+   out.innerHTML=bubble(mdLite(answer)+extra);
+ }else{
+   // fallback: ricerca libri se l'AI non è disponibile
+   const cards=await aiSearchCards(q.replace(/^\s*(trovami|trova|cerca|cercami|consigliami|consiglia|suggeriscimi|suggerisci)\s+/i,''));
+   out.innerHTML=bubble(cards?('L\'AI non è raggiungibile ora, ma ho cercato dei libri per te:'+cards):'Al momento non riesco a rispondere. Riprova tra poco. (Se è la prima volta, va deployata la function "assistente" su Supabase.)');
+ }
  out.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
@@ -1464,7 +1484,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v25 (polish globale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v26 (assistente AI reale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2286,7 +2306,7 @@ function renderAiCloud(){
    <input id="aiText" placeholder="Es. trovami Solaris, consigliami un giallo…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
- <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questa versione le risposte AI sono esempi. Collegando un modello AI vero diventeranno personalizzate sui tuoi libri.</div>`;
+ <div class="muted" style="font-size:11.5px;margin-top:9px">✨ Pàgina AI usa un modello reale (Gemini) con il contesto della tua libreria e dei tuoi gusti. Evita gli spoiler.</div>`;
 }
 async function loadAiRecs(){
  const box=$('#aiRecs');if(!box)return;
