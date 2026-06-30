@@ -745,6 +745,15 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .ts-item b{font-size:13.5px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ts-item small{font-size:11.5px;color:var(--ink-faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ts-empty{padding:15px;color:var(--ink-soft);font-size:13px}
+/* chat assistente */
+.ai-chat{display:flex;flex-direction:column;gap:6px;max-height:52vh;overflow-y:auto;padding:2px}
+.chat-row{display:flex;gap:10px;margin-bottom:8px}
+.chat-row.me{justify-content:flex-end}
+.chat-av{width:34px;height:34px;border-radius:11px;background:var(--ai-bg);display:grid;place-items:center;flex:none;font-size:17px}
+.chat-bubble{max-width:82%;padding:12px 15px;border-radius:16px;font-size:14px;line-height:1.62;box-shadow:var(--shadow-sm);animation:viewIn .2s both}
+.chat-bubble.ai{background:var(--surface);border:1px solid var(--line);border-top-left-radius:5px}
+.chat-bubble.me{background:var(--brand-grad);color:#fff;border-top-right-radius:5px}
+.chat-src{font-size:10px;opacity:.7;margin-top:8px;letter-spacing:.4px;text-transform:uppercase}
 
 /* ---- MOBILE: più aria e leggibilità ---- */
 @media(max-width:640px){
@@ -1319,30 +1328,88 @@ async function aiSearchCards(query){
    <button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>
  </div>`).join('')+'</div>';
 }
-async function aiAsk(q){
- if(!q||!q.trim())return;q=q.trim();
- const out=$('#aiOut');const t=$('#aiText');
- const bubble=html=>`<div class="card pad ai-card fade"><div style="font-size:26px">🤖</div><div class="ai-bubble" style="flex:1">${html}</div></div>`;
- out.innerHTML=bubble('<span class="ai-typing">Pàgina AI sta scrivendo<i>.</i><i>.</i><i>.</i></span>');
- if(t)t.value='';out.scrollIntoView({behavior:'smooth',block:'nearest'});
+/* ====== ASSISTENTE — architettura modulare a provider ======
+   1) prova un provider AI esterno (Edge Function "assistente": Groq→OpenRouter→Gemini)
+   2) se non disponibile, usa l'"Assistente base gratuito" (logiche interne sui dati dell'app)
+   Niente 502 a schermo, niente risposte finte spacciate per AI. */
+let aiChat=[];
+function aiCtx(){
  const d=(typeof profile!=='undefined'&&profile&&profile.data)||{};
  const reading=books.find(b=>b.status==='reading');
- const ctx={reading:reading?{title:reading.t,author:reading.a}:null,genres:d.genres||[],authors:d.authors||[],library:books.slice(0,40).map(b=>b.t)};
- let answer='';
- try{
-   if(typeof supa!=='undefined'&&supa){const {data,error}=await supa.functions.invoke('assistente',{body:{message:q,context:ctx}});
-     if(!error&&data&&data.answer)answer=data.answer;}
- }catch(e){}
- if(answer){
-   // se la domanda è "trovami/cerca un libro", aggiungo le card per metterlo in libreria
-   let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''));}
-   out.innerHTML=bubble(mdLite(answer)+extra);
+ return {reading:reading?{title:reading.t,author:reading.a}:null,genres:d.genres||[],authors:d.authors||[],library:books.slice(0,40).map(b=>b.t)};
+}
+async function aiProviderAsk(message,ctx){            // livello di astrazione: cambia provider senza toccare la UI
+ if(typeof supa==='undefined'||!supa)return null;
+ try{const {data,error}=await supa.functions.invoke('assistente',{body:{message,context:ctx}});
+   if(error)return null;
+   if(data&&data.answer)return {answer:data.answer,provider:data.provider||'AI'};
+   return null;                                       // {unavailable:true} → fallback locale
+ }catch(e){return null}
+}
+function renderChat(){
+ const out=$('#aiOut');if(!out)return;
+ if(!aiChat.length){out.innerHTML='<div class="muted" style="font-size:13px;padding:6px 2px">Scrivimi qui sotto: posso aiutarti con la tua libreria, i club, le note, il progresso di lettura e consigli su misura.</div>';return}
+ out.innerHTML=aiChat.map(m=>m.who==='me'
+   ? `<div class="chat-row me"><div class="chat-bubble me">${m.html}</div></div>`
+   : `<div class="chat-row ai"><div class="chat-av">🤖</div><div class="chat-bubble ai">${m.html}${m.src?`<div class="chat-src">${m.src}</div>`:''}</div></div>`).join('');
+ const last=out.lastElementChild;if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function aiClear(){aiChat=[];renderChat()}
+async function aiAsk(q){
+ if(!q||!q.trim())return;q=q.trim();
+ const t=$('#aiText');if(t)t.value='';
+ aiChat.push({who:'me',html:esc(q)});
+ aiChat.push({who:'ai',html:'<span class="ai-typing">scrivo<i>.</i><i>.</i><i>.</i></span>'});
+ renderChat();
+ const ctx=aiCtx();
+ const res=await aiProviderAsk(q,ctx);
+ aiChat.pop();                                        // togli "scrivo…"
+ if(res&&res.answer){
+   let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''))}
+   aiChat.push({who:'ai',html:mdLite(res.answer)+extra,src:'✨ AI · '+esc(res.provider)});
  }else{
-   // fallback: ricerca libri se l'AI non è disponibile
-   const cards=await aiSearchCards(q.replace(/^\s*(trovami|trova|cerca|cercami|consigliami|consiglia|suggeriscimi|suggerisci)\s+/i,''));
-   out.innerHTML=bubble(cards?('L\'AI non è raggiungibile ora, ma ho cercato dei libri per te:'+cards):'Al momento non riesco a rispondere. Riprova tra poco. (Se è la prima volta, va deployata la function "assistente" su Supabase.)');
+   const loc=localAssistant(q,ctx);
+   if(loc.kind==='search'){const cards=await aiSearchCards(loc.text);
+     aiChat.push({who:'ai',html:(cards?'Ecco alcuni libri che potrebbero piacerti:'+cards:'Non ho trovato libri per questa ricerca: prova con un titolo o un autore.'),src:'🛟 Assistente base gratuito'});}
+   else aiChat.push({who:'ai',html:loc.html,src:'🛟 Assistente base gratuito'});
  }
- out.scrollIntoView({behavior:'smooth',block:'nearest'});
+ renderChat();
+}
+function localAssistant(q,ctx){
+ const t=deburr(q);const has=(...k)=>k.some(x=>t.includes(x));
+ const reading=ctx.reading;const book=reading?('«'+reading.title+'»'+(reading.author?(' di '+reading.author):'')):'il libro del mese';
+ if(has('trovami','cerca','cercami','trova','consiglia','consigliami','suggerisci','suggeriscimi','consiglio','libri su','libro su','qualcosa di','vorrei leggere','voglio leggere'))
+   return {kind:'search',text:q.replace(/^.*?(trovami|cerca|cercami|trova|consigliami|consiglia|suggeriscimi|suggerisci|vorrei leggere|voglio leggere)\s*/i,'').replace(/^(un|una|dei|delle|di|qualcosa di)\s+/i,'')||q};
+ if(has('domande','discussione'))
+   return {html:`<b>Spunti di discussione su ${book}:</b><br>• Quale personaggio ti ha colpita di più e perché?<br>• Qual è il tema centrale e come viene sviluppato?<br>• C'è una scena che funzionerebbe diversamente se fosse ambientata oggi?<br>• Quali scelte dei personaggi condividi o contesti?<br>• Che domanda faresti all'autore/autrice?`};
+ if(has('temi','dibattito','dibattere'))
+   return {html:`<b>Temi di dibattito:</b><br>• Il libro "invecchia" bene rispetto a oggi?<br>• Lo stile aiuta o ostacola la storia?<br>• Il messaggio è ancora attuale?<br>• Lo consiglieresti a chi non ama il genere? Perché?`};
+ if(has('citazion'))
+   return {html:`Per <b>citazioni verificate</b> serve l'AI esterna (ora non attiva). Nel frattempo segna i passaggi che ti colpiscono come <b>note</b> nel Diario condiviso. 📖`};
+ if(has('riferimenti storici','contesto storico'))
+   return {html:`Le spiegazioni di <b>contesto storico</b> approfondite richiedono l'AI esterna (ora non attiva). In modalità base posso aiutarti su app, club, note e progresso di lettura.`};
+ if(has('offuscat','blur','bloccat','spoiler','non vedo le note','perche non vedo'))
+   return {html:`Nel <b>Diario condiviso</b> le note degli altri sono <b>offuscate</b> finché non raggiungi la pagina a cui si riferiscono: così niente spoiler. Imposta "Sei a pagina" col tuo avanzamento; quando superi la pagina di una nota, comparirà e potrai cliccarla per leggerla. Le tue note le vedi sempre.`};
+ if(has('progress','aggiornare pagina','che pagina','pagina raggiunta','avanzamento','a che punto'))
+   return {html:`Per aggiornare il <b>progresso</b>: vai su <b>Diario condiviso</b> e usa il selettore <b>"Sei a pagina"</b> (− / numero / +). Decide quali note puoi vedere; è personale e non scende sotto le note che hai già scritto.`};
+ if(has('nota','note','annotazion','commento'))
+   return {html:`Le <b>note</b> si gestiscono nel <b>Diario condiviso</b>: scrivi una considerazione e scegli se riferirla a una pagina, a un intervallo o "fino a qui". Puoi <b>modificare/eliminare solo le tue</b> (✏️/🗑). Le altrui restano offuscate finché non arrivi alla loro pagina.`};
+ if(has('club','invito','codice','membri','unisci'))
+   return {html:`Per i <b>club</b>: <b>Club del libro</b> → "Crea o unisciti". Inviti con un <b>link</b> o un <b>codice</b> (l'altro va su "Crea o unisciti → Unisciti con un codice"). L'admin elimina il club dalle Impostazioni.`};
+ if(has('sorteggio','turni','chi sceglie'))
+   return {html:`Il <b>sorteggio a turni</b> decide chi sceglie il libro: il primo sorteggio dà l'inizio, chi sceglie viene escluso finché non hanno scelto tutti, poi si riparte. Lo avvia l'admin.`};
+ if(has('votazione','proporre','votare','proposta'))
+   return {html:`Nella <b>votazione</b> ogni membro propone <b>un</b> libro (puoi toglierlo per cambiarlo) e vota quelli altrui (non il proprio). L'admin chiude: il più votato diventa libro del mese.`};
+ if(has('incontro','incontri','calendario','luogo','quando ci vediamo'))
+   return {html:`Gli <b>incontri</b> si creano in <b>Incontri</b> (serve un libro del mese). Scegli club/libro, data (non passata) e ora, e un <b>luogo</b> con suggerimenti mappa. Modificabili/eliminabili.`};
+ if(has('mappa','ambientaz','dove sono ambientati'))
+   return {html:`In <b>Mappa letture</b> premi <b>"Rileva ambientazioni"</b>: i tuoi libri vengono posizionati sul planisfero in base a dove sono ambientati. 🌍`};
+ if(has('quanti libri','statistich','quanti ho'))
+   {const tot=books.length,rd=books.filter(b=>b.status==='read').length,rg=books.filter(b=>b.status==='reading').length;
+    return {html:`Nella tua libreria: <b>${tot}</b> libri · ${rd} letti · ${rg} in lettura.${reading?(' Ora stai leggendo '+book+'.'):''}`};}
+ if(has('come funziona','aiuto','help','cosa puoi fare','cosa sai fare','guida','come si usa','come usare'))
+   return {html:`Sono l'<b>Assistente base</b> di Pàgina. Posso aiutarti con: 📚 libreria e consigli di lettura, 👥 club, ✍️ note e diario (e perché alcune sono offuscate), 📖 progresso di lettura, 🗳️ sorteggio/votazione, 📅 incontri, 🌍 mappa. Esempi: <i>"consigliami un giallo"</i>, <i>"come aggiorno la pagina"</i>, <i>"perché le note sono offuscate"</i>.`};
+ return {html:`Sono in <b>modalità base</b> (senza AI esterna): rispondo su uso dell'app, club, note/diario, progresso e consigli di libri. Prova: <i>"consigliami un fantasy"</i>, <i>"come funziona il sorteggio"</i>, <i>"perché le note sono bloccate"</i>.`};
 }
 
 renders.calendario=()=>{
@@ -1617,7 +1684,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v28 (ricerca sezioni + mappa attiva)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v29 (assistente multi-provider + base gratuito)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2434,12 +2501,13 @@ function renderAiCloud(){
    <button onclick="aiAsk('Spiega i riferimenti storici')">🏛️ Riferimenti storici</button>
    <button onclick="aiAsk('Citazioni significative')">❝ Citazioni</button>
  </div>
- <div id="aiOut" style="margin-top:14px"></div>
+ <div id="aiOut" class="ai-chat" style="margin-top:14px"></div>
  <div class="chatbox">
-   <input id="aiText" placeholder="Es. trovami Solaris, consigliami un giallo…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <input id="aiText" placeholder="Scrivi un messaggio… (es. consigliami un giallo)" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
- <div class="muted" style="font-size:11.5px;margin-top:9px">✨ Pàgina AI usa un modello reale (Gemini) con il contesto della tua libreria e dei tuoi gusti. Evita gli spoiler.</div>`;
+ <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><span>✨ Usa l'AI esterna se configurata, altrimenti l'<b>Assistente base gratuito</b> (sui dati dell'app). Niente spoiler.</span>${aiChat.length?'<a href="#" onclick="aiClear();return false" style="color:var(--plum);font-weight:600">Pulisci chat</a>':''}</div>`;
+ renderChat();
 }
 async function loadAiRecs(){
  const box=$('#aiRecs');if(!box)return;

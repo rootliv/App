@@ -1,62 +1,97 @@
-// Supabase Edge Function: "assistente"
-// Assistente AI reale del club del libro, basato su Gemini.
-// Riceve la domanda dell'utente + un po' di contesto (libro in lettura, generi/autori,
-// libreria) e risponde in italiano, senza spoiler. La chiave Gemini resta lato server.
-// Deploy:  supabase functions deploy assistente
-// (usa lo stesso secret GEMINI_API_KEY della function "curiosita")
+// Supabase Edge Function: "assistente" — assistente del club del libro, MULTI-PROVIDER.
+// Prova in ordine i provider per cui esiste una chiave (secret), tutti con piani GRATUITI
+// e SENZA carta di credito per ottenere la chiave:
+//   1) GROQ_API_KEY      → console.groq.com  (Llama, veloce, free, no carta)
+//   2) OPENROUTER_API_KEY→ openrouter.ai      (modelli :free, free, no carta)
+//   3) GEMINI_API_KEY    → aistudio.google.com (free)
+// Non restituisce MAI 502: se nessun provider risponde → 200 {unavailable:true}
+// così il frontend usa l'"Assistente base gratuito". Imposta i secret con:
+//   supabase secrets set GROQ_API_KEY=...   (poi: supabase functions deploy assistente)
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const MODEL = "gemini-2.0-flash";
+const GROQ = Deno.env.get("GROQ_API_KEY") || "";
+const OPENROUTER = Deno.env.get("OPENROUTER_API_KEY") || "";
+const GEMINI = Deno.env.get("GEMINI_API_KEY") || "";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-function json(b: unknown, s = 200) {
-  return new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+const json = (b: unknown, s = 200) =>
+  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
+
+const SYSTEM =
+`Sei "Pàgina AI", l'assistente di un'app per club del libro. Rispondi SEMPRE in italiano, con tono caldo, competente e ordinato.
+Puoi: consigliare libri (indica Titolo e Autore), generare domande di discussione, proporre temi di dibattito, spiegare contesto storico/culturale, suggerire citazioni famose, e spiegare come usare l'app (note nel diario che si sbloccano per pagina, progresso di lettura, club, sorteggio/votazione, incontri).
+Regole: NIENTE SPOILER (no finali, colpi di scena, morti, identità segrete). Conciso ma completo; usa elenchi puntati quando aiutano.`;
+
+function buildUserPrompt(message: string, ctx: any): string {
+  const lines = [
+    ctx?.reading ? `Sta leggendo: "${ctx.reading.title}" di ${ctx.reading.author}.` : "",
+    (ctx?.genres?.length) ? `Generi preferiti: ${ctx.genres.join(", ")}.` : "",
+    (ctx?.authors?.length) ? `Autori preferiti: ${ctx.authors.join(", ")}.` : "",
+    (ctx?.library?.length) ? `Alcuni libri in libreria: ${ctx.library.slice(0, 25).join("; ")}.` : "",
+  ].filter(Boolean).join("\n");
+  return `Contesto utente:\n${lines || "(nessun dato)"}\n\nMessaggio dell'utente:\n${message}`;
+}
+
+async function viaOpenAICompatible(url: string, key: string, model: string, message: string, ctx: any) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: buildUserPrompt(message, ctx) },
+      ],
+      temperature: 0.6, max_tokens: 800,
+    }),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  const a = d?.choices?.[0]?.message?.content;
+  return (a && a.trim()) ? a.trim() : null;
+}
+
+async function viaGemini(key: string, message: string, ctx: any) {
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,
+    {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: SYSTEM + "\n\n" + buildUserPrompt(message, ctx) }] }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 800 },
+      }),
+    },
+  );
+  if (!r.ok) return null;
+  const d = await r.json();
+  const a = (d?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || "").join("").trim();
+  return a || null;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (!GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY non configurata" }, 500);
   try {
     const { message, context } = await req.json();
     if (!message || !String(message).trim()) return json({ error: "message mancante" }, 400);
     const ctx = context || {};
 
-    const sys =
-`Sei "Pàgina AI", l'assistente di un'app per club del libro. Rispondi SEMPRE in italiano, con tono caldo, competente e ordinato.
-Cosa puoi fare: consigliare libri (indica sempre Titolo e Autore), generare domande di discussione per il club, proporre temi di dibattito, spiegare contesto storico/culturale e riferimenti, proporre citazioni famose, aiutare nella lettura.
-Regole: NON fare spoiler (niente finali, colpi di scena, morti, identità segrete). Sii conciso ma completo. Usa elenchi puntati quando aiutano la chiarezza. Se l'utente chiede di trovare un libro specifico, dai con precisione Titolo e Autore.`;
+    const providers: Array<[string, () => Promise<string | null>]> = [];
+    if (GROQ) providers.push(["Groq (Llama 3.3)", () => viaOpenAICompatible("https://api.groq.com/openai/v1/chat/completions", GROQ, "llama-3.3-70b-versatile", message, ctx)]);
+    if (OPENROUTER) providers.push(["OpenRouter", () => viaOpenAICompatible("https://openrouter.ai/api/v1/chat/completions", OPENROUTER, "meta-llama/llama-3.3-70b-instruct:free", message, ctx)]);
+    if (GEMINI) providers.push(["Gemini", () => viaGemini(GEMINI, message, ctx)]);
 
-    const ctxLines = [
-      ctx.reading ? `Sta leggendo: "${ctx.reading.title}" di ${ctx.reading.author}.` : "",
-      (ctx.genres && ctx.genres.length) ? `Generi preferiti: ${ctx.genres.join(", ")}.` : "",
-      (ctx.authors && ctx.authors.length) ? `Autori preferiti: ${ctx.authors.join(", ")}.` : "",
-      (ctx.library && ctx.library.length) ? `Alcuni libri nella sua libreria: ${ctx.library.slice(0, 25).join("; ")}.` : "",
-    ].filter(Boolean).join("\n");
-
-    const prompt = `${sys}\n\nContesto utente:\n${ctxLines || "(nessun dato disponibile)"}\n\nMessaggio dell'utente:\n${message}`;
-
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.6, maxOutputTokens: 700 },
-        }),
-      },
-    );
-    if (!r.ok) return json({ error: "gemini " + r.status, detail: await r.text() }, 502);
-    const d = await r.json();
-    const answer = (d?.candidates?.[0]?.content?.parts || [])
-      .map((p: { text?: string }) => p.text || "").join("").trim();
-    if (!answer) return json({ error: "vuota" }, 502);
-    return json({ answer });
+    for (const [name, run] of providers) {
+      try {
+        const a = await run();
+        if (a) return json({ answer: a, provider: name });
+      } catch (_) { /* prova il prossimo */ }
+    }
+    // nessun provider disponibile/funzionante → il frontend userà l'assistente base
+    return json({ unavailable: true });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    return json({ unavailable: true, reason: String(e) });
   }
 });
