@@ -804,8 +804,10 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .note-locked-bars span:last-child{width:58%}
 .note-hint{font-size:11.5px;color:var(--ink-faint);margin-top:8px}
 .note{position:relative}
-.note-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;opacity:0;transition:.15s}
+.note-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px;opacity:0;transition:.15s;z-index:2}
 .note:hover .note-actions{opacity:1}
+.note .nh{padding-right:60px}
+.note-when{font-size:11.5px;color:var(--ink-faint);margin-left:4px}
 .ac-box{position:absolute;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:12px;
   box-shadow:var(--shadow);margin-top:4px;max-height:230px;overflow-y:auto}
 .ac-item{padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);line-height:1.35}
@@ -1687,7 +1689,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v31 (AI opzionale: niente errori di default)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v32 (fix note-azioni + mappa geocoding)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2362,7 +2364,7 @@ function renderNotesList(){
    const when=fmtNoteDate(n.created_at);
    const sc=parseScope(n.text);const lab=sc.label||('pag. '+n.position);
    const av=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].data&&noteAuthors[n.user_id].data.avatar)||'';
-   const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${avFill(nm,av)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time style="margin-left:auto">${when}</time>`:''}</div>`;
+   const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${avFill(nm,av)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time class="note-when">${when}</time>`:''}</div>`;
    if(editNoteId===n.id&&own){
      return `<div class="note">${head}<textarea id="editNoteTa" rows="3" style="margin-top:8px">${esc(sc.clean)}</textarea>
        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
@@ -2595,10 +2597,10 @@ async function detectBookLocations(){
  let done=0,errors=0;
  for(const b of todo){
    try{
-     const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In quale città e paese è ambientato PRINCIPALMENTE il libro "'+b.t+'"'+(b.a?(' di '+b.a):'')+'? Rispondi SOLO con "Città, Paese" (oppure solo "Paese"). Se non è un luogo reale o è ignoto, rispondi solo: SCONOSCIUTO.'}});
+     const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which city and country is the book "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Answer ONLY with "City, Country" in ENGLISH (or just "Country"). If it is not a real place or it is unknown, answer only: UNKNOWN.'}});
      if(error){errors++;continue}
-     let ans=((data&&data.answer)||'').trim().split('\n')[0].replace(/^[-•\d.\s]+/,'').slice(0,80);
-     if(!ans||/sconosciut/i.test(ans))continue;
+     let ans=((data&&data.answer)||'').trim().split('\n')[0].replace(/^[-•\d.\s"']+/,'').replace(/["'.]+$/,'').slice(0,80);
+     if(!ans||/unknown|sconosciut/i.test(ans))continue;
      const g=await geocodeOne(ans);
      if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};setBookLocs(m);done++;if(current==='mappa')renderMappaCloud()}
    }catch(e){errors++}
@@ -2608,6 +2610,7 @@ async function detectBookLocations(){
  else toast(done?('Aggiunti '+done+' libri'):'Nessuna ambientazione trovata','🗺️');
  if(current==='mappa')renderMappaCloud();
 }
+function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','🗺️');renderMappaCloud()}
 function renderMappaCloud(){
  const locs=Object.values(bookLocs());
  const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
@@ -2617,6 +2620,7 @@ function renderMappaCloud(){
    <div><h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div></div>
    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
      <span class="pill sky">🌍 ${countries.length} paesi · ${locs.length} libri</span>
+     ${locs.length?`<button class="btn ghost sm" onclick="clearMapLocs()">🗑 Svuota</button>`:''}
      ${books.length?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:''}
    </div>
  </div>
