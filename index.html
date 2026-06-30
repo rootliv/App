@@ -565,6 +565,16 @@ input[type=range]{accent-color:var(--coral)}
 .cmp-ta{display:block;width:100%;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:inherit;
   font-size:14.5px;line-height:1.6;outline:none;background:var(--surface);resize:vertical;min-height:104px;transition:.15s}
 .cmp-ta:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+
+/* ---- avatar con foto ---- */
+.av{overflow:hidden}
+.av>img{width:100%;height:100%;object-fit:cover;display:block}
+.prof-av{position:relative;width:84px;height:84px;border-radius:24px;overflow:hidden;flex:none;cursor:pointer;
+  background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:30px}
+.prof-av img{width:100%;height:100%;object-fit:cover;display:block}
+.prof-av-cam{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:11.5px;font-family:'Inter',sans-serif;text-align:center;padding:4px 0;opacity:0;transition:.15s}
+.prof-av:hover .prof-av-cam{opacity:1}
+.side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .scope-seg{display:inline-flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:30px;padding:4px;margin-top:12px;flex-wrap:wrap}
 .scope-seg button{border:none;background:none;font-family:inherit;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
@@ -1384,7 +1394,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v22 (diario v2 + ambito nota)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v23 (foto profilo)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1688,11 +1698,34 @@ function pendingItems(){
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
  const ids=(mem||[]).map(m=>m.user_id);if(!ids.length)return [];
- const {data:profs}=await supa.from('profiles').select('id,name,username').in('id',ids);
+ const {data:profs}=await supa.from('profiles').select('id,name,username,data').in('id',ids);
  const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
- return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||''}));
+ return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||'',avatar:(pm[m.user_id]&&pm[m.user_id].data&&pm[m.user_id].data.avatar)||''}));
 }
 function ini2(n){return ((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase()}
+/* ---- avatar foto profilo (salvato in profiles.data.avatar come immagine ridotta) ---- */
+function avFill(name,url){return url?`<img src="${esc(url)}" alt="">`:ini2(name)}
+function myAvatar(){return (typeof profile!=='undefined'&&profile&&profile.data&&profile.data.avatar)||''}
+function applyMyAvatar(){const el=$('#meAv');if(el)el.innerHTML=avFill((profile&&profile.name)||'',myAvatar())}
+function chooseAvatar(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{const f=i.files&&i.files[0];if(f)processAvatar(f)};i.click()}
+function processAvatar(file){const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=async()=>{
+  const S=224,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');
+  const m=Math.min(img.width,img.height),sx=(img.width-m)/2,sy=(img.height-m)/2;
+  ctx.drawImage(img,sx,sy,m,m,0,0,S,S);
+  await saveAvatar(cv.toDataURL('image/jpeg',0.78));
+ };img.onerror=()=>alert('Immagine non valida.');img.src=e.target.result};fr.readAsDataURL(file);}
+async function saveAvatar(url){
+ if(!profile)profile={};profile.data=Object.assign({},profile.data||{},{avatar:url});
+ try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){alert('Errore nel salvataggio della foto: '+e.message);return}
+ applyMyAvatar();if(current==='profilo')renderProfiloCloud();
+}
+async function removeAvatar(){
+ if(!profile||!profile.data||!profile.data.avatar)return;
+ if(!confirm('Rimuovere la foto profilo?'))return;
+ delete profile.data.avatar;
+ try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}
+ applyMyAvatar();if(current==='profilo')renderProfiloCloud();
+}
 function renderClubCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club… ☁️</div></div>';
    cloudLoadClubs().then(()=>{clubsLoaded=true;if(!clubSel&&myClubs[0])clubSel=myClubs[0].id;renderClubCloud()}).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel caricamento dei club.</div></div>'});return}
@@ -1755,10 +1788,10 @@ function renderClubCloud(){
   </div>`;
  loadMembers(c.id).then(list=>{
    const mEl=$('#clubMembers');
-   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</div>
+   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
      <div style="min-width:0"><b>${m.name}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+m.username+' · ':''}${m.role}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
    const av=$('#clubAvs');
-   if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${ini2(m.name)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'}</span>`;
+   if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'}</span>`;
    const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
    if(c.selection_mode==='voting')loadAndRenderProposals(c.id);
  }).catch(()=>{});
@@ -2003,7 +2036,7 @@ async function loadClubNotes(c){
  const {data}=await supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title).order('position');
  cloudNotes=data||[];
  const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
- if(ids.length){const {data:profs}=await supa.from('profiles').select('id,name,username').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
+ if(ids.length){const {data:profs}=await supa.from('profiles').select('id,name,username,data').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
 }
 function renderNotesList(){
  const el=$('#notesList');if(!el)return;
@@ -2015,7 +2048,8 @@ function renderNotesList(){
    const reached=pos>=n.position;
    const when=fmtNoteDate(n.created_at);
    const sc=parseScope(n.text);const lab=sc.label||('pag. '+n.position);
-   const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${ini2(nm)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time style="margin-left:auto">${when}</time>`:''}</div>`;
+   const av=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].data&&noteAuthors[n.user_id].data.avatar)||'';
+   const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${avFill(nm,av)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time style="margin-left:auto">${when}</time>`:''}</div>`;
    if(editNoteId===n.id&&own){
      return `<div class="note">${head}<textarea id="editNoteTa" rows="3" style="margin-top:8px">${esc(sc.clean)}</textarea>
        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
@@ -2253,10 +2287,10 @@ function renderProfiloCloud(){
  const chips=(arr,empty)=>(arr&&arr.length)?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):`<span class="muted" style="font-size:13px">${empty}</span>`;
  view.innerHTML=`
  <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-   <div style="width:84px;height:84px;border-radius:24px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:30px;flex:none">${ini2(p.name||'?')}</div>
+   <div class="prof-av" onclick="chooseAvatar()" title="Cambia foto">${d.avatar?`<img src="${esc(d.avatar)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">📷 Cambia</div></div>
    <div style="flex:1;min-width:200px">
      <h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2>
-     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}</div>
+     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}${d.avatar?` · <a href="#" onclick="removeAvatar();return false" style="color:var(--plum);font-weight:600">Rimuovi foto</a>`:''}</div>
      <div class="chips" style="margin-top:10px">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
        ${goal?`<span class="pill green">🎯 Obiettivo ${goal} libri</span>`:''}
@@ -2363,7 +2397,7 @@ async function saveProfile(){
  });
  profile=Object.assign({},profile,{name,data:d});
  try{await supa.from('profiles').update({name,data:d}).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
- $('#meName').textContent=name;$('#meAv').textContent=ini2(name);
+ $('#meName').textContent=name;applyMyAvatar();
  closeModal();renderProfiloCloud();
 }
 
@@ -2882,7 +2916,7 @@ function startApp(target){
  const name=mode==='demo'?'Ospite Demo':((profile&&profile.name)||'Lettrice');
  const username=mode==='demo'?'':((profile&&profile.username)||'');
  $('#meName').textContent=name;
- $('#meAv').textContent=(name.split(' ').map(x=>x[0]).slice(0,2).join('')||'P').toUpperCase();
+ $('#meAv').innerHTML=avFill(name,myAvatar());
  $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(username?'@'+username:'Account cloud ☁️');
  buildNav();go(target||'home');
  enrichCovers();
