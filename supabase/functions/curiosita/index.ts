@@ -1,86 +1,73 @@
-// Supabase Edge Function: "curiosita"
-// Genera UNA curiosità letteraria in italiano, VERA e senza spoiler, usando
-// Gemini con "Google Search grounding" (AI con accesso reale al web).
-// La chiave Gemini resta SOLO lato server (secret GEMINI_API_KEY) e non è mai
-// esposta nel sito. Deploy:  supabase functions deploy curiosita
-// Secret:  supabase secrets set GEMINI_API_KEY=la_tua_chiave
+// Supabase Edge Function: "curiosita" — curiosità del libro, MULTI-PROVIDER e silenziosa.
+// Prova i provider con piano gratuito SENZA carta (Groq → OpenRouter → Gemini).
+// NON restituisce mai 429/502: se nessun provider risponde → 200 {unavailable:true}
+// e il frontend ripiega su Wikidata/Wikipedia (nessun errore in console).
+// Secret consigliato:  supabase secrets set GROQ_API_KEY=...   (gratis, niente carta)
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || "";
-const MODEL = "gemini-2.0-flash"; // supporta il grounding con Google Search
+const GROQ = Deno.env.get("GROQ_API_KEY") || "";
+const OPENROUTER = Deno.env.get("OPENROUTER_API_KEY") || "";
+const GEMINI = Deno.env.get("GEMINI_API_KEY") || "";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const json = (b: unknown, s = 200) =>
+  new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
+function buildPrompt(title: string, author: string, originalTitle: string, genre: string) {
+  return `Sei un curatore letterario. Proponi UNA sola curiosità VERA e interessante sul libro "${title}"${author ? ` di ${author}` : ""}${originalTitle ? ` (titolo originale: "${originalTitle}")` : ""}${genre ? ` [genere: ${genre}]` : ""}.
+Regole: in ITALIANO, max 45 parole, NESSUNO SPOILER, niente frasi banali. Preferisci aneddoti su autore/scrittura, contesto, adattamenti, premi, pubblicazione, titolo. Se non sei certo, dai un'informazione generale e prudente; non inventare.
+Scegli una categoria tra: Autore, Dietro le quinte, Adattamenti, Riconoscimenti, Pubblicazione, Contesto, Genere, Titolo.
+Rispondi SOLO con JSON valido: {"categoria":"<categoria>","testo":"<curiosità>"}`;
+}
+function parseJSON(raw: string) {
+  const m = (raw || "").match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* */ } }
+  const t = (raw || "").replace(/```json|```/g, "").trim();
+  return t ? { categoria: "Curiosità", testo: t } : null;
+}
+async function viaOpenAI(url: string, key: string, model: string, prompt: string) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
+    body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], temperature: 0.7, max_tokens: 300 }),
   });
+  if (!r.ok) return null;
+  const d = await r.json();
+  return parseJSON(d?.choices?.[0]?.message?.content || "");
+}
+async function viaGemini(key: string, prompt: string) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 300 } }),
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  return parseJSON((d?.candidates?.[0]?.content?.parts || []).map((p: any) => p.text || "").join(""));
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (!GEMINI_API_KEY) return json({ error: "GEMINI_API_KEY non configurata" }, 500);
-
   try {
     const { title = "", author = "", originalTitle = "", genre = "" } = await req.json();
-    if (!title) return json({ error: "title mancante" }, 400);
+    if (!title) return json({ unavailable: true });
+    const prompt = buildPrompt(title, author, originalTitle, genre);
 
-    const prompt =
-`Sei un curatore letterario esperto. Cerca sul web e proponi UNA sola curiosità VERA e VERIFICABILE sul libro "${title}"${author ? ` di ${author}` : ""}${originalTitle ? ` (titolo originale: "${originalTitle}")` : ""}${genre ? ` [genere: ${genre}]` : ""}.
+    const providers: Array<() => Promise<any>> = [];
+    if (GROQ) providers.push(() => viaOpenAI("https://api.groq.com/openai/v1/chat/completions", GROQ, "llama-3.3-70b-versatile", prompt));
+    if (OPENROUTER) providers.push(() => viaOpenAI("https://openrouter.ai/api/v1/chat/completions", OPENROUTER, "meta-llama/llama-3.3-70b-instruct:free", prompt));
+    if (GEMINI) providers.push(() => viaGemini(GEMINI, prompt));
 
-Regole tassative:
-- Scrivi in ITALIANO, massimo 45 parole, tono coinvolgente.
-- NESSUNO SPOILER: non rivelare finali, morti di personaggi, colpi di scena, identità segrete, soluzioni di misteri o eventi decisivi della trama.
-- Niente frasi banali ("è molto famoso", "è un bel libro").
-- Preferisci: aneddoti sull'autore o sulla scrittura, contesto storico/culturale, ispirazioni (senza spoiler), adattamenti cinema/TV usciti, premi e riconoscimenti, prima pubblicazione, differenza col titolo originale, accoglienza del pubblico, influenza culturale.
-- Basati su fonti attendibili trovate con la ricerca. Se non trovi nulla di certo, dai un'informazione generale e prudente su autore/genere, senza inventare fatti.
-- Scegli una categoria tra: Autore, Dietro le quinte, Adattamenti, Riconoscimenti, Pubblicazione, Contesto, Genere, Titolo.
-
-Rispondi SOLO con un oggetto JSON valido, senza testo extra:
-{"categoria":"<una delle categorie>","testo":"<la curiosità>"}`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const base = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7, maxOutputTokens: 400 },
-    };
-    const call = (body: unknown) =>
-      fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-
-    // USE_WEB=false → AI senza web (gratis, veloce). Metti true solo se attivi la
-    // fatturazione su Google AI Studio: allora userà la ricerca web (Google Search grounding).
-    const USE_WEB = false;
-    let usedWeb = USE_WEB;
-    let r = USE_WEB ? await call({ ...base, tools: [{ google_search: {} }] }) : await call(base);
-    // se il web grounding fallisce (tipico sul piano gratuito: 429/400/403), riprova senza web
-    if (USE_WEB && !r.ok && (r.status === 400 || r.status === 403 || r.status === 429)) {
-      usedWeb = false;
-      r = await call(base);
+    for (const run of providers) {
+      try {
+        const out = await run();
+        if (out && out.testo) return json({ categoria: out.categoria || "Curiosità", testo: out.testo, web: false });
+      } catch (_) { /* prova il prossimo */ }
     }
-    if (!r.ok) {
-      const status = r.status;
-      const detail = await r.text();
-      const msg = status === 429
-        ? "Limite richieste Gemini raggiunto: riprova tra poco (la curiosità è settimanale, in uso normale non accade)."
-        : ("gemini " + status);
-      return json({ error: msg, status, detail }, status === 429 ? 429 : 502);
-    }
-    const d = await r.json();
-    const raw = (d?.candidates?.[0]?.content?.parts || [])
-      .map((p: { text?: string }) => p.text || "").join("").trim();
-
-    let out: { categoria?: string; testo?: string } = {};
-    const m = raw.match(/\{[\s\S]*\}/);
-    if (m) { try { out = JSON.parse(m[0]); } catch { /* ignore */ } }
-    if (!out.testo) out = { categoria: "Curiosità", testo: raw.replace(/```json|```/g, "").trim() };
-
-    if (!out.testo) return json({ error: "vuota" }, 502);
-    return json({ categoria: out.categoria || "Curiosità", testo: out.testo, web: usedWeb });
+    return json({ unavailable: true });   // nessun provider → fallback lato client (Wikidata)
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    return json({ unavailable: true, reason: String(e) });
   }
 });
