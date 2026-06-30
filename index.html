@@ -1332,7 +1332,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v13 (proposte/voto)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v14 (sorteggio a turni)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1791,11 +1791,14 @@ async function removeMyProposal(clubId){
 function selectionPanelHTML(c,role,members){
  const me=authUser.id;
  if(c.selection_mode==='rotation'){
+   const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers:[];
+   const chosen=members.filter(m=>cc.includes(m.id));
    const ch=members.find(m=>m.id===c.current_chooser);const nm=ch?ch.name:'…';
-   let h=`<div class="pill sky">🎲 Turno di scelta: <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
-   if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">📖 Scegli il libro</button></div>`;
-   else h+=`<div class="muted" style="font-size:13px;margin-top:10px">In attesa che ${nm} scelga il libro…</div>`;
-   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:10px" onclick="cancelSelection(${c.id})">Annulla</button></div>`;
+   let h=`<div class="pill sky">🎲 Sorteggio: tocca a <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
+   if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">📖 Scegli il libro del mese</button></div>`;
+   else h+=`<div class="muted" style="font-size:13px;margin-top:10px">In attesa che ${nm} scelga il libro del mese…</div>`;
+   if(chosen.length)h+=`<div class="muted" style="font-size:12px;margin-top:10px">Hanno già scelto in questo giro: <b>${chosen.map(m=>m.name).join(', ')}</b>.</div>`;
+   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:10px" onclick="cancelSelection(${c.id})">Annulla turno</button></div>`;
    return h;
  }
  if(c.selection_mode==='voting'){
@@ -1809,11 +1812,27 @@ function selectionPanelHTML(c,role,members){
      <div style="width:60px;flex:none">${coverEl(c.id,c.current_title,'',null,c.current_cover)}</div>
      <div><b style="font-family:'Fraunces';font-size:17px">${c.current_title}</b><div class="muted" style="font-size:13px">${c.current_author||''}</div><span class="pill green" style="margin-top:8px">📖 In lettura</span></div>
    </div>`:`<div class="muted" style="font-size:13.5px">Nessun libro scelto, per ora.</div>`;
- if(role==='admin')h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-     <button class="btn sm" onclick="startRotation(${c.id})">🎲 Sorteggio a turni</button>
-     <button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>
-   </div><div class="muted" style="font-size:11.5px;margin-top:6px">Scegli come decidere il prossimo libro.</div>`;
- else if(!c.current_title)h+=`<div class="muted" style="font-size:12px;margin-top:8px">L'admin avvierà la scelta del libro.</div>`;
+ // stato del giro di sorteggio
+ const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers:[];
+ const total=members.length;
+ const chosen=members.filter(m=>cc.includes(m.id));
+ const remaining=members.filter(m=>!cc.includes(m.id));
+ const inProgress=chosen.length>0 && remaining.length>0;     // giro iniziato, mancano persone
+ const completed=total>0 && chosen.length>0 && remaining.length===0; // tutti hanno scelto
+ if(role==='admin'){
+   if(inProgress){
+     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+         <button class="btn sm" onclick="startRotation(${c.id})">➡️ Prossimo turno (sorteggio)</button>
+         <button class="btn ghost sm" onclick="resetRotation(${c.id})">↺ Azzera giro</button>
+       </div>
+       <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.5">Giro in corso: hanno scelto <b>${chosen.length}/${total}</b>. Sorteggiabili ora: ${remaining.map(m=>m.name).join(', ')}.</div>`;
+   }else{
+     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+         <button class="btn sm" onclick="startRotation(${c.id})">🎲 ${completed?'Nuovo giro: sorteggia tutti':'Sorteggio a turni'}</button>
+         <button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>
+       </div><div class="muted" style="font-size:11.5px;margin-top:6px;line-height:1.5">${completed?'Giro completato 🎉 Il nuovo sorteggio includerà di nuovo tutti i membri.':'Il sorteggio decide da chi iniziare; chi sceglie viene escluso dai sorteggi finché non hanno scelto tutti.'}</div>`;
+   }
+ }else if(!c.current_title)h+=`<div class="muted" style="font-size:12px;margin-top:8px">L'admin avvierà la scelta del libro.</div>`;
  return h;
 }
 async function startRotation(clubId){
@@ -1828,6 +1847,11 @@ async function startRotation(clubId){
 }
 async function cancelSelection(clubId){
  await supa.from('clubs').update({selection_mode:null,current_chooser:null}).eq('id',clubId);
+ clubsLoaded=false;go('club');
+}
+async function resetRotation(clubId){
+ if(!confirm('Azzerare il giro? Tutti i membri torneranno sorteggiabili dall\'inizio.'))return;
+ await supa.from('clubs').update({cycle_choosers:[],selection_mode:null,current_chooser:null}).eq('id',clubId);
  clubsLoaded=false;go('club');
 }
 async function startVoting(clubId){
