@@ -549,6 +549,8 @@ input[type=range]{accent-color:var(--coral)}
 .prop-row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .prop-row:last-child{border-bottom:none}
 .ev-actions{display:flex;gap:6px;flex:none;align-self:flex-start}
+.mt-map{height:160px;border-radius:12px;margin-top:10px;overflow:hidden;border:1px solid var(--line)}
+.pac-container{z-index:100000!important;border-radius:12px;box-shadow:var(--shadow);font-family:'Inter',sans-serif}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -1333,7 +1335,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v15 (incontri: modifica/elimina + Maps)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v16 (Maps autocomplete)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2506,6 +2508,34 @@ function renderIncontriCloud(){
  </div>`;
 }
 function mapsUrl(place){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place)}
+/* ===== Google Maps (autocomplete luogo + anteprima) ===== */
+let MAPS_KEY='';try{const k=(localStorage.getItem('mapskey')||'').trim();if(k)MAPS_KEY=k;}catch(e){}
+let _mapsP=null;
+function loadMaps(){
+ if(window.google&&google.maps&&google.maps.places)return Promise.resolve();
+ if(_mapsP)return _mapsP;
+ if(!MAPS_KEY)return Promise.reject(new Error('no-key'));
+ _mapsP=new Promise((res,rej)=>{const s=document.createElement('script');
+   s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(MAPS_KEY)+'&libraries=places&language=it&region=IT';
+   s.async=true;s.onload=()=>res();s.onerror=()=>rej(new Error('load'));document.head.appendChild(s);});
+ return _mapsP;
+}
+function setupPlaceAutocomplete(){
+ const inp=$('#mtPlace');if(!inp)return;
+ loadMaps().then(()=>{
+   if(!(google.maps.places&&google.maps.places.Autocomplete))return;
+   const ac=new google.maps.places.Autocomplete(inp,{fields:['formatted_address','name','geometry'],types:['establishment','geocode']});
+   ac.addListener('place_changed',()=>{
+     const p=ac.getPlace();if(!p)return;
+     const label=(p.name&&p.formatted_address&&!p.formatted_address.startsWith(p.name))?(p.name+', '+p.formatted_address):(p.formatted_address||p.name||inp.value);
+     inp.value=label;
+     const mEl=$('#mtMap');
+     if(p.geometry&&p.geometry.location&&mEl){mEl.style.display='block';
+       const map=new google.maps.Map(mEl,{center:p.geometry.location,zoom:15,disableDefaultUI:true});
+       new google.maps.Marker({position:p.geometry.location,map});}
+   });
+ }).catch(()=>{/* nessuna chiave/errore: il campo resta testo normale */});
+}
 function openMeetingModal(id){
  const m=id?(myMeetings||[]).find(x=>x.id===id):null;
  const opts=myClubs.map(c=>`<option value="${c.id}" ${m&&m.club_id===c.id?'selected':''}>${c.current_title?('📖 '+esc(c.current_title)+' · '+esc(c.name)):((c.emoji||'📖')+' '+esc(c.name)+' — nessun libro scelto')}</option>`).join('');
@@ -2516,13 +2546,15 @@ function openMeetingModal(id){
       <select id="mtClub">${opts}</select>
       <div class="muted" style="font-size:11.5px;margin-top:5px">Il titolo dell'incontro sarà il <b>libro del mese</b> del club scelto.</div></div>
     <div class="field"><label>Data</label><input id="mtDate" type="date" value="${m?String(m.date).slice(0,10):todayStr()}"></div>
-    <div class="field"><label>Luogo (facoltativo)</label><input id="mtPlace" placeholder="Es. Libreria Tomo, Roma" value="${m?esc(m.place||''):''}">
-      <div class="muted" style="font-size:11.5px;margin-top:5px">📍 Indirizzo, locale o posto: diventerà un link che apre Google Maps.</div></div>
+    <div class="field"><label>Luogo (facoltativo)</label><input id="mtPlace" placeholder="Inizia a scrivere un indirizzo o un locale…" autocomplete="off" value="${m?esc(m.place||''):''}">
+      <div class="muted" style="font-size:11.5px;margin-top:5px">📍 Scegli un suggerimento di Google Maps; diventerà un link cliccabile.</div>
+      <div id="mtMap" class="mt-map" style="display:none"></div></div>
     <div class="field"><label>Link videochiamata (facoltativo)</label><input id="mtLink" placeholder="https://meet.google.com/…" value="${m?esc(m.link||''):''}"></div>
     <button class="btn" onclick="saveMeeting(${m?m.id:0})">${m?'Salva modifiche':'Salva incontro'}</button>
     <div id="mtMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
  openOverlay();
+ setupPlaceAutocomplete();
 }
 async function saveMeeting(editId){
  editId=editId||0;
