@@ -1335,7 +1335,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v16 (Maps autocomplete)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v17 (incontri: data futura + ora)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2501,7 +2501,7 @@ function renderIncontriCloud(){
    ${up.length?up.map(m=>{const d=fmtDateParts(m.date);const canEdit=(m.created_by===authUser.id)||(myRoles[m.club_id]==='admin');return `<div class="event">
      <div class="date"><b>${d.d}</b><small>${d.m}</small></div>
      <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(m.title||'Incontro')}</b>
-       <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}</div>
+       <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}${m.time?` · 🕒 ${esc(m.time)}`:''}</div>
        <div class="chips">${m.link?`<a class="pill sky" style="text-decoration:none" href="${esc(m.link)}" target="_blank" rel="noopener">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
      ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" title="Elimina">🗑</button></div>`:''}
    </div>`}).join(''):`<div class="srch-empty">Nessun incontro in programma.${myClubs.length?' Creane uno con "＋ Nuovo incontro".':' Unisciti a un club per organizzare gli incontri.'}</div>`}
@@ -2545,7 +2545,10 @@ function openMeetingModal(id){
     <div class="field"><label>Club & libro del mese</label>
       <select id="mtClub">${opts}</select>
       <div class="muted" style="font-size:11.5px;margin-top:5px">Il titolo dell'incontro sarà il <b>libro del mese</b> del club scelto.</div></div>
-    <div class="field"><label>Data</label><input id="mtDate" type="date" value="${m?String(m.date).slice(0,10):todayStr()}"></div>
+    <div class="row" style="gap:12px">
+      <div class="field" style="flex:1"><label>Data</label><input id="mtDate" type="date" min="${todayStr()}" value="${m?String(m.date).slice(0,10):todayStr()}"></div>
+      <div class="field" style="flex:none;width:128px"><label>Ora</label><input id="mtTime" type="time" value="${m&&m.time?esc(m.time):'19:00'}"></div>
+    </div>
     <div class="field"><label>Luogo (facoltativo)</label><input id="mtPlace" placeholder="Inizia a scrivere un indirizzo o un locale…" autocomplete="off" value="${m?esc(m.place||''):''}">
       <div class="muted" style="font-size:11.5px;margin-top:5px">📍 Scegli un suggerimento di Google Maps; diventerà un link cliccabile.</div>
       <div id="mtMap" class="mt-map" style="display:none"></div></div>
@@ -2556,21 +2559,28 @@ function openMeetingModal(id){
  openOverlay();
  setupPlaceAutocomplete();
 }
+function nowHM(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
 async function saveMeeting(editId){
  editId=editId||0;
- const club_id=+$('#mtClub').value;const date=$('#mtDate').value;
+ const club_id=+$('#mtClub').value;const date=$('#mtDate').value;const time=(($('#mtTime')&&$('#mtTime').value)||'').trim();
  const place=$('#mtPlace').value.trim();const link=$('#mtLink').value.trim();
  const c=myClubs.find(x=>x.id===club_id)||{};
  const title=(c.current_title&&c.current_title.trim())||c.name||'Incontro';
  const msg=t=>{const e=$('#mtMsg');if(e){e.textContent=t;e.classList.add('show')}};
  if(!club_id||!date)return msg('Scegli un club e una data.');
+ const today=todayStr();
+ if(date<today)return msg('La data non può essere nel passato.');
+ if(date===today&&time&&time<nowHM())return msg('L\'orario non può essere nel passato.');
  const dup=(myMeetings||[]).find(x=>x.id!==editId&&x.club_id===club_id&&String(x.date).slice(0,10)===date&&(x.title||'')===title);
  if(dup)return msg('Esiste già un incontro per questo libro in questa data.');
- let error;
- if(editId){({error}=await supa.from('meetings').update({club_id,title,date,place:place||null,link:link||null}).eq('id',editId));}
- else{({error}=await supa.from('meetings').insert({club_id,title,date,place:place||null,link:link||null,created_by:authUser.id}));}
+ const base={club_id,title,date,place:place||null,link:link||null};
+ const full=Object.assign({},base,{time:time||null});
+ const run=obj=>editId?supa.from('meetings').update(obj).eq('id',editId):supa.from('meetings').insert(Object.assign({},obj,{created_by:authUser.id}));
+ let droppedTime=false;let {error}=await run(full);
+ if(error&&/time/i.test(error.message||'')&&/(column|schema|find|cache)/i.test(error.message||'')){droppedTime=true;({error}=await run(base));}
  if(error)return msg('Errore: '+error.message);
  await cloudLoadMeetings();closeModal();go('incontri');
+ if(droppedTime&&time)alert('Incontro salvato. Per memorizzare anche l\'ORA, aggiungi una colonna alla tabella su Supabase:\n\nalter table meetings add column if not exists time text;');
 }
 async function deleteMeeting(id){
  if(!confirm('Eliminare questo incontro?'))return;
