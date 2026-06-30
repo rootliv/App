@@ -734,6 +734,17 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 @media(max-width:900px){
   .sidebar{border-radius:0}
 }
+/* ricerca rapida (header) */
+.search-wrap{position:relative}
+.topsearch-res{position:absolute;top:calc(100% + 8px);right:0;width:330px;max-width:82vw;background:var(--surface);
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);overflow:hidden;z-index:80;max-height:64vh;overflow-y:auto;animation:viewIn .18s both}
+.ts-grp{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--ink-faint);font-weight:700;padding:11px 15px 5px}
+.ts-item{display:flex;align-items:center;gap:11px;padding:9px 15px;cursor:pointer}
+.ts-item:hover{background:var(--hover)}
+.ts-ic{width:32px;height:32px;border-radius:10px;background:var(--surface2);display:grid;place-items:center;font-size:15px;flex:none}
+.ts-item b{font-size:13.5px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-item small{font-size:11.5px;color:var(--ink-faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-empty{padding:15px;color:var(--ink-soft);font-size:13px}
 
 /* ---- MOBILE: più aria e leggibilità ---- */
 @media(max-width:640px){
@@ -869,7 +880,10 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="sub" id="pageSub">Il tuo angolo di lettura</div>
       </div>
       <div class="spacer"></div>
-      <div class="search"><span>🔎</span><input placeholder="Cerca libri, club, autori…"></div>
+      <div class="search-wrap">
+        <div class="search"><span>🔎</span><input id="topSearch" placeholder="Vai a… sezione o libro" autocomplete="off" oninput="topSearchInput(this.value)" onkeydown="if(event.key==='Enter')topSearchGo();if(event.key==='Escape')topClose()" onblur="setTimeout(topClose,180)"></div>
+        <div id="topSearchRes" class="topsearch-res" style="display:none"></div>
+      </div>
       <button class="bell" onclick="go('notifiche')">🔔<span class="dot"></span></button>
     </header>
     <div class="view fade" id="view"></div>
@@ -1000,6 +1014,19 @@ const pages=[
  {id:'mappa',ic:'🗺️',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Strumenti'},
  {id:'notifiche',ic:'🔔',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Strumenti'},
 ];
+function topSearchInput(q){
+ const box=$('#topSearchRes');if(!box)return;q=(q||'').trim();
+ if(!q){box.style.display='none';box.innerHTML='';return}
+ const nq=deburr(q);
+ const secs=pages.filter(p=>deburr(p.label).includes(nq)||deburr(p.title).includes(nq)).slice(0,6)
+   .map(p=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="go('${p.id}');topClose()"><span class="ts-ic">${p.ic}</span><span style="min-width:0"><b>${p.label}</b><small>${esc(p.sub)}</small></span></div>`).join('');
+ const bks=(typeof books!=='undefined'?books:[]).filter(b=>deburr(b.t).includes(nq)||deburr(b.a||'').includes(nq)).slice(0,5)
+   .map(b=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="openBook(${b.id});topClose()"><span class="ts-ic">📖</span><span style="min-width:0"><b>${esc(b.t)}</b><small>${esc(b.a||'')}</small></span></div>`).join('');
+ box.innerHTML=(secs?'<div class="ts-grp">Sezioni</div>'+secs:'')+(bks?'<div class="ts-grp">Libreria</div>'+bks:'')||'<div class="ts-empty">Nessun risultato</div>';
+ box.style.display='block';
+}
+function topSearchGo(){const box=$('#topSearchRes');if(!box)return;const f=box.querySelector('.ts-item');if(f)f.click();}
+function topClose(){const box=$('#topSearchRes');if(box)box.style.display='none';const i=$('#topSearch');if(i)i.value='';}
 function buildNav(){
  let html='',last='';
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
@@ -1590,7 +1617,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v27 (redesign verde/ottone)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v28 (ricerca sezioni + mappa attiva)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2474,20 +2501,62 @@ async function loadAiRecs(){
      </div>
    </div>`).join('')}</div>`;
 }
+function locKey(){return 'pagina_booklocs_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
+function bookLocs(){try{return JSON.parse(localStorage.getItem(locKey())||'{}')||{}}catch(e){return{}}}
+function setBookLocs(m){try{localStorage.setItem(locKey(),JSON.stringify(m))}catch(e){}}
+function geocodeOne(q){return fetch('https://photon.komoot.io/api/?limit=1&q='+encodeURIComponent(q)).then(r=>r.ok?r.json():null).then(d=>{const f=d&&d.features&&d.features[0];if(!f||!f.geometry)return null;const c=f.geometry.coordinates;return{lat:c[1],lng:c[0],country:(f.properties&&f.properties.country)||''}}).catch(()=>null)}
+let curioMapBusy=false;
+async function detectBookLocations(){
+ if(typeof supa==='undefined'||!supa){alert('AI non disponibile.');return}
+ if(curioMapBusy)return;curioMapBusy=true;
+ const m=bookLocs();const todo=books.filter(b=>!m[normKey(b.t)]);
+ const btn=$('#detectBtn');if(btn){btn.disabled=true;btn.textContent='⏳ Rilevo…'}
+ if(!todo.length){toast('Ambientazioni già sulla mappa','🗺️');curioMapBusy=false;if(btn){btn.disabled=false;btn.textContent='✨ Rileva ambientazioni'}return}
+ let done=0,errors=0;
+ for(const b of todo){
+   try{
+     const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In quale città e paese è ambientato PRINCIPALMENTE il libro "'+b.t+'"'+(b.a?(' di '+b.a):'')+'? Rispondi SOLO con "Città, Paese" (oppure solo "Paese"). Se non è un luogo reale o è ignoto, rispondi solo: SCONOSCIUTO.'}});
+     if(error){errors++;continue}
+     let ans=((data&&data.answer)||'').trim().split('\n')[0].replace(/^[-•\d.\s]+/,'').slice(0,80);
+     if(!ans||/sconosciut/i.test(ans))continue;
+     const g=await geocodeOne(ans);
+     if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};setBookLocs(m);done++;if(current==='mappa')renderMappaCloud()}
+   }catch(e){errors++}
+ }
+ curioMapBusy=false;
+ if(errors&&!done)toast('AI non raggiungibile: deploya la function "assistente"','⚠️');
+ else toast(done?('Aggiunti '+done+' libri'):'Nessuna ambientazione trovata','🗺️');
+ if(current==='mappa')renderMappaCloud();
+}
 function renderMappaCloud(){
- const placed=books.filter(b=>b.set&&b.set.length);
- const countries=[...new Set(placed.flatMap(b=>b.set.map(s=>s.c)))];
+ const locs=Object.values(bookLocs());
+ const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
+ const missing=books.filter(b=>!bookLocs()[normKey(b.t)]).length;
  view.innerHTML=`
  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-   <h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3>
-   <span class="pill sky">🌍 ${countries.length} paesi · ${placed.length} libri</span>
+   <div><h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div></div>
+   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+     <span class="pill sky">🌍 ${countries.length} paesi · ${locs.length} libri</span>
+     ${books.length?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:''}
+   </div>
  </div>
  <div id="map"></div>
  <div class="card pad" style="margin-top:18px">
-   ${placed.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: ${countries.join(', ')}.</div>`
-     :`<div class="srch-empty">Nessun libro con ambientazione nota, per ora. Man mano che aggiungi e leggi libri, le loro ambientazioni compariranno qui sulla mappa. 🌏</div>`}
+   ${locs.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: <b>${countries.join(', ')||'—'}</b>.${missing?` ${missing} libri ancora da posizionare: premi "✨ Rileva ambientazioni".`:''}</div>`
+     :(books.length?`<div class="srch-empty">La mappa è pronta! Premi <b>✨ Rileva ambientazioni</b>: l'AI individua dove sono ambientati i tuoi libri e li posiziona sul planisfero. 🌏</div>`
+       :`<div class="srch-empty">Aggiungi libri alla libreria e poi premi "Rileva ambientazioni" per vederli sulla mappa. 🌏</div>`)}
  </div>`;
- setTimeout(initMap,60);
+ setTimeout(()=>initMapCloud(locs),60);
+}
+function initMapCloud(locs){
+ if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
+ if(typeof L==='undefined')return;
+ mapObj=L.map('map',{scrollWheelZoom:false}).setView([25,12],2);
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
+ const icon=L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:13px">📖</span></div>',iconSize:[30,30],iconAnchor:[15,28]});
+ const pts=locs.filter(l=>l.lat!=null);
+ pts.forEach(l=>L.marker([l.lat,l.lng],{icon}).addTo(mapObj).bindPopup('<b>'+esc(l.title)+'</b><br>'+esc(l.author||'')+'<br><span style="color:#766a61">📍 '+esc(l.place)+'</span>'));
+ if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}}
 }
 /* ============ PROFILO (cloud) ============ */
 function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;').replace(/</g,'&lt;')}
@@ -2807,7 +2876,6 @@ function paintCuriosity(box,p,st){
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
    +'<button class="btn sm" onclick="openBook('+p.bookId+')">📖 Apri libro</button>'
    +'<button class="btn ghost sm" onclick="curioAnother()">🔄 Un\'altra</button>'
-   +'<button class="btn ghost sm" onclick="curioDismiss('+p.bookId+')">🙈 Non mi interessa</button>'
    +notifBtn
   +'</div>'
   +'<div class="muted" style="font-size:11px;margin-top:10px">Fonte: '+esc(p.source)+' · senza spoiler</div>'
