@@ -283,11 +283,13 @@ input[type=range]{accent-color:var(--coral)}
 .lock-msg{display:flex;align-items:center;gap:11px;color:var(--ink-soft);font-size:13.5px}
 
 /* ===== MEETINGS ===== */
-.event{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--line)}
+.event{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid var(--line);align-items:flex-start}
 .event:last-child{border:none}
-.event .date{width:66px;text-align:center;flex:none;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:10px 0}
+.event .date{width:74px;flex:none;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:10px 4px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .event .date b{font-family:'Fraunces';font-size:26px;color:var(--plum);display:block;line-height:1}
 .event .date small{text-transform:uppercase;font-size:10.5px;letter-spacing:1.5px;color:var(--coral);font-weight:700}
+.event .date .etime{margin-top:6px;font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px 7px;white-space:nowrap}
 
 /* ===== MAP ===== */
 #map{height:460px;border-radius:18px;border:1px solid var(--line);z-index:1;box-shadow:var(--shadow)}
@@ -469,7 +471,7 @@ input[type=range]{accent-color:var(--coral)}
 
 /* Card: hover con micro-sollevamento ovunque */
 .card{transition:transform .2s, box-shadow .2s}
-.row>.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.row>.card[onclick]:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
 
 /* Comparsa morbida delle viste */
 @keyframes viewIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
@@ -1684,7 +1686,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v29 (assistente multi-provider + base gratuito)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v30 (incontri: layout data+ora, card non finte)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3019,9 +3021,9 @@ function renderIncontriCloud(){
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">📅 Prossimi incontri</h3>${myClubs.length?`<button class="btn sm" onclick="openMeetingModal()">＋ Nuovo incontro</button>`:''}</div>
  <div class="card pad">
    ${up.length?up.map(m=>{const d=fmtDateParts(m.date);const canEdit=(m.created_by===authUser.id)||(myRoles[m.club_id]==='admin');return `<div class="event">
-     <div class="date"><b>${d.d}</b><small>${d.m}</small></div>
+     <div class="date"><b>${d.d}</b><small>${d.m}</small>${m.time?`<span class="etime">🕒 ${esc(m.time)}</span>`:''}</div>
      <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(m.title||'Incontro')}</b>
-       <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}${m.time?` · 🕒 ${esc(m.time)}`:''}</div>
+       <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}</div>
        <div class="chips">${m.link?`<a class="pill sky" style="text-decoration:none" href="${esc(m.link)}" target="_blank" rel="noopener">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
      ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" title="Elimina">🗑</button></div>`:''}
    </div>`}).join(''):`<div class="srch-empty">Nessun incontro in programma.${myClubs.length?' Creane uno con "＋ Nuovo incontro".':' Unisciti a un club per organizzare gli incontri.'}</div>`}
