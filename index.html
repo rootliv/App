@@ -562,6 +562,9 @@ input[type=range]{accent-color:var(--coral)}
 @media(max-width:640px){.dh-prog{min-width:100%}}
 .diary-compose{margin-bottom:18px}
 .cmp-label{display:block;font-size:13px;font-weight:600;margin-bottom:8px}
+.cmp-ta{display:block;width:100%;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-family:inherit;
+  font-size:14.5px;line-height:1.6;outline:none;background:var(--surface);resize:vertical;min-height:104px;transition:.15s}
+.cmp-ta:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
 .scope-seg{display:inline-flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:30px;padding:4px;margin-top:12px;flex-wrap:wrap}
 .scope-seg button{border:none;background:none;font-family:inherit;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
@@ -2102,7 +2105,7 @@ function paintDiary(c){
 
   <div class="card pad diary-compose">
    <label class="cmp-label">✍️ Scrivi una considerazione</label>
-   <textarea id="noteText" rows="3" placeholder="Una riflessione, una domanda, una citazione…"></textarea>
+   <textarea id="noteText" class="cmp-ta" rows="4" placeholder="Una riflessione, una domanda, una citazione…"></textarea>
    <div class="scope-seg" id="scopeSeg">
      <button type="button" class="active" data-s="page" onclick="setNoteScope('page')">📄 Una pagina</button>
      <button type="button" data-s="range" onclick="setNoteScope('range')">📑 Più pagine</button>
