@@ -1335,7 +1335,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v17 (incontri: data futura + ora)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v18 (incontro richiede libro + diario a pagine)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1942,6 +1942,10 @@ async function handlePendingJoin(){
 }
 
 /* ---- Diario condiviso cloud ---- */
+let curDiaryTitle='';
+function bookPos(title){try{const m=JSON.parse(localStorage.getItem('pagina_bookpos')||'{}');return +m[title]||0}catch(e){return 0}}
+function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem('pagina_bookpos')||'{}');m[title]=p;localStorage.setItem('pagina_bookpos',JSON.stringify(m))}catch(e){}}
+function clubBookPages(c){const b=books.find(x=>normKey(x.t)===normKey(c.current_title||''));return (b&&b.pg)||0}
 async function loadClubNotes(c){
  const {data}=await supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title).order('position');
  cloudNotes=data||[];
@@ -1951,15 +1955,16 @@ async function loadClubNotes(c){
 function renderNotesList(){
  const el=$('#notesList');if(!el)return;
  if(!cloudNotes.length){el.innerHTML='<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>';return}
- el.innerHTML=cloudNotes.map(n=>{const locked=n.position>myPos;const nm=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].name)||'Lettore';
-   if(locked)return `<div class="note locked"><div class="lock-msg">🔒 <div><b>Nota bloccata</b> · ${nm} ha scritto a <b>pos. ${n.position}</b>. Si sblocca quando arrivi lì.</div></div></div>`;
-   return `<div class="note fade"><div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${ini2(nm)}</div><b>${nm}</b><span class="pill">pos. ${n.position}</span></div><p style="font-size:14px;line-height:1.6">${(n.text||'').replace(/</g,'&lt;')}</p></div>`;
+ const pos=bookPos(curDiaryTitle);
+ el.innerHTML=cloudNotes.map(n=>{const locked=n.position>pos;const nm=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].name)||'Lettore';
+   if(locked)return `<div class="note locked"><div class="lock-msg">🔒 <div><b>Nota bloccata</b> · ${nm} ha scritto a <b>pag. ${n.position}</b>. Si sblocca quando arrivi a quella pagina.</div></div></div>`;
+   return `<div class="note fade"><div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${ini2(nm)}</div><b>${nm}</b><span class="pill">pag. ${n.position}</span></div><p style="font-size:14px;line-height:1.6">${(n.text||'').replace(/</g,'&lt;')}</p></div>`;
  }).join('');
 }
 async function addClubNote(clubId){
  const c=myClubs.find(x=>x.id===clubId);if(!c)return;
  const ta=$('#noteText');const txt=ta?ta.value.trim():'';if(!txt)return;
- await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:myPos,text:txt,shared:true});
+ await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:bookPos(c.current_title),text:txt,shared:true});
  if(ta)ta.value='';await loadClubNotes(c);renderNotesList();
 }
 function renderDiarioCloud(){
@@ -1968,17 +1973,23 @@ function renderDiarioCloud(){
  const withBook=myClubs.filter(c=>c.current_title);
  if(!withBook.length){view.innerHTML=`<div class="card pad" style="text-align:center;padding:44px 20px"><div style="font-size:42px">✍️</div><div class="muted" style="margin:12px auto 16px;max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</div><button class="btn" onclick="go('club')">Vai ai club</button></div>`;return}
  const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;
+ curDiaryTitle=c.current_title;
+ const total=clubBookPages(c);const pos=bookPos(c.current_title);
+ const titEsc=(c.current_title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
  view.innerHTML=`
   <div class="card pad" style="margin-bottom:18px">
    <div class="tabs" style="margin-bottom:12px">${withBook.map(cl=>`<button class="${cl.id===c.id?'active':''}" onclick="clubSel=${cl.id};renderDiarioCloud()">${cl.emoji||'📖'} ${cl.name}</button>`).join('')}</div>
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
-     <div><h3 style="font-size:16px">✍️ ${c.current_title}</h3><div class="muted" style="font-size:13px">Le note si sbloccano in base al punto raggiunto. Niente spoiler. 🔒</div></div>
-     <div style="text-align:right"><div class="muted" style="font-size:12px;margin-bottom:4px">Tuo avanzamento</div>
-       <div style="display:flex;align-items:center;gap:10px"><input type="range" min="0" max="100" value="${myPos}" oninput="myPos=+this.value;save();renderDiarioCloud()" style="width:150px"><b style="font-family:'Fraunces';font-size:20px;color:var(--plum)">${myPos}%</b></div></div>
+     <div><h3 style="font-size:16px">✍️ ${c.current_title}</h3><div class="muted" style="font-size:13px">Le note si sbloccano in base alla pagina raggiunta. Niente spoiler. 🔒</div></div>
+     <div style="text-align:right"><div class="muted" style="font-size:12px;margin-bottom:4px">Sei a pagina</div>
+       <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+         <input type="number" min="0" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(0,parseInt(this.value)||0));renderDiarioCloud()" style="width:88px;text-align:center;font-size:16px">
+         ${total?`<span class="muted" style="font-size:13px">di ${total}</span>`:''}
+       </div></div>
    </div>
   </div>
   <div class="card pad" style="margin-bottom:18px">
-   <div class="field" style="margin-bottom:8px"><label>✍️ Scrivi una nota condivisa (visibile dalla posizione ${myPos}%)</label><textarea id="noteText" rows="2" placeholder="Una riflessione, una domanda, una citazione…"></textarea></div>
+   <div class="field" style="margin-bottom:8px"><label>✍️ Scrivi una nota condivisa (visibile da pagina ${pos})</label><textarea id="noteText" rows="2" placeholder="Una riflessione, una domanda, una citazione…"></textarea></div>
    <button class="btn" onclick="addClubNote(${c.id})">Condividi nota</button>
   </div>
   <div class="sec-title">📝 Note del club</div>
@@ -2538,7 +2549,19 @@ function setupPlaceAutocomplete(){
 }
 function openMeetingModal(id){
  const m=id?(myMeetings||[]).find(x=>x.id===id):null;
- const opts=myClubs.map(c=>`<option value="${c.id}" ${m&&m.club_id===c.id?'selected':''}>${c.current_title?('📖 '+esc(c.current_title)+' · '+esc(c.name)):((c.emoji||'📖')+' '+esc(c.name)+' — nessun libro scelto')}</option>`).join('');
+ let pool=myClubs.filter(c=>c.current_title);                          // solo club con libro del mese
+ if(m&&!pool.some(c=>c.id===m.club_id)){const mc=myClubs.find(c=>c.id===m.club_id);if(mc)pool=[mc].concat(pool);}
+ if(!pool.length){
+   $('#modal').innerHTML=`<div class="modal-top"><b>📅 Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+     <div class="modal-body" style="text-align:center;padding:34px 26px">
+       <div style="font-size:42px">📖</div>
+       <h3 style="font-size:18px;margin:10px 0 6px">Prima serve il libro del mese</h3>
+       <div class="muted" style="max-width:430px;margin:0 auto 18px;line-height:1.55">Non puoi ancora fissare un incontro: nessuno dei tuoi club ha scelto il libro del mese. Avvia un <b>sorteggio</b> o una <b>votazione</b> nel club, poi torna qui.</div>
+       <button class="btn" onclick="closeModal();go('club')">Vai ai club</button>
+     </div>`;
+   openOverlay();return;
+ }
+ const opts=pool.map(c=>`<option value="${c.id}" ${m&&m.club_id===c.id?'selected':''}>${c.current_title?('📖 '+esc(c.current_title)+' · '+esc(c.name)):((c.emoji||'📖')+' '+esc(c.name))}</option>`).join('');
  $('#modal').innerHTML=`
   <div class="modal-top"><b>${m?'✏️ Modifica incontro':'📅 Nuovo incontro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
@@ -2565,9 +2588,11 @@ async function saveMeeting(editId){
  const club_id=+$('#mtClub').value;const date=$('#mtDate').value;const time=(($('#mtTime')&&$('#mtTime').value)||'').trim();
  const place=$('#mtPlace').value.trim();const link=$('#mtLink').value.trim();
  const c=myClubs.find(x=>x.id===club_id)||{};
- const title=(c.current_title&&c.current_title.trim())||c.name||'Incontro';
+ const existing=editId?(myMeetings||[]).find(x=>x.id===editId):null;
+ const title=(c.current_title&&c.current_title.trim())||(existing&&existing.title)||'';
  const msg=t=>{const e=$('#mtMsg');if(e){e.textContent=t;e.classList.add('show')}};
  if(!club_id||!date)return msg('Scegli un club e una data.');
+ if(!title)return msg('Questo club non ha ancora un libro del mese: scegline uno prima di fissare l\'incontro.');
  const today=todayStr();
  if(date<today)return msg('La data non può essere nel passato.');
  if(date===today&&time&&time<nowHM())return msg('L\'orario non può essere nel passato.');
