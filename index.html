@@ -1394,7 +1394,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v23 (foto profilo)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v24 (menu foto profilo)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1714,17 +1714,31 @@ function processAvatar(file){const fr=new FileReader();fr.onload=e=>{const img=n
   ctx.drawImage(img,sx,sy,m,m,0,0,S,S);
   await saveAvatar(cv.toDataURL('image/jpeg',0.78));
  };img.onerror=()=>alert('Immagine non valida.');img.src=e.target.result};fr.readAsDataURL(file);}
+function openAvatarMenu(){
+ const url=myAvatar();const nm=(profile&&profile.name)||'?';
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>Foto profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body" style="text-align:center">
+    ${url?`<img src="${esc(url)}" alt="" style="width:210px;height:210px;object-fit:cover;border-radius:26px;box-shadow:var(--shadow)">`
+        :`<div style="width:210px;height:210px;margin:0 auto;border-radius:26px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:64px">${ini2(nm)}</div>`}
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px">
+      <button class="btn" onclick="chooseAvatar()">📷 ${url?'Cambia foto':'Carica foto'}</button>
+      ${url?`<button class="btn danger" onclick="removeAvatar()">🗑 Rimuovi foto</button>`:''}
+    </div>
+  </div>`;
+ openOverlay();
+}
 async function saveAvatar(url){
  if(!profile)profile={};profile.data=Object.assign({},profile.data||{},{avatar:url});
  try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){alert('Errore nel salvataggio della foto: '+e.message);return}
- applyMyAvatar();if(current==='profilo')renderProfiloCloud();
+ applyMyAvatar();closeModal();if(current==='profilo')renderProfiloCloud();
 }
 async function removeAvatar(){
  if(!profile||!profile.data||!profile.data.avatar)return;
  if(!confirm('Rimuovere la foto profilo?'))return;
  delete profile.data.avatar;
  try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}
- applyMyAvatar();if(current==='profilo')renderProfiloCloud();
+ applyMyAvatar();closeModal();if(current==='profilo')renderProfiloCloud();
 }
 function renderClubCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club… ☁️</div></div>';
@@ -2287,10 +2301,10 @@ function renderProfiloCloud(){
  const chips=(arr,empty)=>(arr&&arr.length)?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):`<span class="muted" style="font-size:13px">${empty}</span>`;
  view.innerHTML=`
  <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-   <div class="prof-av" onclick="chooseAvatar()" title="Cambia foto">${d.avatar?`<img src="${esc(d.avatar)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">📷 Cambia</div></div>
+   <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${d.avatar?`<img src="${esc(d.avatar)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
    <div style="flex:1;min-width:200px">
      <h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2>
-     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}${d.avatar?` · <a href="#" onclick="removeAvatar();return false" style="color:var(--plum);font-weight:600">Rimuovi foto</a>`:''}</div>
+     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}</div>
      <div class="chips" style="margin-top:10px">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
        ${goal?`<span class="pill green">🎯 Obiettivo ${goal} libri</span>`:''}
