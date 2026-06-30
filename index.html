@@ -629,6 +629,112 @@ input[type=range]{accent-color:var(--coral)}
 .ai-typing i:nth-child(2){animation-delay:.2s}.ai-typing i:nth-child(3){animation-delay:.4s}
 @keyframes blink{0%,100%{opacity:.2}50%{opacity:1}}
 
+/* ============================================================
+   REDESIGN — nuova identità "libreria premium" (verde bosco + ottone su avorio)
+   Ridefinisce i token e ridisegna i componenti condivisi: si applica a TUTTA l'app.
+   ============================================================ */
+:root{
+  --bg:#f4efe5; --bg2:#eae2d2; --surface:#fffdf8; --surface2:#f6f0e4;
+  --ink:#221f19; --ink-soft:#6c6457; --ink-faint:#a89d8b;
+  --line:#e7decd;
+  --plum:#1f6b57; --plum-dark:#16513f; --plum-soft:#2f8c72;     /* "plum" → verde bosco */
+  --coral:#b07d35; --coral-soft:#f1e6cf;                         /* "coral" → ottone */
+  --gold:#b07d35; --gold-soft:#f0e2c4;
+  --sage:#1f6b57; --sage-soft:#e2efe8; --sky:#3b6f8c;
+  --glow1:#e7efe9; --glow2:#f1e9da; --hover:#efe8da; --glass:rgba(255,253,248,.78);
+  --brand-solid:#1f6b57;
+  --brand-grad:linear-gradient(135deg,#1f6b57,#2f8c72);
+  --gold-grad:linear-gradient(135deg,#b07d35,#caa15c);
+  --quote-bg:#f3eddf; --ai-bg:#eef3ef;
+  --shadow-sm:0 1px 2px rgba(40,32,20,.06);
+  --shadow:0 10px 30px -12px rgba(40,32,20,.18);
+  --shadow-lg:0 34px 70px -20px rgba(40,32,20,.30);
+  --r:20px; --r-sm:14px;
+}
+[data-theme="dark"]{
+  --bg:#14130e; --bg2:#1d1b14; --surface:#1a1812; --surface2:#221f17;
+  --ink:#efe9dc; --ink-soft:#b1a895; --ink-faint:#7d7565;
+  --line:#2c2820;
+  --plum:#5db79d; --plum-dark:#0c0d0c; --plum-soft:#79ccb4;
+  --coral:#d4a65f; --coral-soft:#2b2114;
+  --gold:#d4a65f; --gold-soft:#2b2114;
+  --sage:#5db79d; --sage-soft:#15241e; --sky:#8db9dd;
+  --glow1:#13231d; --glow2:#1a1710; --hover:#262219; --glass:rgba(26,24,18,.8);
+  --brand-solid:#2f8c72;
+  --brand-grad:linear-gradient(135deg,#236b57,#33967a);
+  --gold-grad:linear-gradient(135deg,#b07d35,#d4a65f);
+  --quote-bg:#211d14; --ai-bg:#15241e;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 14px 36px -14px rgba(0,0,0,.6);
+  --shadow-lg:0 36px 80px -22px rgba(0,0,0,.72);
+}
+/* tipografia: gerarchia più netta */
+h1,h2,h3,.serif{letter-spacing:-.02em}
+.topbar h2{font-family:'Fraunces',serif;font-weight:600;font-size:26px}
+.topbar .sub{font-size:13px}
+
+/* SIDEBAR ridisegnata */
+.sidebar{border-radius:24px;border:1px solid var(--line);box-shadow:var(--shadow);background:var(--surface)}
+.brand .logo{border-radius:15px;box-shadow:0 8px 18px -6px rgba(31,107,87,.5)}
+.brand b{font-size:22px}
+.nav .grp{font-size:9px;letter-spacing:2px;color:var(--ink-faint)}
+.nav button{border-radius:13px;font-size:14px;font-weight:500;padding:11px 13px;color:var(--ink-soft)}
+.nav button .ic{transition:transform .15s}
+.nav button:hover{background:var(--hover)}
+.nav button:hover .ic{transform:scale(1.12)}
+.nav button.active{background:var(--sage-soft);color:var(--plum);font-weight:650}
+.nav button.active::before{content:"";position:absolute;left:-2px;top:9px;bottom:9px;width:3.5px;border-radius:4px;background:var(--brand-grad)}
+.side-foot{border-radius:15px;background:var(--surface2)}
+
+/* HEADER */
+.topbar{backdrop-filter:blur(14px) saturate(1.2)}
+.search{border-radius:14px;border:1px solid var(--line)}
+.search:focus-within{border-color:var(--plum);box-shadow:0 0 0 4px var(--sage-soft)}
+.bell{border-radius:14px}
+
+/* BOTTONI — varianti coerenti, rettangolo arrotondato moderno */
+.btn{border-radius:13px;font-weight:600;letter-spacing:.01em;box-shadow:0 8px 18px -8px rgba(31,107,87,.5)}
+.btn:hover{box-shadow:0 12px 24px -8px rgba(31,107,87,.55)}
+.btn.gold{box-shadow:0 8px 18px -8px rgba(176,125,53,.55)}
+.btn.ghost{border-radius:13px;border:1.5px solid var(--line);box-shadow:none;background:var(--surface)}
+.btn.ghost:hover{border-color:var(--plum);background:var(--hover)}
+.btn.sm{border-radius:11px}
+.btn.danger{border-radius:13px}
+
+/* CARD */
+.card{border-radius:var(--r);border:1px solid var(--line);box-shadow:var(--shadow)}
+.pad{padding:26px}
+
+/* PILL */
+.pill{border-radius:12px;font-weight:600}
+
+/* INPUT / FORM */
+.field input,.field select,.field textarea,.cmp-ta,.chatbox input{border-radius:12px;border:1.5px solid var(--line);background:var(--surface)}
+.field label{font-size:12.5px;letter-spacing:.01em;color:var(--ink-soft)}
+
+/* HERO (Home) */
+.hero{border-radius:var(--r);border:1px solid var(--line);background:
+  radial-gradient(700px 220px at 92% -30%, var(--sage-soft), transparent 60%), var(--surface)}
+.hero h1{font-size:32px}
+
+/* TABS */
+.tabs{border-radius:14px;background:var(--bg2)}
+.tabs button{border-radius:11px}
+
+/* MODALE */
+.modal{border-radius:24px}
+.modal-top .close{border-radius:12px}
+
+/* sec-title accento ottone-verde */
+.sec-title::before{background:var(--brand-grad)}
+
+/* MOBILE bottom-nav coerente */
+.botnav{background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.botnav button.active{color:var(--plum)}
+@media(max-width:900px){
+  .sidebar{border-radius:0}
+}
+
 /* ---- MOBILE: più aria e leggibilità ---- */
 @media(max-width:640px){
   .view{padding:10px 16px 110px}
@@ -1484,7 +1590,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v26 (assistente AI reale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v27 (redesign verde/ottone)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
