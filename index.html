@@ -548,6 +548,7 @@ input[type=range]{accent-color:var(--coral)}
 .member-chip small{font-size:11.5px;color:var(--ink-faint)}
 .prop-row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
 .prop-row:last-child{border-bottom:none}
+.ev-actions{display:flex;gap:6px;flex:none;align-self:flex-start}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -1332,7 +1333,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v14 (sorteggio a turni)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v15 (incontri: modifica/elimina + Maps)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2495,35 +2496,55 @@ function renderIncontriCloud(){
  </div>
  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">📅 Prossimi incontri</h3>${myClubs.length?`<button class="btn sm" onclick="openMeetingModal()">＋ Nuovo incontro</button>`:''}</div>
  <div class="card pad">
-   ${up.length?up.map(m=>{const d=fmtDateParts(m.date);return `<div class="event">
+   ${up.length?up.map(m=>{const d=fmtDateParts(m.date);const canEdit=(m.created_by===authUser.id)||(myRoles[m.club_id]==='admin');return `<div class="event">
      <div class="date"><b>${d.d}</b><small>${d.m}</small></div>
-     <div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${m.title||'Incontro'}</b>
-       <div class="muted" style="font-size:13px;margin:4px 0 8px">${clubName(m.club_id)}</div>
-       <div class="chips">${m.link?`<a class="pill sky" style="text-decoration:none" href="${m.link}" target="_blank">🎥 Videochiamata</a>`:''}${m.place?`<span class="pill coral">📍 ${m.place}</span>`:''}</div></div>
+     <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(m.title||'Incontro')}</b>
+       <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}</div>
+       <div class="chips">${m.link?`<a class="pill sky" style="text-decoration:none" href="${esc(m.link)}" target="_blank" rel="noopener">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
+     ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" title="Elimina">🗑</button></div>`:''}
    </div>`}).join(''):`<div class="srch-empty">Nessun incontro in programma.${myClubs.length?' Creane uno con "＋ Nuovo incontro".':' Unisciti a un club per organizzare gli incontri.'}</div>`}
  </div>`;
 }
-function openMeetingModal(){
+function mapsUrl(place){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place)}
+function openMeetingModal(id){
+ const m=id?(myMeetings||[]).find(x=>x.id===id):null;
+ const opts=myClubs.map(c=>`<option value="${c.id}" ${m&&m.club_id===c.id?'selected':''}>${c.current_title?('📖 '+esc(c.current_title)+' · '+esc(c.name)):((c.emoji||'📖')+' '+esc(c.name)+' — nessun libro scelto')}</option>`).join('');
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>📅 Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${m?'✏️ Modifica incontro':'📅 Nuovo incontro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <div class="field"><label>Club</label><select id="mtClub">${myClubs.map(c=>`<option value="${c.id}">${c.emoji||'📖'} ${c.name}</option>`).join('')}</select></div>
-    <div class="field"><label>Titolo</label><input id="mtTitle" placeholder="Es. Incontro finale"></div>
-    <div class="field"><label>Data</label><input id="mtDate" type="date" value="${todayStr()}"></div>
-    <div class="field"><label>Luogo (facoltativo)</label><input id="mtPlace" placeholder="Es. Libreria Tomo, Roma"></div>
-    <div class="field"><label>Link videochiamata (facoltativo)</label><input id="mtLink" placeholder="https://meet.google.com/…"></div>
-    <button class="btn" onclick="saveMeeting()">Salva incontro</button>
+    <div class="field"><label>Club & libro del mese</label>
+      <select id="mtClub">${opts}</select>
+      <div class="muted" style="font-size:11.5px;margin-top:5px">Il titolo dell'incontro sarà il <b>libro del mese</b> del club scelto.</div></div>
+    <div class="field"><label>Data</label><input id="mtDate" type="date" value="${m?String(m.date).slice(0,10):todayStr()}"></div>
+    <div class="field"><label>Luogo (facoltativo)</label><input id="mtPlace" placeholder="Es. Libreria Tomo, Roma" value="${m?esc(m.place||''):''}">
+      <div class="muted" style="font-size:11.5px;margin-top:5px">📍 Indirizzo, locale o posto: diventerà un link che apre Google Maps.</div></div>
+    <div class="field"><label>Link videochiamata (facoltativo)</label><input id="mtLink" placeholder="https://meet.google.com/…" value="${m?esc(m.link||''):''}"></div>
+    <button class="btn" onclick="saveMeeting(${m?m.id:0})">${m?'Salva modifiche':'Salva incontro'}</button>
     <div id="mtMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
  openOverlay();
 }
-async function saveMeeting(){
- const club_id=+$('#mtClub').value;const title=$('#mtTitle').value.trim();const date=$('#mtDate').value;
+async function saveMeeting(editId){
+ editId=editId||0;
+ const club_id=+$('#mtClub').value;const date=$('#mtDate').value;
  const place=$('#mtPlace').value.trim();const link=$('#mtLink').value.trim();
- if(!club_id||!date){const e=$('#mtMsg');if(e){e.textContent='Scegli un club e una data.';e.classList.add('show')}return}
- const {error}=await supa.from('meetings').insert({club_id,title:title||'Incontro',date,place:place||null,link:link||null,created_by:authUser.id});
- if(error){const e=$('#mtMsg');if(e){e.textContent='Errore: '+error.message;e.classList.add('show')}return}
+ const c=myClubs.find(x=>x.id===club_id)||{};
+ const title=(c.current_title&&c.current_title.trim())||c.name||'Incontro';
+ const msg=t=>{const e=$('#mtMsg');if(e){e.textContent=t;e.classList.add('show')}};
+ if(!club_id||!date)return msg('Scegli un club e una data.');
+ const dup=(myMeetings||[]).find(x=>x.id!==editId&&x.club_id===club_id&&String(x.date).slice(0,10)===date&&(x.title||'')===title);
+ if(dup)return msg('Esiste già un incontro per questo libro in questa data.');
+ let error;
+ if(editId){({error}=await supa.from('meetings').update({club_id,title,date,place:place||null,link:link||null}).eq('id',editId));}
+ else{({error}=await supa.from('meetings').insert({club_id,title,date,place:place||null,link:link||null,created_by:authUser.id}));}
+ if(error)return msg('Errore: '+error.message);
  await cloudLoadMeetings();closeModal();go('incontri');
+}
+async function deleteMeeting(id){
+ if(!confirm('Eliminare questo incontro?'))return;
+ const {error}=await supa.from('meetings').delete().eq('id',id);
+ if(error){alert('Errore: '+error.message);return}
+ await cloudLoadMeetings();go('incontri');
 }
 function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
