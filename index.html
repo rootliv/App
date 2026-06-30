@@ -562,6 +562,8 @@ input[type=range]{accent-color:var(--coral)}
 .pageval input{width:64px;border:none;background:none;outline:none;font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--plum);text-align:center;-moz-appearance:textfield}
 .pageval input::-webkit-outer-spin-button,.pageval input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .pageval small{font-size:12.5px;color:var(--ink-faint);font-weight:600}
+.pageval.sm{padding:4px 10px}
+.pageval.sm input{font-size:18px;width:48px}
 
 .note-body.reach{filter:blur(6px);cursor:pointer;user-select:none;transition:filter .25s;font-size:14px;line-height:1.6;margin-top:10px}
 .note-body.reach.show{filter:none;user-select:text}
@@ -1362,7 +1364,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v20 (luogo gratis OSM/Photon + note autore)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v21 (diario rifinito + pagina nota)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1969,11 +1971,12 @@ async function handlePendingJoin(){
 }
 
 /* ---- Diario condiviso cloud ---- */
-let curDiaryTitle='',editNoteId=null;
+let curDiaryTitle='',curDiaryClub=null,editNoteId=null;
 function posKey(){return 'pagina_bookpos_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')} // posizione PER UTENTE
 function bookPos(title){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}}
-function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=Math.max(0,p|0);localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}}
-function stepPos(title,d){setBookPos(title,bookPos(title)+d);renderDiarioCloud()}
+function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=Math.max(1,p|0);localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}} // mai sotto 1
+function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
+function stepPos(title,d){const mn=diaryMinPos();setBookPos(title,Math.max(mn,bookPos(title)+d));if(curDiaryClub)paintDiary(curDiaryClub);}
 function clubBookPages(c){const b=books.find(x=>normKey(x.t)===normKey(c.current_title||''));return (b&&b.pg)||0}
 function fmtNoteDate(s){try{const d=new Date(s);if(isNaN(d))return'';return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'})}catch(e){return''}}
 async function loadClubNotes(c){
@@ -2008,8 +2011,12 @@ function renderNotesList(){
 async function addClubNote(clubId){
  const c=myClubs.find(x=>x.id===clubId);if(!c)return;
  const ta=$('#noteText');const txt=ta?ta.value.trim():'';if(!txt)return;
- await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:bookPos(c.current_title),text:txt,shared:true});
- if(ta)ta.value='';await loadClubNotes(c);renderNotesList();
+ const pos=bookPos(c.current_title);
+ let pg=parseInt(($('#notePage')&&$('#notePage').value))||pos;
+ if(pg<1){alert('La pagina della nota deve essere almeno 1.');return}
+ if(pg>pos)pg=pos;                       // non oltre la pagina raggiunta
+ await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:pg,text:txt,shared:true});
+ if(ta)ta.value='';await loadClubNotes(c);paintDiary(c);
 }
 function editClubNote(id){editNoteId=id;renderNotesList();setTimeout(()=>{const t=$('#editNoteTa');if(t)t.focus()},30)}
 function cancelEditNote(){editNoteId=null;renderNotesList()}
@@ -2017,49 +2024,62 @@ async function saveEditNote(id){
  const t=$('#editNoteTa');const txt=t?t.value.trim():'';if(!txt){editNoteId=null;return renderNotesList()}
  const {error}=await supa.from('notes').update({text:txt}).eq('id',id).eq('user_id',authUser.id);
  if(error){alert('Errore: '+error.message);return}
- editNoteId=null;const c=myClubs.find(x=>x.id===clubSel);if(c){await loadClubNotes(c);}renderNotesList();
+ editNoteId=null;const c=myClubs.find(x=>x.id===clubSel);if(c){await loadClubNotes(c);paintDiary(c);}
 }
 async function deleteClubNote(id){
  if(!confirm('Eliminare questa nota?'))return;
  const {error}=await supa.from('notes').delete().eq('id',id).eq('user_id',authUser.id);
  if(error){alert('Errore: '+error.message);return}
- const c=myClubs.find(x=>x.id===clubSel);if(c){await loadClubNotes(c);}renderNotesList();
+ const c=myClubs.find(x=>x.id===clubSel);if(c){await loadClubNotes(c);paintDiary(c);}
 }
 function renderDiarioCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';
    cloudLoadClubs().then(()=>{clubsLoaded=true;renderDiarioCloud()});return}
  const withBook=myClubs.filter(c=>c.current_title);
  if(!withBook.length){view.innerHTML=`<div class="card pad" style="text-align:center;padding:44px 20px"><div style="font-size:42px">✍️</div><div class="muted" style="margin:12px auto 16px;max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</div><button class="btn" onclick="go('club')">Vai ai club</button></div>`;return}
- const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;
- curDiaryTitle=c.current_title;
- const total=clubBookPages(c);const pos=bookPos(c.current_title);
+ const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;curDiaryClub=c;curDiaryTitle=c.current_title;
+ view.innerHTML='<div class="card pad"><div class="srch-empty">Carico il diario… ✍️</div></div>';
+ loadClubNotes(c).then(()=>paintDiary(c)).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel diario.</div></div>'});
+}
+function paintDiary(c){
+ curDiaryClub=c;curDiaryTitle=c.current_title;
+ const withBook=myClubs.filter(x=>x.current_title);
+ const total=clubBookPages(c);
+ const mn=diaryMinPos();
+ let pos=bookPos(c.current_title);if(pos<mn){pos=mn;setBookPos(c.current_title,pos);}
  const titEsc=(c.current_title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+ const others=(cloudNotes||[]).filter(n=>n.user_id!==authUser.id);
+ const readable=others.filter(n=>pos>=n.position).length;
  view.innerHTML=`
   <div class="club-banner" style="margin-bottom:18px">
    <div class="club-mono">✍️</div>
-   <div style="flex:1;min-width:0">
-     <div class="club-eyebrow">Diario condiviso</div>
-     <h2>${esc(c.current_title)}</h2>
-     <p>${withBook.length>1?'':''}Le note si svelano quando raggiungi la pagina in cui sono state scritte. Niente spoiler.</p>
-   </div>
+   <div style="flex:1;min-width:0"><div class="club-eyebrow">Diario condiviso</div><h2>${esc(c.current_title)}</h2>
+     <p>Le considerazioni si svelano quando raggiungi la pagina in cui sono state scritte.</p></div>
   </div>
   ${withBook.length>1?`<div class="tabs" style="margin-bottom:16px">${withBook.map(cl=>`<button class="${cl.id===c.id?'active':''}" onclick="clubSel=${cl.id};renderDiarioCloud()">${cl.emoji||'📖'} ${esc(cl.name)}</button>`).join('')}</div>`:''}
   <div class="diary-prog">
-    <div><div class="eyebrow">A che punto sei</div><div class="muted" style="font-size:12.5px;margin-top:3px">${pos>0?`Hai sbloccato le note fino a pag. ${pos}.`:'Imposta la pagina per sbloccare le note che hai superato.'}</div></div>
+    <div><div class="eyebrow">A che pagina sei</div><div class="muted" style="font-size:12.5px;margin-top:3px">Note leggibili fino a pag. <b>${pos}</b>${mn>1?` · minimo ${mn} (hai già scritto qui)`:''}.</div></div>
     <div class="page-stepper">
-      <button onclick="stepPos('${titEsc}',-1)" aria-label="meno">−</button>
-      <div class="pageval"><input type="number" min="0" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',parseInt(this.value)||0);renderDiarioCloud()"><small>${total?'/ '+total:'pag.'}</small></div>
-      <button onclick="stepPos('${titEsc}',1)" aria-label="più">+</button>
+      <button onclick="stepPos('${titEsc}',-1)" aria-label="indietro">−</button>
+      <div class="pageval"><input type="number" min="${mn}" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(${mn},parseInt(this.value)||${mn}));paintDiary(curDiaryClub)"><small>${total?'/ '+total:'pag.'}</small></div>
+      <button onclick="stepPos('${titEsc}',1)" aria-label="avanti">+</button>
     </div>
   </div>
-  ${total?`<div class="bar" style="margin:0 0 18px"><i style="width:${Math.min(100,Math.round(pos/total*100))}%"></i></div>`:'<div style="height:6px"></div>'}
+  ${total?`<div class="bar" style="margin:0 0 18px"><i style="width:${Math.min(100,Math.round(pos/total*100))}%"></i></div>`:'<div style="height:8px"></div>'}
   <div class="card pad" style="margin-bottom:18px">
-   <div class="field" style="margin-bottom:8px"><label>✍️ Scrivi una nota condivisa (sarà visibile da pag. ${pos})</label><textarea id="noteText" rows="2" placeholder="Una riflessione, una domanda, una citazione…"></textarea></div>
-   <button class="btn" onclick="addClubNote(${c.id})">Condividi nota</button>
+   <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">✍️ Nuova considerazione</label>
+   <textarea id="noteText" rows="2" placeholder="Una riflessione, una domanda, una citazione…"></textarea>
+   <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+     <span class="muted" style="font-size:12.5px">Riferita a pagina</span>
+     <div class="pageval sm"><input id="notePage" type="number" min="1" max="${pos}" value="${pos}"></div>
+     <button class="btn sm" onclick="addClubNote(${c.id})">Condividi</button>
+   </div>
+   <div class="muted" style="font-size:11.5px;margin-top:7px">Predefinita: la tua pagina attuale (${pos}). Puoi indicare una pagina già letta (1–${pos}) per commentarla.</div>
   </div>
-  <div class="sec-title">📝 Note del club</div>
-  <div id="notesList"><div class="muted" style="padding:10px">Carico le note…</div></div>`;
- loadClubNotes(c).then(()=>renderNotesList());
+  <div class="sec-title">📝 Considerazioni del club${(cloudNotes&&cloudNotes.length)?` · ${cloudNotes.length}`:''}</div>
+  ${others.length?`<div class="muted" style="font-size:12.5px;margin:-8px 0 12px">🔓 ${readable} leggibili ora · 🔒 ${others.length-readable} da sbloccare</div>`:''}
+  <div id="notesList"></div>`;
+ renderNotesList();
 }
 
 function renderAiCloud(){
