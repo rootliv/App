@@ -546,6 +546,8 @@ input[type=range]{accent-color:var(--coral)}
 .member-chip .av{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex:none}
 .member-chip b{font-size:13.5px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .member-chip small{font-size:11.5px;color:var(--ink-faint)}
+.prop-row{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.prop-row:last-child{border-bottom:none}
 </style>
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
@@ -1330,7 +1332,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v12 (club editoriale)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v13 (proposte/voto)','color:#7c5cff;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1771,9 +1773,18 @@ async function chooseClubBook(clubId,i){
 }
 async function proposeFound(clubId,i){
  const s=searchResults[i];if(!s)return;
- const {error}=await supa.from('proposals').upsert({club_id:clubId,user_id:authUser.id,title:s.t,author:s.a,cover:s.coverUrl||null},{onConflict:'club_id,user_id'});
+ const {data:existing}=await supa.from('proposals').select('id').eq('club_id',clubId).eq('user_id',authUser.id).maybeSingle();
+ if(existing){alert('Hai già proposto un libro per questo club.\nPer proporne un altro, togli prima la tua proposta attuale (pulsante "🗑 Togli" accanto al tuo libro).');closeModal();return}
+ const {error}=await supa.from('proposals').insert({club_id:clubId,user_id:authUser.id,title:s.t,author:s.a,cover:s.coverUrl||null});
  if(error){alert('Errore: '+error.message);return}
  closeModal();clubsLoaded=false;go('club');
+}
+async function removeMyProposal(clubId){
+ if(!confirm('Vuoi togliere la tua proposta? Dopo potrai proporne un\'altra.'))return;
+ const {data:mine}=await supa.from('proposals').select('id').eq('club_id',clubId).eq('user_id',authUser.id).maybeSingle();
+ if(mine){try{await supa.from('votes').delete().eq('club_id',clubId).eq('proposal_id',mine.id)}catch(e){}}
+ await supa.from('proposals').delete().eq('club_id',clubId).eq('user_id',authUser.id);
+ loadAndRenderProposals(clubId);
 }
 
 /* ---- meccanismi di scelta del libro ---- */
@@ -1789,7 +1800,7 @@ function selectionPanelHTML(c,role,members){
  }
  if(c.selection_mode==='voting'){
    let h=`<div class="pill gold">🗳️ Votazione in corso</div>
-     <div style="margin-top:12px"><button class="btn sm" onclick="openProposeBook(${c.id})">＋ Proponi un libro</button></div>
+     <div style="margin-top:12px" id="proposeWrap"><button id="proposeBtn" class="btn sm" onclick="openProposeBook(${c.id})">＋ Proponi un libro</button></div>
      <div id="propList" style="margin-top:14px"><div class="muted" style="font-size:13px">Carico le proposte…</div></div>`;
    if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:12px" onclick="closeVoting(${c.id})">🏆 Chiudi votazione</button></div>`;
    return h;
@@ -1835,16 +1846,27 @@ async function loadAndRenderProposals(clubId){
  if(ids.length){const {data:pr}=await supa.from('profiles').select('id,name').in('id',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
  if(!props||!props.length){el.innerHTML='<div class="muted" style="font-size:13px">Ancora nessuna proposta. Proponi tu il primo libro!</div>';return}
  const total=(votes||[]).length;
- el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;
-   return `<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+ el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;const own=p.user_id===authUser.id;
+   return `<div class="prop-row">
      <div style="width:36px;flex:none">${coverEl(p.id,p.title,'',null,p.cover)}</div>
-     <div style="flex:1;min-width:0"><b style="font-size:13.5px">${p.title}</b><div class="muted" style="font-size:11.5px">${p.author||''} · da ${pm[p.user_id]||'membro'}</div>
+     <div style="flex:1;min-width:0"><b style="font-size:13.5px">${p.title}</b><div class="muted" style="font-size:11.5px">${p.author||''} · da ${pm[p.user_id]||'membro'}${own?' (tu)':''}</div>
        <div class="bar" style="margin-top:5px"><i style="width:${total?Math.round(n/total*100):0}%"></i></div></div>
-     <div style="text-align:right"><div class="muted" style="font-size:12px">${n}</div>
-       <button class="btn ${mine?'':'ghost'} sm" onclick="castVote(${clubId},${p.id})">${mine?'✓':'Vota'}</button></div>
+     <div style="text-align:right;flex:none"><div class="muted" style="font-size:12px">${n} ${n===1?'voto':'voti'}</div>
+       ${own
+         ? `<button class="btn ghost sm" onclick="removeMyProposal(${clubId})">🗑 Togli</button>`
+         : `<button class="btn ${mine?'':'ghost'} sm" onclick="castVote(${clubId},${p.id})">${mine?'✓ Votato':'Vota'}</button>`}
+     </div>
    </div>`}).join('');
+ // se ho già una proposta, blocco il pulsante "Proponi"
+ const hasMine=(props||[]).some(p=>p.user_id===authUser.id);
+ const pw=$('#proposeWrap');
+ if(pw)pw.innerHTML=hasMine
+   ? `<div class="muted" style="font-size:12px;line-height:1.5">Hai già proposto un libro. Per cambiarlo, usa <b>🗑 Togli</b> accanto alla tua proposta qui sotto.</div>`
+   : `<button id="proposeBtn" class="btn sm" onclick="openProposeBook(${clubId})">＋ Proponi un libro</button>`;
 }
 async function castVote(clubId,proposalId){
+ const {data:p}=await supa.from('proposals').select('user_id').eq('id',proposalId).maybeSingle();
+ if(p&&p.user_id===authUser.id){alert('Non puoi votare il libro che hai proposto tu.');return}
  await supa.from('votes').upsert({club_id:clubId,user_id:authUser.id,proposal_id:proposalId},{onConflict:'club_id,user_id'});
  loadAndRenderProposals(clubId);
 }
