@@ -15,10 +15,13 @@ const cors = {
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 
-function buildPrompt(title: string, author: string, originalTitle: string, genre: string) {
+function buildPrompt(title: string, author: string, originalTitle: string, genre: string, allowSpoilers: boolean) {
+  const spoilerRule = allowSpoilers
+    ? `L'utente ha GIÀ LETTO questo libro: puoi includere liberamente dettagli della trama, colpi di scena o del finale se rendono la curiosità più interessante.`
+    : `NESSUNO SPOILER (niente finali, colpi di scena, morti, identità segrete).`;
   return `Sei un curatore letterario. Proponi UNA sola curiosità VERA e interessante sul libro "${title}"${author ? ` di ${author}` : ""}${originalTitle ? ` (titolo originale: "${originalTitle}")` : ""}${genre ? ` [genere: ${genre}]` : ""}.
-Regole: in ITALIANO, max 45 parole, NESSUNO SPOILER, niente frasi banali. Preferisci aneddoti su autore/scrittura, contesto, adattamenti, premi, pubblicazione, titolo. Se non sei certo, dai un'informazione generale e prudente; non inventare.
-Scegli una categoria tra: Autore, Dietro le quinte, Adattamenti, Riconoscimenti, Pubblicazione, Contesto, Genere, Titolo.
+Regole: in ITALIANO, max 45 parole, niente frasi banali. ${spoilerRule} Se non sei certo, dai un'informazione generale e prudente; non inventare.
+Scegli una categoria tra: Autore, Dietro le quinte, Adattamenti, Riconoscimenti, Pubblicazione, Contesto, Genere, Titolo, Trama.
 Rispondi SOLO con JSON valido: {"categoria":"<categoria>","testo":"<curiosità>"}`;
 }
 function parseJSON(raw: string) {
@@ -40,9 +43,9 @@ async function viaOpenAI(url: string, key: string, model: string, prompt: string
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
-    const { title = "", author = "", originalTitle = "", genre = "" } = await req.json();
+    const { title = "", author = "", originalTitle = "", genre = "", allowSpoilers = false } = await req.json();
     if (!title) return json({ unavailable: true });
-    const prompt = buildPrompt(title, author, originalTitle, genre);
+    const prompt = buildPrompt(title, author, originalTitle, genre, !!allowSpoilers);
 
     const providers: Array<() => Promise<any>> = [];
     if (GROQ) providers.push(() => viaOpenAI("https://api.groq.com/openai/v1/chat/completions", GROQ, "llama-3.3-70b-versatile", prompt));

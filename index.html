@@ -1689,7 +1689,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v34 (AI sempre attiva, nessun interruttore)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v35 (curiosità con spoiler se libro già letto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2872,6 +2872,7 @@ async function wikidataFacts(qid){
 }
 async function curiosityFor(cat,b,seed){
  const author=b.a||'',title=b.t||'';seed=seed||0;
+ const spoilersOk=(b.status==='read');   // libro già letto → curiosità anche con spoiler
  if(cat==='titolo'){
    if(b.originalTitle&&normKey(b.originalTitle)!==normKey(title))
      return mkCurio(b,'Titolo','Titolo originale','In lingua originale «'+title+'» si intitola «'+b.originalTitle+'». I titoli vengono spesso riadattati nella traduzione italiana per renderli più evocativi per il pubblico.','metadati');
@@ -2902,6 +2903,11 @@ async function curiosityFor(cat,b,seed){
  }
  if(cat==='contesto'){
    const w=await findBookWiki(b);if(!w)return null;
+   if(spoilersOk){                                   // già letto: usa liberamente l'incipit (anche con trama)
+     const txt=curioSentences(w.extract).slice(0,3).join(' ');
+     if(txt&&txt.length>40)return mkCurio(b,'Dietro le quinte',title,curioClip(txt,320),'Wikipedia');
+     return null;
+   }
    const safe=curioSafeSentences(w.extract);if(!safe.length)return null;
    const extra=safe.slice(1).find(s=>/\b(pubblicat|success|premi|tradot|edizion|ispirat|ambientat|scritt|accoglienz|vendut|bestseller|critica|adatt)\b/i.test(s));
    const txt=[safe[0],extra].filter(Boolean).slice(0,2).join(' ');
@@ -2919,13 +2925,15 @@ async function aiCuriosity(b){
  if(!aiOn())return null;                                              // AI esterna spenta → solo Wikidata/Wikipedia
  if(typeof supa==='undefined'||!supa||typeof mode==='undefined'||mode!=='cloud')return null;
  if(window.__aiCurioOff)return null;
+ const spoilersOk=(b.status==='read');
  try{
-   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||''}});
+   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||'',allowSpoilers:spoilersOk}});
    if(error){if((error.message||'').match(/not found|404/i))window.__aiCurioOff=true;return null;}
    if(!data||!data.testo)return null;
    let t=stripHtml(data.testo);
-   if(!validTrama(t)||SPOILER_RE.test(t))return null;                  // doppio controllo anti-spoiler lato client
-   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,data.web===false?'AI':'AI + ricerca web');
+   if(!validTrama(t))return null;
+   if(!spoilersOk&&SPOILER_RE.test(t))return null;                     // filtro anti-spoiler solo se NON già letto
+   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,'AI');
  }catch(e){return null}
 }
 async function buildCuriosity(b,seed){
