@@ -1689,7 +1689,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v36 (incontri: 1 per club + auto-elimina scaduti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v37 (curiosità libri letti evidenziate)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2796,8 +2796,9 @@ function curiosityCandidates(){
  const authors=(d.authors||[]).map(x=>(x||'').toLowerCase());
  const tiers=[
    books.filter(b=>b.status==='reading'),                                   // 1. in lettura
-   books.slice().sort((a,b)=>(b.id||0)-(a.id||0)),                          // 2. aggiunti di recente (id desc)
-   books.filter(b=>(b.rate||0)>=4),                                         // 3. valutazione alta
+   books.filter(b=>b.status==='read'),                                      // 2. già letti (curiosità anche con spoiler)
+   books.slice().sort((a,b)=>(b.id||0)-(a.id||0)),                          // 3. aggiunti di recente (id desc)
+   books.filter(b=>(b.rate||0)>=4),                                         // 4. valutazione alta
    books.filter(b=>genres.includes((b.g||'').toLowerCase())),              // 4. generi preferiti
    books.filter(b=>authors.includes((b.a||'').toLowerCase())),            // 5. autori preferiti
    books                                                                    // resto
@@ -2969,6 +2970,7 @@ function paintCuriosity(box,p,st){
   +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
    +'<span class="pill '+curioPillColor(p.category)+'">'+esc(p.category)+'</span>'
    +'<span class="muted" style="font-size:12.5px">Da «'+esc(p.title)+'» · '+esc(p.author)+'</span>'
+   +(p.read?'<span class="pill sky" style="font-size:11px">📖 già letto · può contenere spoiler</span>':'')
    +(isNew?'<span class="pill gold" style="font-size:11px">✨ Novità</span>':'')
   +'</div>'
   +'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>'
@@ -2991,6 +2993,7 @@ async function renderCuriosity(){
  const seed=curioWeekIndex()+curioOverride;                                                // cambia ogni settimana
  const b=cand[((seed%cand.length)+cand.length)%cand.length];
  let payload;try{payload=await buildCuriosity(b,seed)}catch(e){payload=curioFallback(b)}
+ if(payload)payload.read=(b.status==='read');
  if(!$('#curioCard'))return;                 // utente ha cambiato pagina
  if(!curioOverride){
    st=loadCurioState();st.week=wk;st.payload=payload;st.seen=false;
