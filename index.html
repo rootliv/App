@@ -855,7 +855,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     <div class="auth-form">
       <h2 id="authTitle">Bentornata 👋</h2>
       <div class="lead" id="authLead">Accedi per riprendere a leggere.</div>
-      <div class="tabs" style="margin-bottom:22px">
+      <div class="tabs" id="authTabs" style="margin-bottom:22px">
         <button id="tabLogin" class="active" onclick="authTab('login')">Accedi</button>
         <button id="tabReg" onclick="authTab('reg')">Registrati</button>
       </div>
@@ -864,6 +864,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       <div id="formLogin">
         <div class="field"><label>Email o username</label><input id="lId" placeholder="nome@email.it oppure @username"></div>
         <div class="field"><label>Password</label><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+        <div style="text-align:right;margin:-6px 0 14px"><a href="#" onclick="authTab('forgot');return false" style="font-size:12.5px;color:var(--plum);font-weight:600">Password dimenticata?</a></div>
         <button class="btn" style="width:100%;justify-content:center" onclick="login()">Accedi</button>
       </div>
 
@@ -873,6 +874,20 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
         <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
         <button class="btn gold" style="width:100%;justify-content:center" onclick="register()">Crea il mio account</button>
+      </div>
+
+      <div id="formForgot" style="display:none">
+        <p class="muted" style="font-size:13px;margin-bottom:16px">Inserisci l'email del tuo account: se esiste, ti mandiamo un link sicuro e monouso per reimpostare la password.</p>
+        <div class="field"><label>Email</label><input id="fgEmail" type="email" placeholder="nome@email.it" onkeydown="if(event.key==='Enter')sendPasswordReset()"></div>
+        <button class="btn" id="fgBtn" style="width:100%;justify-content:center" onclick="sendPasswordReset()">Invia link di reset</button>
+        <div style="text-align:center;margin-top:16px"><a href="#" onclick="authTab('login');return false" style="font-size:12.5px;color:var(--ink-soft)">← Torna al login</a></div>
+      </div>
+
+      <div id="formRecovery" style="display:none">
+        <p class="muted" style="font-size:13px;margin-bottom:16px">Scegli una nuova password per il tuo account.</p>
+        <div class="field"><label>Nuova password</label><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Conferma nuova password</label><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')completePasswordRecovery()"></div>
+        <button class="btn" id="rcBtn" style="width:100%;justify-content:center" onclick="completePasswordRecovery()">🔑 Imposta nuova password</button>
       </div>
 
       <div class="auth-sep">oppure</div>
@@ -2723,8 +2738,7 @@ function renderProfiloCloud(){
  </div>
  <div class="card pad" style="margin-top:18px">
    <h3 style="font-size:16px;margin-bottom:12px">🔒 Sicurezza</h3>
-   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Cambia la password del tuo account regolarmente e non riutilizzarla su altri siti.</div>
-   <button class="btn ghost sm" onclick="openChangePassword()">🔑 Cambia password</button>
+   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Per cambiare password, esci dall'account e usa "Password dimenticata?" nella schermata di accesso: ti manderemo un link sicuro via email.</div>
    <hr style="margin:16px 0">
    <div class="muted" style="font-size:13px;margin-bottom:10px">Eliminare l'account è permanente: rimuove il profilo, la libreria personale, le note e l'iscrizione ai club. Non si può annullare.</div>
    <button class="btn danger sm" onclick="openDeleteAccount()">🗑️ Elimina account</button>`:`<div class="muted" style="font-size:13px">Sei in modalità dimostrativa: crea un account cloud per gestire la sicurezza del tuo profilo.</div>`}
@@ -2804,42 +2818,6 @@ async function saveProfile(){
  try{await supa.from('profiles').update({name,data:d}).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
  closeModal();renderProfiloCloud();
-}
-
-/* ---- Cambio password (account cloud) ----
-   Richiede la password attuale (current_password) per confermare l'identità: Supabase Auth
-   la verifica lato server prima di accettare la nuova password, il che evita anche di dover
-   forzare un logout/reauth per gli utenti già loggati di recente. La policy di robustezza è
-   applicata qui lato client (passwordIssues) ma l'enforcement reale e non bypassabile è quello
-   configurato in Supabase → Authentication → Policies (vedi report di sicurezza). */
-function openChangePassword(){
- $('#modal').innerHTML=`
-  <div class="modal-top"><b>🔑 Cambia password</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
-  <div class="modal-body">
-    <div class="auth-err" id="cpErr"></div>
-    <div class="field"><label>Password attuale</label><input id="cpCurrent" type="password" autocomplete="current-password" placeholder="••••••••"></div>
-    <div class="field"><label>Nuova password</label><input id="cpNew" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><small class="muted" id="cpHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-    <div class="field"><label>Conferma nuova password</label><input id="cpConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')changePassword()"></div>
-    <button class="btn" id="cpBtn" onclick="changePassword()">💾 Aggiorna password</button>
-  </div>`;
- openOverlay();
- passwordHint('cpNew','cpHint',()=>({email:(profile&&profile.username)||'',username:(profile&&profile.username)||''}));
-}
-function cpShowErr(m){const e=$('#cpErr');if(e){e.textContent=m;e.classList.add('show')}}
-async function changePassword(){
- const cur=$('#cpCurrent').value,neu=$('#cpNew').value,conf=$('#cpConfirm').value;
- const e=$('#cpErr');if(e)e.classList.remove('show');
- if(!cur)return cpShowErr('Inserisci la password attuale.');
- if(neu!==conf)return cpShowErr('Le due password non coincidono.');
- if(neu===cur)return cpShowErr('La nuova password deve essere diversa da quella attuale.');
- const issues=passwordIssues(neu,{email:(authUser&&authUser.email)||'',username:(profile&&profile.username)||''});
- if(issues.length)return cpShowErr(issues[0]);
- const btn=$('#cpBtn');if(btn){btn.disabled=true;btn.textContent='Aggiorno…'}
- try{
-   const {error}=await supa.auth.updateUser({password:neu,current_password:cur});
-   if(error){cpShowErr(traduciErrore(error.message));if(btn){btn.disabled=false;btn.textContent='💾 Aggiorna password'}return}
-   closeModal();toast('Password aggiornata ✔️');
- }catch(err){cpShowErr('Errore di rete: riprova.');if(btn){btn.disabled=false;btn.textContent='💾 Aggiorna password'}}
 }
 
 /* ---- Eliminazione account (permanente) ----
@@ -3303,6 +3281,9 @@ const SUPABASE_URL='https://ogcgfemadhtzzhdjkjda.supabase.co';
 const SUPABASE_KEY='sb_publishable_d-yZxBxgQc_7k2alklVAKA_AVMBT7d5';
 let supa=null;
 try{ supa = window.supabase && window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){}
+try{
+ if(supa)supa.auth.onAuthStateChange((event)=>{ if(event==='PASSWORD_RECOVERY')showPasswordRecoveryScreen(); });
+}catch(e){}
 
 let mode='demo';     // 'cloud' = account vero su Supabase, 'demo' = ospite locale
 let authUser=null;   // utente Supabase
@@ -3311,21 +3292,88 @@ let session=null;
 let pendingJoin=null;
 try{pendingJoin=new URLSearchParams(location.search).get('club')}catch(e){}
 
-function showErr(m){authReset();const e=$('#authErr');if(e){e.textContent=m;e.classList.add('show')}}
-function clearErr(){const e=$('#authErr');if(e)e.classList.remove('show')}
+function showErr(m){authReset();const e=$('#authErr');if(e){e.style.color='';e.style.background='';e.textContent=m;e.classList.add('show')}}
+function showAuthMsg(m){const e=$('#authErr');if(e){e.style.color='#2e6b45';e.style.background='#e3f1e8';e.textContent=m;e.classList.add('show')}}
+function clearErr(){const e=$('#authErr');if(e){e.classList.remove('show');e.style.color='';e.style.background=''}}
 function authReset(){
  const r=document.querySelector('#formReg .btn');if(r){r.disabled=false;r.textContent='Crea il mio account'}
  const l=document.querySelector('#formLogin .btn');if(l){l.disabled=false;l.textContent='Accedi'}
 }
 function authBusy(sel,txt){const b=document.querySelector(sel);if(b){b.disabled=true;b.textContent=txt}}
 function authTab(t){
- const l=t==='login';
- $('#tabLogin').classList.toggle('active',l);$('#tabReg').classList.toggle('active',!l);
- $('#formLogin').style.display=l?'block':'none';$('#formReg').style.display=l?'none':'block';
- $('#authTitle').textContent=l?'Bentornata 👋':'Crea il tuo account';
- $('#authLead').textContent=l?'Accedi per riprendere a leggere.':'Bastano pochi secondi per iniziare.';
+ const forms={login:'#formLogin',reg:'#formReg',forgot:'#formForgot'};
+ Object.keys(forms).forEach(k=>{const el=$(forms[k]);if(el)el.style.display=(k===t)?'block':'none'});
+ const rc=$('#formRecovery');if(rc)rc.style.display='none';
+ $('#tabLogin').classList.toggle('active',t==='login');$('#tabReg').classList.toggle('active',t==='reg');
+ $('#authTabs').style.display=t==='forgot'?'none':'flex';
+ $('#authTitle').textContent=t==='login'?'Bentornata 👋':t==='reg'?'Crea il tuo account':'Password dimenticata?';
+ $('#authLead').textContent=t==='login'?'Accedi per riprendere a leggere.':t==='reg'?'Bastano pochi secondi per iniziare.':'Ti mandiamo un link sicuro via email.';
  clearErr();
- if(!l&&!authTab._hintBound){authTab._hintBound=true;passwordHint('rPass','rPassHint',()=>({email:($('#rEmail')||{}).value,username:($('#rUser')||{}).value}));}
+ if(t==='reg'&&!authTab._hintBound){authTab._hintBound=true;passwordHint('rPass','rPassHint',()=>({email:($('#rEmail')||{}).value,username:($('#rUser')||{}).value}));}
+}
+
+/* ---- Password dimenticata: invio email di reset ----
+   Il token è generato e gestito interamente da Supabase Auth: monouso, con scadenza breve,
+   verificato lato server. Qui NON confermiamo mai se l'email esiste o no (stesso messaggio in
+   ogni caso), per non rendere possibile scoprire quali indirizzi sono registrati. Il cooldown
+   sul bottone è solo UX anti-doppio-click: la vera protezione da abusi è il rate limit di
+   Supabase sull'invio email (vedi report di sicurezza). */
+let fgCooldownUntil=0,fgTimer=null;
+async function sendPasswordReset(){
+ clearErr();
+ const email=($('#fgEmail').value||'').trim().toLowerCase();
+ if(!/^\S+@\S+\.\S+$/.test(email))return showErr('Inserisci un\'email valida.');
+ if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
+ if(Date.now()<fgCooldownUntil)return;
+ const btn=$('#fgBtn');if(btn){btn.disabled=true;btn.textContent='Invio…'}
+ try{await supa.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});}catch(e){}
+ showAuthMsg('Se l\'indirizzo è registrato, riceverai a breve un\'email con le istruzioni per reimpostare la password. Controlla anche lo spam.');
+ fgCooldownUntil=Date.now()+30000;
+ clearTimeout(fgTimer);
+ (function tick(){
+   if(!btn)return;
+   const left=Math.ceil((fgCooldownUntil-Date.now())/1000);
+   if(left<=0){btn.disabled=false;btn.textContent='Invia link di reset';return}
+   btn.textContent=`Riprova tra ${left}s`;
+   fgTimer=setTimeout(tick,1000);
+ })();
+}
+
+/* ---- Password dimenticata: completamento (link cliccato dall'email) ----
+   supa.auth.onAuthStateChange emette 'PASSWORD_RECOVERY' quando la pagina viene caricata con
+   un link di recovery valido nell'URL: Supabase ha già verificato il token lato server prima
+   di arrivare qui. Mostriamo il form per la nuova password e blocchiamo l'ingresso automatico
+   nell'app (vedi il blocco INIT più sotto) finché la password non è stata aggiornata. */
+let passwordRecoveryActive=false;
+function showPasswordRecoveryScreen(){
+ passwordRecoveryActive=true;
+ $('#auth').style.display='flex';$('#appRoot').style.display='none';
+ $('#authTabs').style.display='none';
+ ['formLogin','formReg','formForgot'].forEach(id=>{const el=$('#'+id);if(el)el.style.display='none'});
+ $('#formRecovery').style.display='block';
+ $('#authTitle').textContent='Imposta una nuova password';
+ $('#authLead').textContent='Sei quasi arrivata: scegli una password robusta.';
+ clearErr();
+ if(!showPasswordRecoveryScreen._hintBound){showPasswordRecoveryScreen._hintBound=true;passwordHint('rcPass','rcHint',()=>({}));}
+}
+async function completePasswordRecovery(){
+ clearErr();
+ const neu=$('#rcPass').value,conf=$('#rcConfirm').value;
+ if(neu!==conf)return showErr('Le due password non coincidono.');
+ const issues=passwordIssues(neu,{});
+ if(issues.length)return showErr(issues[0]);
+ const btn=$('#rcBtn');if(btn){btn.disabled=true;btn.textContent='Aggiorno…'}
+ try{
+   const {error}=await supa.auth.updateUser({password:neu});
+   if(error){showErr(traduciErrore(error.message));if(btn){btn.disabled=false;btn.textContent='🔑 Imposta nuova password'}return}
+   passwordRecoveryActive=false;
+   try{await supa.auth.signOut()}catch(e){}
+   alert('Password aggiornata! Ora accedi con la nuova password.');
+   location.href=location.origin+location.pathname;
+ }catch(e){
+   showErr('Errore di rete: riprova.');
+   if(btn){btn.disabled=false;btn.textContent='🔑 Imposta nuova password'}
+ }
 }
 /* ---- Policy password robusta: min 10 caratteri, minuscola, maiuscola, cifra, simbolo ----
    Usata sia in registrazione che in cambio password. Rispecchia le impostazioni consigliate
@@ -3462,9 +3510,11 @@ function startApp(target){
 (async function(){
  if(supa){
    try{const {data}=await supa.auth.getSession();
+     if(passwordRecoveryActive)return; // resta sulla schermata "imposta nuova password"
      if(data&&data.session){authUser=data.session.user;mode='cloud';await loadProfile();try{await cloudLoadBooks()}catch(e){}const j=await handlePendingJoin();startApp(j?'club':undefined);return}
    }catch(e){}
  }
+ if(passwordRecoveryActive)return;
  if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui sei stata invitata.';const tt=$('#authTitle');if(tt)tt.textContent='Sei stata invitata in un club 📖';}
  if(localStorage.getItem('pagina_session')==='__demo__'&&!pendingJoin)guest();
 })();
