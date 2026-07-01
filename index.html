@@ -864,7 +864,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="field"><label>Nome e cognome</label><input id="rName" placeholder="Es. Elena Marchetti"></div>
         <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off" onkeydown="if(event.key==='Enter')register()"></div>
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
-        <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 6 caratteri" onkeydown="if(event.key==='Enter')register()"></div>
+        <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
         <button class="btn gold" style="width:100%;justify-content:center" onclick="register()">Crea il mio account</button>
       </div>
 
@@ -2702,6 +2702,11 @@ function renderProfiloCloud(){
        <div class="muted" style="font-size:13px;margin-top:2px">In base ai tuoi generi, autori e alla tua libreria, l'assistente ti propone nuovi libri.</div></div>
      <button class="btn gold sm" onclick="libTab='ai';go('libreria')">Vedi consigli</button>
    </div>
+ </div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:12px">🔒 Sicurezza</h3>
+   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Cambia la password del tuo account regolarmente e non riutilizzarla su altri siti.</div>
+   <button class="btn ghost sm" onclick="openChangePassword()">🔑 Cambia password</button>`:`<div class="muted" style="font-size:13px">Sei in modalità dimostrativa: crea un account cloud per gestire la sicurezza del tuo profilo.</div>`}
  </div>`;
 }
 const PROFILE_SUGGEST={
@@ -2778,6 +2783,42 @@ async function saveProfile(){
  try{await supa.from('profiles').update({name,data:d}).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
  closeModal();renderProfiloCloud();
+}
+
+/* ---- Cambio password (account cloud) ----
+   Richiede la password attuale (current_password) per confermare l'identità: Supabase Auth
+   la verifica lato server prima di accettare la nuova password, il che evita anche di dover
+   forzare un logout/reauth per gli utenti già loggati di recente. La policy di robustezza è
+   applicata qui lato client (passwordIssues) ma l'enforcement reale e non bypassabile è quello
+   configurato in Supabase → Authentication → Policies (vedi report di sicurezza). */
+function openChangePassword(){
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>🔑 Cambia password</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="auth-err" id="cpErr"></div>
+    <div class="field"><label>Password attuale</label><input id="cpCurrent" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <div class="field"><label>Nuova password</label><input id="cpNew" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><small class="muted" id="cpHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+    <div class="field"><label>Conferma nuova password</label><input id="cpConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')changePassword()"></div>
+    <button class="btn" id="cpBtn" onclick="changePassword()">💾 Aggiorna password</button>
+  </div>`;
+ openOverlay();
+ passwordHint('cpNew','cpHint',()=>({email:(profile&&profile.username)||'',username:(profile&&profile.username)||''}));
+}
+function cpShowErr(m){const e=$('#cpErr');if(e){e.textContent=m;e.classList.add('show')}}
+async function changePassword(){
+ const cur=$('#cpCurrent').value,neu=$('#cpNew').value,conf=$('#cpConfirm').value;
+ const e=$('#cpErr');if(e)e.classList.remove('show');
+ if(!cur)return cpShowErr('Inserisci la password attuale.');
+ if(neu!==conf)return cpShowErr('Le due password non coincidono.');
+ if(neu===cur)return cpShowErr('La nuova password deve essere diversa da quella attuale.');
+ const issues=passwordIssues(neu,{email:(authUser&&authUser.email)||'',username:(profile&&profile.username)||''});
+ if(issues.length)return cpShowErr(issues[0]);
+ const btn=$('#cpBtn');if(btn){btn.disabled=true;btn.textContent='Aggiorno…'}
+ try{
+   const {error}=await supa.auth.updateUser({password:neu,current_password:cur});
+   if(error){cpShowErr(traduciErrore(error.message));if(btn){btn.disabled=false;btn.textContent='💾 Aggiorna password'}return}
+   closeModal();toast('Password aggiornata ✔️');
+ }catch(err){cpShowErr('Errore di rete: riprova.');if(btn){btn.disabled=false;btn.textContent='💾 Aggiorna password'}}
 }
 
 /* ============ HOME / INCONTRI / NOTIFICHE (cloud) ============ */
@@ -3222,11 +3263,49 @@ function authTab(t){
  $('#authTitle').textContent=l?'Bentornata 👋':'Crea il tuo account';
  $('#authLead').textContent=l?'Accedi per riprendere a leggere.':'Bastano pochi secondi per iniziare.';
  clearErr();
+ if(!l&&!authTab._hintBound){authTab._hintBound=true;passwordHint('rPass','rPassHint',()=>({email:($('#rEmail')||{}).value,username:($('#rUser')||{}).value}));}
+}
+/* ---- Policy password robusta: min 10 caratteri, minuscola, maiuscola, cifra, simbolo ----
+   Usata sia in registrazione che in cambio password. Rispecchia le impostazioni consigliate
+   in Supabase → Authentication → Policies (Password requirements), che sono l'enforcement
+   server-side reale (Supabase Auth valida la password lato server indipendentemente dal
+   client, quindi questo controllo qui è comunque bypassabile chiamando l'API direttamente:
+   la vera protezione è la configurazione lato Supabase). Vedi anche il migration SQL per
+   il Password Verification Hook anti brute-force.
+*/
+const PASSWORD_MIN_LEN=10;
+function passwordIssues(pass,extra){
+ extra=extra||{};
+ const issues=[];
+ pass=String(pass||'');
+ if(pass.length<PASSWORD_MIN_LEN)issues.push(`Almeno ${PASSWORD_MIN_LEN} caratteri (attuali: ${pass.length}).`);
+ if(!/[a-z]/.test(pass))issues.push('Almeno una lettera minuscola.');
+ if(!/[A-Z]/.test(pass))issues.push('Almeno una lettera maiuscola.');
+ if(!/[0-9]/.test(pass))issues.push('Almeno una cifra.');
+ if(!/[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~\\]/.test(pass))issues.push('Almeno un simbolo (es. ! @ # % & *).');
+ const low=pass.toLowerCase();
+ if(extra.email&&low.includes(String(extra.email).toLowerCase().split('@')[0])&&extra.email.length>2)issues.push('Non deve contenere la tua email/username.');
+ if(extra.username&&extra.username.length>2&&low.includes(String(extra.username).toLowerCase()))issues.push('Non deve contenere la tua email/username.');
+ if(/^(.)\1{3,}/.test(pass)||/^(?:1234|abcd|password|qwerty)/i.test(pass))issues.push('Password troppo comune o ripetitiva: sceglila meno prevedibile.');
+ return issues;
+}
+function passwordHint(inputId,hintId,extraGetter){
+ const el=$('#'+inputId);const h=$('#'+hintId);if(!el||!h)return;
+ const upd=()=>{const v=el.value;if(!v){h.textContent='Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.';h.style.color='';return}
+   const issues=passwordIssues(v,extraGetter?extraGetter():{});
+   if(!issues.length){h.textContent='✓ Password robusta.';h.style.color='var(--sage,#5f8d6c)';}
+   else{h.textContent=issues[0];h.style.color='var(--coral,#e08a5d)';}};
+ el.addEventListener('input',upd);upd();
 }
 function traduciErrore(m){m=(m||'').toLowerCase();
  if(m.includes('already')&&m.includes('regist'))return 'Esiste già un account con questa email. Prova ad accedere.';
- if(m.includes('rate')||m.includes('limit'))return 'Troppi tentativi: riprova tra qualche minuto.';
- if(m.includes('password'))return 'Password non valida (minimo 6 caratteri).';
+ if((m.includes('rate')||m.includes('limit'))&&!m.includes('password'))return 'Troppi tentativi: riprova tra qualche minuto.';
+ if(m.includes('pwned')||m.includes('leak')||m.includes('breach'))return 'Questa password è comparsa in una fuga di dati nota: scegline un\'altra, mai usata altrove.';
+ if(m.includes('weak')||m.includes('strength'))return 'Password troppo debole: usa almeno 10 caratteri con maiuscola, minuscola, cifra e simbolo.';
+ if(m.includes('should be at least')||m.includes('should contain')||m.includes('at least one character')||m.includes('too short'))return 'Password non conforme ai requisiti di sicurezza: almeno 10 caratteri con maiuscola, minuscola, cifra e simbolo.';
+ if(m.includes('should be different')||m.includes('same as'))return 'La nuova password deve essere diversa da quella attuale.';
+ if(m.includes('invalid login credentials')||m.includes('invalid_credentials'))return 'Email/username o password non corretti.';
+ if(m.includes('password'))return 'Password non valida: almeno 10 caratteri con maiuscola, minuscola, cifra e simbolo.';
  return 'Errore: '+m;
 }
 
@@ -3238,7 +3317,8 @@ async function register(){
  if(!name)return showErr('Inserisci il tuo nome.');
  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username))return showErr('Username: 3-20 caratteri, solo lettere, numeri o _ (niente spazi).');
  if(!/^\S+@\S+\.\S+$/.test(email))return showErr('Inserisci un\'email valida.');
- if(pass.length<6)return showErr('La password deve avere almeno 6 caratteri.');
+ const pwIssues=passwordIssues(pass,{email,username});
+ if(pwIssues.length)return showErr(pwIssues[0]);
  if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
  authBusy('#formReg .btn','Creo l\'account…');
  try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',username).limit(1);
