@@ -1013,12 +1013,13 @@ function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
    <a target="_blank" rel="noopener noreferrer" href="https://www.mondadoristore.it/search/?q=${q}">📗 Mondadori</a>
  </div>`}
 function stars(n){return'★'.repeat(n)+'☆'.repeat(5-n)}
-function coverEl(i,t,a,badge,url){return`<div class="cover" style="${coverStyle(i)}">${badge?`<div class="badge">${badge}</div>`:''}${url?`<img class="real" src="${url}" alt="${(t||'').replace(/"/g,'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="ct">${t||''}</div><div class="ca">${a||''}</div></div>`}
+function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
+function coverEl(i,t,a,badge,url){const su=safeImgUrl(url);return`<div class="cover" style="${coverStyle(i)}">${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div>`}
 function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'✓':'🔖';
  return`<div class="book" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
    <div class="ledge"></div>
-   <div class="meta"><b>${b.t}</b><span>${b.a}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}</div>
+   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}</div>
  </div>`}
 
 /* ============ NAV ============ */
@@ -1094,8 +1095,8 @@ renders.home=()=>{
      <div style="display:flex;gap:16px">
        <div style="width:74px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
        <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:17px">${b.t}</b>
-         <div class="muted" style="font-size:13px;margin:2px 0 12px">${b.a}</div>
+         <b style="font-family:'Fraunces';font-size:17px">${esc(b.t)}</b>
+         <div class="muted" style="font-size:13px;margin:2px 0 12px">${esc(b.a)}</div>
          <div class="bar"><i style="width:${b.prog}%"></i></div>
          <div class="muted" style="font-size:12px;margin-top:7px">${b.prog}% · pag. ${Math.round(b.pg*b.prog/100)} di ${b.pg}</div>
        </div>
@@ -1188,7 +1189,7 @@ renders.libreria=()=>{
      : `<div class="shelf">${aiSuggest.map(s=>`
      <div class="book" onclick="openAi(${s.id})">
        ${coverEl(s.ci,s.t,s.a,'✨')}
-       <div class="meta"><b>${s.t}</b><span>${s.a}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
+       <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
      </div>`).join('')}</div>`)
   : (list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad" style="text-align:center;padding:48px 20px">
@@ -1209,7 +1210,7 @@ renders.club=()=>{
   ${clubs.map(cl=>`
    <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;transition:.18s;${cl.id===clubTab?'border:2px solid var(--coral);box-shadow:var(--shadow)':''}" onclick="clubTab=${cl.id};renders.club()">
      <div style="font-size:28px">${cl.emoji}</div>
-     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${cl.name}</b>
+     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${esc(cl.name)}</b>
      <div class="muted" style="font-size:12.5px">${cl.members} membri · ${cl.role}</div>
    </div>`).join('')}
    <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;display:grid;place-items:center;border-style:dashed;background:transparent" onclick="alert('Qui potrai creare un nuovo club o inserire un codice di invito.')">
@@ -1219,7 +1220,7 @@ renders.club=()=>{
 
  <div class="card pad" style="margin-top:18px">
    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-     <div><h2 style="font-size:23px">${c.emoji} ${c.name}</h2><div class="muted">${c.desc}</div></div>
+     <div><h2 style="font-size:23px">${c.emoji} ${esc(c.name)}</h2><div class="muted">${esc(c.desc)}</div></div>
      <span class="pill gold">Tuo ruolo: ${c.role}</span>
    </div>
    <hr>
@@ -1228,8 +1229,8 @@ renders.club=()=>{
        <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📖 Libro del mese</div>
        <div style="display:flex;gap:14px;cursor:pointer" onclick="openBook(${b.id})">
          <div style="width:64px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
-         <div><b style="font-family:'Fraunces';font-size:17px">${b.t}</b><div class="muted" style="font-size:13px">${b.a}</div>
-         <div class="pill sky" style="margin-top:10px">🎲 Sceglie: ${c.chooser}</div></div>
+         <div><b style="font-family:'Fraunces';font-size:17px">${esc(b.t)}</b><div class="muted" style="font-size:13px">${esc(b.a)}</div>
+         <div class="pill sky" style="margin-top:10px">🎲 Sceglie: ${esc(c.chooser)}</div></div>
        </div>
      </div>
      <div style="flex:1;min-width:200px">
@@ -1253,8 +1254,8 @@ renders.club=()=>{
      <h3 style="font-size:16px;margin-bottom:6px">🗳️ Votazione prossimo libro</h3>
      <div class="muted" style="font-size:13px;margin-bottom:14px">Proposte da ${clubs[3].chooser} · chiude tra 3 giorni</div>
      ${votes.map(v=>`<div style="margin-bottom:14px">
-       <div style="display:flex;justify-content:space-between;font-size:14px"><b>${v.t}</b><span class="muted">${v.v} voti</span></div>
-       <div class="muted" style="font-size:12px">${v.a}</div>
+       <div style="display:flex;justify-content:space-between;font-size:14px"><b>${esc(v.t)}</b><span class="muted">${v.v} voti</span></div>
+       <div class="muted" style="font-size:12px">${esc(v.a)}</div>
        <div class="bar" style="margin-top:6px"><i style="width:${v.v/5*100}%"></i></div>
        <button class="btn ghost sm" style="margin-top:8px" onclick="this.textContent='✓ Votato!';this.disabled=true;this.style.opacity=.7">Vota</button>
      </div>`).join('')}
@@ -1285,8 +1286,8 @@ renders.ai=()=>{
      <div style="display:flex;gap:14px">
        <div style="width:70px;flex:none">${coverEl(s.ci,s.t,'')}</div>
        <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:17px">${s.t}</b>
-         <div class="muted" style="font-size:13px">${s.a} · ${s.g}</div>
+         <b style="font-family:'Fraunces';font-size:17px">${esc(s.t)}</b>
+         <div class="muted" style="font-size:13px">${esc(s.a)} · ${esc(s.g)}</div>
          <div class="compat"><span class="match">${s.compat}%</span><div class="bar"><i style="width:${s.compat}%"></i></div></div>
        </div>
      </div>
@@ -1437,7 +1438,7 @@ renders.calendario=()=>{
  <div class="row">
    <div class="card pad" style="flex:1;min-width:300px">
      <h3 style="font-size:16px;margin-bottom:16px">⚙️ Imposta il tuo ritmo</h3>
-     <div class="field"><label>Libro</label><select id="cBook">${planBooks.map(b=>`<option value="${b.id}">${b.t}</option>`).join('')}</select></div>
+     <div class="field"><label>Libro</label><select id="cBook">${planBooks.map(b=>`<option value="${b.id}">${esc(b.t)}</option>`).join('')}</select></div>
      <div class="field"><label>Come preferisci misurare?</label><select id="cMode"><option value="pages">Pagine al giorno</option><option value="chapters">Capitoli al giorno</option><option value="days">Giorni a settimana disponibili</option></select></div>
      <div class="field"><label>Quanto? (numero)</label><input id="cAmt" type="number" value="25" min="1"></div>
      <div class="field"><label>Data dell'incontro</label><input id="cDate" type="date" value="2026-07-12"></div>
@@ -1475,7 +1476,7 @@ function genPlan(){
  }
  $('#planOut').innerHTML=`
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-     <h3 style="font-size:16px">📖 Piano per "${b.t}"</h3>
+     <h3 style="font-size:16px">📖 Piano per "${esc(b.t)}"</h3>
      <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo da aumentare'}</span>
    </div>
    <div class="muted" style="font-size:13px;margin:8px 0 14px">${days} giorni all'incontro · ~${remainingPg} pagine da leggere · servono ~<b>${need} pagine al giorno</b>.</div>
@@ -1534,7 +1535,7 @@ function initMap(){
  const icon=L.divIcon({className:'',html:'<div style="background:#6d2540;color:#fff;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa14a"><span style="transform:rotate(45deg);font-size:14px">📖</span></div>',iconSize:[32,32],iconAnchor:[16,30]});
  books.forEach(b=>b.set.forEach(s=>{
    L.marker([s.lat,s.lng],{icon}).addTo(mapObj)
-    .bindPopup(`<b>${b.t}</b><br>${b.a}<br><span style="color:#766a61">📍 ${s.city||s.c}, ${s.c}</span>`);
+    .bindPopup(`<b>${esc(b.t)}</b><br>${esc(b.a)}<br><span style="color:#766a61">📍 ${esc(s.city||s.c)}, ${esc(s.c)}</span>`);
  }));
 }
 
@@ -1552,9 +1553,9 @@ renders.incontri=()=>{
      <div class="event">
        <div class="date"><b>${m.d}</b><small>${m.m}</small></div>
        <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:16px">${m.title}</b>
-         <div class="muted" style="font-size:13px;margin:4px 0 8px">${cl.emoji} ${cl.name} · 📖 ${m.book}</div>
-         <div class="chips"><span class="pill ${m.link?'sky':'coral'}">${m.link?'🎥 '+m.where:'📍 '+m.where}</span></div>
+         <b style="font-family:'Fraunces';font-size:16px">${esc(m.title)}</b>
+         <div class="muted" style="font-size:13px;margin:4px 0 8px">${cl.emoji} ${esc(cl.name)} · 📖 ${esc(m.book)}</div>
+         <div class="chips"><span class="pill ${m.link?'sky':'coral'}">${m.link?'🎥 '+esc(m.where):'📍 '+esc(m.where)}</span></div>
        </div>
        <div style="text-align:right">
          <div class="avstack" style="justify-content:flex-end;margin-bottom:10px">${Array.from({length:Math.min(4,m.who)}).map((_,i)=>`<div class="av" style="background:${pal(i)[0]}">${String.fromCharCode(65+i)}</div>`).join('')}${m.who>4?`<div class="av" style="background:#cfc3b4;color:#5a5048">+${m.who-4}</div>`:''}</div>
@@ -1591,8 +1592,8 @@ function openBook(id){
   <div class="book-head">
     <div style="width:150px;flex:none">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
     <div style="flex:1">
-      <h2>${b.t}</h2>
-      <div class="book-author">${b.a}</div>
+      <h2>${esc(b.t)}</h2>
+      <div class="book-author">${esc(b.a)}</div>
       ${b.originalTitle&&normKey(b.originalTitle)!==normKey(b.t)?`<div class="muted" style="font-size:12.5px;margin-top:3px">Titolo originale: <i>${esc(b.originalTitle)}</i></div>`:''}
       <div class="chips">
         <span class="pill ${st[1]}">${st[0]}</span>
@@ -1606,7 +1607,7 @@ function openBook(id){
     </div>
   </div>
   <div class="modal-body">
-    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${(b.trama&&!/non disponibile/i.test(b.trama))?b.trama:'<span class="muted">Trama non ancora disponibile.</span>'}</p>
+    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${(b.trama&&!/non disponibile/i.test(b.trama))?esc(b.trama):'<span class="muted">Trama non ancora disponibile.</span>'}</p>
     ${b.set&&b.set.length?`<p class="kv"><b>Ambientazione.</b> ${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')} 🗺️</p>`:''}
     ${b.cur?`<p class="kv"><b>Curiosità.</b> ${b.cur}</p>`:''}
     ${b.quote?`<div class="quote">${b.quote}</div>`:''}
@@ -1677,7 +1678,7 @@ function openAi(id){
   <div class="book-head">
     <div style="width:150px;flex:none">${coverEl(s.ci,s.t,s.a,'✨')}</div>
     <div style="flex:1">
-      <h2>${s.t}</h2><div class="book-author">${s.a} · ${s.g}</div>
+      <h2>${esc(s.t)}</h2><div class="book-author">${esc(s.a)} · ${esc(s.g)}</div>
       <div class="compat"><span class="match" style="font-size:18px">${s.compat}% per te</span></div>
       <div class="bar" style="margin:6px 0 14px"><i style="width:${s.compat}%"></i></div>
       ${buyLinks(s.t,s.a)}
@@ -1896,8 +1897,8 @@ function renderResults(btnFor){
  const box=$('#searchResults');if(!box)return;
  if(!searchResults.length){box.innerHTML='<div class="srch-empty">⚠️ Nessun risultato (o nessuna connessione). Prova con un altro titolo.</div>';return}
  box.innerHTML=searchResults.map((s,i)=>`<div class="srch-item">
-   ${s.coverUrl?`<img class="th" src="${s.coverUrl}" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
-   <div style="flex:1;min-width:0"><b>${s.t}</b><div class="mt">${s.a}${s.year?' · '+s.year:''}${s.pg?' · '+s.pg+' pag.':''}</div></div>
+   ${s.coverUrl?`<img class="th" src="${esc(s.coverUrl)}" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
+   <div style="flex:1;min-width:0"><b>${esc(s.t)}</b><div class="mt">${esc(s.a)}${s.year?' · '+esc(s.year):''}${s.pg?' · '+esc(s.pg)+' pag.':''}</div></div>
    ${btnFor(i)}
  </div>`).join('');
 }
@@ -1999,11 +2000,11 @@ function clubName(id){const c=myClubs.find(x=>x.id===id);return c?(c.emoji||'�
 function pendingItems(){
  const items=[];
  myClubs.forEach(c=>{
-   if(c.selection_mode==='voting')items.push({ic:'🗳️',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+c.name+': proponi e vota il prossimo libro.',go:'club',cid:c.id});
-   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+c.name+' sei stata sorteggiata: scegli il libro.',go:'club',cid:c.id});
+   if(c.selection_mode==='voting')items.push({ic:'🗳️',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id});
+   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' sei stata sorteggiata: scegli il libro.',go:'club',cid:c.id});
  });
- upcomingMeetings().slice(0,2).forEach(m=>{const dd=daysTo(m.date);items.push({ic:'📅',bg:'#e1edf6',t:'Incontro '+(dd===0?'oggi':'tra '+dd+'g'),p:(m.title||'Incontro')+' · '+clubName(m.club_id),go:'incontri'})});
- myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'✍️',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+c.current_title+'".',go:'diario'}));
+ upcomingMeetings().slice(0,2).forEach(m=>{const dd=daysTo(m.date);items.push({ic:'📅',bg:'#e1edf6',t:'Incontro '+(dd===0?'oggi':'tra '+dd+'g'),p:esc(m.title||'Incontro')+' · '+esc(clubName(m.club_id)),go:'incontri'})});
+ myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'✍️',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario'}));
  return items;
 }
 async function loadMembers(clubId){
@@ -2019,7 +2020,7 @@ function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=documen
 /* AI sempre attiva (nessun interruttore). Se il provider non risponde, ripiego base silenzioso. */
 function aiOn(){return true}
 /* ---- avatar foto profilo (salvato in profiles.data.avatar come immagine ridotta) ---- */
-function avFill(name,url){return url?`<img src="${esc(url)}" alt="">`:ini2(name)}
+function avFill(name,url){const su=safeImgUrl(url);return su?`<img src="${esc(su)}" alt="">`:ini2(name)}
 function myAvatar(){return (typeof profile!=='undefined'&&profile&&profile.data&&profile.data.avatar)||''}
 function applyMyAvatar(){const el=$('#meAv');if(el)el.innerHTML=avFill((profile&&profile.name)||'',myAvatar())}
 function chooseAvatar(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{const f=i.files&&i.files[0];if(f)processAvatar(f)};i.click()}
@@ -2071,7 +2072,7 @@ function renderClubCloud(){
   <div class="club-strip">
    ${myClubs.map(cl=>`<button class="club-tab ${cl.id===clubSel?'active':''}" onclick="clubSel=${cl.id};renderClubCloud()">
      <span class="club-tab-em">${cl.emoji||'📖'}</span>
-     <span style="min-width:0"><b>${cl.name}</b><small>${myRoles[cl.id]||'membro'}</small></span>
+     <span style="min-width:0"><b>${esc(cl.name)}</b><small>${esc(myRoles[cl.id]||'membro')}</small></span>
    </button>`).join('')}
    <button class="club-tab add" onclick="openClubModal()"><span class="club-tab-em">＋</span><span><b>Crea o unisciti</b><small>nuovo club</small></span></button>
   </div>
@@ -2080,8 +2081,8 @@ function renderClubCloud(){
    <div class="club-mono">${c.emoji||'📖'}</div>
    <div style="flex:1;min-width:0">
      <div class="club-eyebrow">Club del libro</div>
-     <h2>${c.name}</h2>
-     ${c.description?`<p>${c.description}</p>`:''}
+     <h2>${esc(c.name)}</h2>
+     ${c.description?`<p>${esc(c.description)}</p>`:''}
      <div class="avstack" id="clubAvs"></div>
    </div>
    <span class="role-chip">${role==='admin'?'★ Admin':'Membro'}</span>
@@ -2118,7 +2119,7 @@ function renderClubCloud(){
  loadMembers(c.id).then(list=>{
    const mEl=$('#clubMembers');
    if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
-     <div style="min-width:0"><b>${m.name}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+m.username+' · ':''}${m.role}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
+     <div style="min-width:0"><b>${esc(m.name)}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+esc(m.username)+' · ':''}${esc(m.role)}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
    const av=$('#clubAvs');
    if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'}</span>`;
    const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
@@ -2224,7 +2225,7 @@ function selectionPanelHTML(c,role,members){
  }
  let h=c.current_title?`<div style="display:flex;gap:14px">
      <div style="width:60px;flex:none">${coverEl(c.id,c.current_title,'',null,c.current_cover)}</div>
-     <div><b style="font-family:'Fraunces';font-size:17px">${c.current_title}</b><div class="muted" style="font-size:13px">${c.current_author||''}</div><span class="pill green" style="margin-top:8px">📖 In lettura</span></div>
+     <div><b style="font-family:'Fraunces';font-size:17px">${esc(c.current_title)}</b><div class="muted" style="font-size:13px">${esc(c.current_author||'')}</div><span class="pill green" style="margin-top:8px">📖 In lettura</span></div>
    </div>`:`<div class="muted" style="font-size:13.5px">Nessun libro scelto, per ora.</div>`;
  // stato del giro di sorteggio
  const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers:[];
@@ -2287,7 +2288,7 @@ async function loadAndRenderProposals(clubId){
  el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;const own=p.user_id===authUser.id;
    return `<div class="prop-row">
      <div style="width:36px;flex:none">${coverEl(p.id,p.title,'',null,p.cover)}</div>
-     <div style="flex:1;min-width:0"><b style="font-size:13.5px">${p.title}</b><div class="muted" style="font-size:11.5px">${p.author||''} · da ${pm[p.user_id]||'membro'}${own?' (tu)':''}</div>
+     <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(p.title)}</b><div class="muted" style="font-size:11.5px">${esc(p.author||'')} · da ${esc(pm[p.user_id]||'membro')}${own?' (tu)':''}</div>
        <div class="bar" style="margin-top:5px"><i style="width:${total?Math.round(n/total*100):0}%"></i></div></div>
      <div style="text-align:right;flex:none"><div class="muted" style="font-size:12px">${n} ${n===1?'voto':'voti'}</div>
        ${own
@@ -2496,7 +2497,7 @@ function renderAiCloud(){
    <div style="font-size:32px">🤖</div>
    <div style="flex:1">
      <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler. ${reading?('Stai leggendo <b>'+reading.t+'</b>.'):'Aggiungi un libro alla libreria per consigli su misura.'}</p>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler. ${reading?('Stai leggendo <b>'+esc(reading.t)+'</b>.'):'Aggiungi un libro alla libreria per consigli su misura.'}</p>
    </div>
  </div>
 
@@ -2514,8 +2515,8 @@ function renderAiCloud(){
    </div>`).join('')}
  </div>
 
- ${club?`<div class="sec-title">👥 Per il club "${club.name}"</div>
- <div class="card pad"><div class="ai-bubble">Posso analizzare i gusti dei membri di <b>${club.name}</b> e proporre un libro che metta d'accordo il gruppo, con il livello di compatibilità. ${club.current_title?('Ora state leggendo <b>'+club.current_title+'</b>.'):'Avviate una scelta del libro dal club per iniziare.'}</div></div>`:''}
+ ${club?`<div class="sec-title">👥 Per il club "${esc(club.name)}"</div>
+ <div class="card pad"><div class="ai-bubble">Posso analizzare i gusti dei membri di <b>${esc(club.name)}</b> e proporre un libro che metta d'accordo il gruppo, con il livello di compatibilità. ${club.current_title?('Ora state leggendo <b>'+esc(club.current_title)+'</b>.'):'Avviate una scelta del libro dal club per iniziare.'}</div></div>`:''}
 
  <div class="sec-title">🛠️ Strumenti AI per la discussione</div>
  <div class="suggest">
@@ -2656,7 +2657,7 @@ function initMapCloud(locs){
  if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}}
 }
 /* ============ PROFILO (cloud) ============ */
-function esc(v){return String(v==null?'':v).replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function renderProfiloCloud(){
  const p=profile||{};const d=p.data||{};
  const read=books.filter(b=>b.status==='read').length;
@@ -2665,7 +2666,7 @@ function renderProfiloCloud(){
  const chips=(arr,empty)=>(arr&&arr.length)?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):`<span class="muted" style="font-size:13px">${empty}</span>`;
  view.innerHTML=`
  <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-   <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${d.avatar?`<img src="${esc(d.avatar)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
+   <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${safeImgUrl(d.avatar)?`<img src="${esc(safeImgUrl(d.avatar))}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
    <div style="flex:1;min-width:200px">
      <h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2>
      <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}</div>
@@ -3039,7 +3040,7 @@ function renderHomeCloud(){
    <div class="stat" style="cursor:pointer" onclick="go('club')"><div class="ic">👥</div><div class="n">${myClubs.length}</div><div class="l">Club</div></div>
  </div>
  ${reading.length?`<div class="sec-title">📖 Continua a leggere</div>
- <div class="row">${reading.map(b=>`<div class="card pad" style="flex:1;min-width:280px;cursor:pointer" onclick="openBook(${b.id})"><div style="display:flex;gap:16px"><div style="width:66px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div><div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${b.t}</b><div class="muted" style="font-size:13px;margin:2px 0 10px">${b.a}</div><div class="bar"><i style="width:${b.prog||0}%"></i></div></div></div></div>`).join('')}</div>`:''}
+ <div class="row">${reading.map(b=>`<div class="card pad" style="flex:1;min-width:280px;cursor:pointer" onclick="openBook(${b.id})"><div style="display:flex;gap:16px"><div style="width:66px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div><div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">${esc(b.t)}</b><div class="muted" style="font-size:13px;margin:2px 0 10px">${esc(b.a)}</div><div class="bar"><i style="width:${b.prog||0}%"></i></div></div></div></div>`).join('')}</div>`:''}
  <div class="sec-title">📚 Curiosità della settimana</div>
  <div id="curioCard"></div>
  <div class="sec-title">🔔 Ti aspettano</div>
@@ -3063,11 +3064,12 @@ function renderIncontriCloud(){
      <div class="date"><b>${d.d}</b><small>${d.m}</small>${m.time?`<span class="etime">🕒 ${esc(m.time)}</span>`:''}</div>
      <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(m.title||'Incontro')}</b>
        <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}</div>
-       <div class="chips">${m.link?`<a class="pill sky" style="text-decoration:none" href="${esc(m.link)}" target="_blank" rel="noopener">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
+       <div class="chips">${m.link&&safeUrl(m.link)?`<a class="pill sky" style="text-decoration:none" href="${esc(safeUrl(m.link))}" target="_blank" rel="noopener noreferrer">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener noreferrer">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
      ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" title="Elimina">🗑</button></div>`:''}
    </div>`}).join(''):`<div class="srch-empty">Nessun incontro in programma.${myClubs.length?' Creane uno con "＋ Nuovo incontro".':' Unisciti a un club per organizzare gli incontri.'}</div>`}
  </div>`;
 }
+function safeUrl(u){u=String(u||'').trim();if(!u)return'';if(/^https:\/\//i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
 function mapsUrl(place){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place)}
 /* ===== Luogo: autocomplete GRATIS (Photon/OpenStreetMap) + anteprima Leaflet ===== */
 let _placeTimer=null,_mtMap=null;
