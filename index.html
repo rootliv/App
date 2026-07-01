@@ -1333,7 +1333,7 @@ async function aiSearchCards(query){
  </div>`).join('')+'</div>';
 }
 /* ====== ASSISTENTE — architettura modulare a provider ======
-   1) prova un provider AI esterno (Edge Function "assistente": Groq→OpenRouter→Gemini)
+   1) prova un provider AI esterno (Edge Function "assistente": Groq→OpenRouter)
    2) se non disponibile, usa l'"Assistente base gratuito" (logiche interne sui dati dell'app)
    Niente 502 a schermo, niente risposte finte spacciate per AI. */
 let aiChat=[];
@@ -1689,7 +1689,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v32 (fix note-azioni + mappa geocoding)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v33 (Gemini rimosso: solo Groq/OpenRouter)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2516,7 +2516,7 @@ function renderAiCloud(){
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-   <span>${aiOn()?'✨ <b>AI esterna attiva</b> (Groq/OpenRouter/Gemini)':'🛟 <b>Assistente base gratuito</b> · nessuna AI esterna'} · senza spoiler</span>
+   <span>${aiOn()?'✨ <b>AI esterna attiva</b> (Groq / OpenRouter)':'🛟 <b>Assistente base gratuito</b> · nessuna AI esterna'} · senza spoiler</span>
    <a href="#" onclick="aiToggle();return false" style="color:var(--plum);font-weight:600">${aiOn()?'Disattiva AI esterna':'Attiva AI esterna'}</a>
    ${aiChat.length?'<a href="#" onclick="aiClear();return false" style="color:var(--plum);font-weight:600">Pulisci chat</a>':''}
  </div>`;
@@ -2917,7 +2917,7 @@ function curioFallback(b){
  if(b.pg)return mkCurio(b,'Lettura',b.t,'«'+b.t+'» di '+b.a+' conta circa '+b.pg+' pagine: dividerle per i giorni a disposizione è un modo semplice per darti un ritmo di lettura.','metadati');
  return mkCurio(b,'Libreria',b.t,'«'+b.t+'» di '+b.a+' è nella tua libreria: aprilo per scoprirne trama e dettagli.','app');
 }
-// AI con accesso al web (Gemini + Google Search) via Supabase Edge Function: chiave LLM solo lato server
+// Curiosità AI via Edge Function (provider gratuiti Groq/OpenRouter): chiave LLM solo lato server
 async function aiCuriosity(b){
  if(!aiOn())return null;                                              // AI esterna spenta → solo Wikidata/Wikipedia
  if(typeof supa==='undefined'||!supa||typeof mode==='undefined'||mode!=='cloud')return null;
