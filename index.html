@@ -327,13 +327,20 @@ input[type=range]{accent-color:var(--coral)}
 .botnav button .ic{font-size:20px}
 .botnav button.active{color:var(--plum)}
 .mtog{display:none}
+.sidebar-close{display:none;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:20px;padding:6px;margin-left:auto;align-items:center}
 
 @media(max-width:900px){
-  .sidebar{inset:0 auto 0 0;border-radius:0 24px 24px 0;transform:translateX(-105%);transition:.28s}
+  .sidebar{inset:0 auto 0 0;border-radius:0 24px 24px 0;transform:translateX(-105%);transition:.28s;
+    padding-bottom:calc(20px + env(safe-area-inset-bottom));overflow-y:auto}
   .sidebar.show{transform:none}
   .main{margin-left:0}
   .mtog{display:grid}
   .botnav{display:flex}
+  /* Quando il menu mobile è aperto, la bottom-nav va nascosta: altrimenti (z-index più alto)
+     si sovrappone al piè di pagina della sidebar (tema/logout), rendendoli invisibili e non
+     cliccabili. Il toggle della classe è gestito da toggleSidebar() in JS. */
+  body.sidebar-open .botnav{display:none}
+  .sidebar-close{display:flex}
   .stat-row{grid-template-columns:repeat(2,1fr)}
   .view{padding:8px 16px 110px}
   .topbar{padding:14px 16px 12px}
@@ -881,6 +888,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     <div class="brand">
       <div class="logo">P</div>
       <div><b>Pàgina</b><small>club & libreria</small></div>
+      <button class="sidebar-close" onclick="toggleSidebar(false)" title="Chiudi menu" aria-label="Chiudi menu">✕</button>
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
@@ -894,7 +902,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
   <!-- MAIN -->
   <main class="main">
     <header class="topbar">
-      <button class="bell mtog" onclick="document.getElementById('sidebar').classList.toggle('show')">☰</button>
+      <button class="bell mtog" onclick="toggleSidebar()">☰</button>
       <div>
         <h2 id="pageTitle">Home</h2>
         <div class="sub" id="pageSub">Il tuo angolo di lettura</div>
@@ -1058,6 +1066,15 @@ function buildNav(){
    return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${p.ic}</span>${p.label.split(' ')[0]}</button>`}).join('');
 }
 let current='home';
+/* Apre/chiude il menu mobile e nasconde la bottom-nav mentre è aperto (altrimenti, avendo uno
+   z-index più alto, coprirebbe il piè di pagina della sidebar con tema/logout rendendoli
+   irraggiungibili). show: true=apri, false=chiudi, omesso=toggle. */
+function toggleSidebar(show){
+ const sb=document.getElementById('sidebar');
+ const open=typeof show==='boolean'?show:!sb.classList.contains('show');
+ sb.classList.toggle('show',open);
+ document.body.classList.toggle('sidebar-open',open);
+}
 function go(id){
  current=id;const p=pages.find(x=>x.id===id);
  $('#pageTitle').textContent=p.title;$('#pageSub').textContent=p.sub;
@@ -1065,6 +1082,7 @@ function go(id){
  view.classList.remove('fade');void view.offsetWidth;view.classList.add('fade');
  renders[id]();
  document.getElementById('sidebar').classList.remove('show');
+ document.body.classList.remove('sidebar-open');
  window.scrollTo(0,0);
 }
 
