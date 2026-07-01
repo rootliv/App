@@ -1689,7 +1689,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v35 (curiosità con spoiler se libro già letto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v36 (incontri: 1 per club + auto-elimina scaduti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1974,6 +1974,15 @@ async function cloudLoadMeetings(){
  if(!ids.length){myMeetings=[];return}
  const {data}=await supa.from('meetings').select('*').in('club_id',ids);
  myMeetings=data||[];
+ await purgePastMeetings();
+}
+function meetingWhen(m){return new Date(String(m.date).slice(0,10)+'T'+((m.time&&/^\d{1,2}:\d{2}/.test(m.time))?m.time:'23:59')+':00')}
+async function purgePastMeetings(){        // elimina automaticamente gli incontri con data/ora già passate
+ const now=Date.now();
+ const past=(myMeetings||[]).filter(m=>{const dt=meetingWhen(m);return !isNaN(dt)&&dt.getTime()<now});
+ if(!past.length)return;
+ for(const m of past){try{await supa.from('meetings').delete().eq('id',m.id)}catch(e){}}
+ myMeetings=(myMeetings||[]).filter(m=>!past.some(p=>p.id===m.id));
 }
 function todayStr(){return new Date().toISOString().slice(0,10)}
 function fmtDateParts(d){const p=String(d).slice(0,10).split('-');const M=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];return {d:+p[2]||'',m:M[(+p[1]||1)-1]}}
@@ -3086,15 +3095,17 @@ function showPlacePreview(lat,lng){
 }
 function openMeetingModal(id){
  const m=id?(myMeetings||[]).find(x=>x.id===id):null;
- let pool=myClubs.filter(c=>c.current_title);                          // solo club con libro del mese
- if(m&&!pool.some(c=>c.id===m.club_id)){const mc=myClubs.find(c=>c.id===m.club_id);if(mc)pool=[mc].concat(pool);}
+ // un solo incontro per club: per un NUOVO incontro mostra solo i club con libro e SENZA incontro già fissato
+ let pool=myClubs.filter(c=>c.current_title&&!(myMeetings||[]).some(mt=>mt.club_id===c.id));
+ if(m){const mc=myClubs.find(c=>c.id===m.club_id);if(mc&&!pool.some(c=>c.id===mc.id))pool=[mc].concat(pool);}
  if(!pool.length){
+   const anyBook=myClubs.some(c=>c.current_title);
    $('#modal').innerHTML=`<div class="modal-top"><b>📅 Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
      <div class="modal-body" style="text-align:center;padding:34px 26px">
-       <div style="font-size:42px">📖</div>
-       <h3 style="font-size:18px;margin:10px 0 6px">Prima serve il libro del mese</h3>
-       <div class="muted" style="max-width:430px;margin:0 auto 18px;line-height:1.55">Non puoi ancora fissare un incontro: nessuno dei tuoi club ha scelto il libro del mese. Avvia un <b>sorteggio</b> o una <b>votazione</b> nel club, poi torna qui.</div>
-       <button class="btn" onclick="closeModal();go('club')">Vai ai club</button>
+       <div style="font-size:42px">${anyBook?'📅':'📖'}</div>
+       <h3 style="font-size:18px;margin:10px 0 6px">${anyBook?'Ogni club ha già un incontro':'Prima serve il libro del mese'}</h3>
+       <div class="muted" style="max-width:440px;margin:0 auto 18px;line-height:1.55">${anyBook?'Ogni club può avere <b>un solo incontro</b> per volta: modifica quello esistente (icona ✏️) invece di crearne uno nuovo.':'Non puoi ancora fissare un incontro: nessuno dei tuoi club ha scelto il libro del mese. Avvia un <b>sorteggio</b> o una <b>votazione</b>, poi torna qui.'}</div>
+       <button class="btn" onclick="closeModal();${anyBook?"go('incontri')":"go('club')"}">${anyBook?'Ho capito':'Vai ai club'}</button>
      </div>`;
    openOverlay();return;
  }
@@ -3131,11 +3142,12 @@ async function saveMeeting(editId){
  const msg=t=>{const e=$('#mtMsg');if(e){e.textContent=t;e.classList.add('show')}};
  if(!club_id||!date)return msg('Scegli un club e una data.');
  if(!title)return msg('Questo club non ha ancora un libro del mese: scegline uno prima di fissare l\'incontro.');
+ // un solo incontro per club
+ if((myMeetings||[]).some(x=>x.id!==editId&&x.club_id===club_id))
+   return msg('Questo club ha già un incontro: modifica quello esistente invece di crearne uno nuovo.');
  const today=todayStr();
  if(date<today)return msg('La data non può essere nel passato.');
  if(date===today&&time&&time<nowHM())return msg('L\'orario non può essere nel passato.');
- const dup=(myMeetings||[]).find(x=>x.id!==editId&&x.club_id===club_id&&String(x.date).slice(0,10)===date&&(x.title||'')===title);
- if(dup)return msg('Esiste già un incontro per questo libro in questa data.');
  const base={club_id,title,date,place:place||null,link:link||null};
  const full=Object.assign({},base,{time:time||null});
  const run=obj=>editId?supa.from('meetings').update(obj).eq('id',editId):supa.from('meetings').insert(Object.assign({},obj,{created_by:authUser.id}));
