@@ -257,7 +257,9 @@ input[type=range]{accent-color:var(--coral)}
 .pref-group h4{font-size:13.5px;margin:0 0 3px}
 .pref-group .pref-hint{font-size:11.5px;color:var(--ink-faint);margin-bottom:11px;display:block}
 .chipadd{display:flex;gap:8px}
-.chipadd input{flex:1}
+.chipadd input{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:11px 14px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.chipadd input:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
+.chipadd .btn.sm{border-radius:12px;white-space:nowrap}
 .acbox{display:none;border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm);max-height:240px;overflow-y:auto}
 .acopt{display:block;width:100%;text-align:left;border:none;background:none;font-family:inherit;font-size:13.5px;padding:10px 13px;cursor:pointer;border-bottom:1px solid var(--line);color:var(--ink)}
 .acopt:last-child{border-bottom:none}
@@ -2907,6 +2909,7 @@ function openEditProfile(){
   <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
+    <div class="field"><label>Username</label><input id="epUser" value="${esc((profile&&profile.username)||'')}" autocapitalize="off" autocomplete="off" placeholder="es. alice_libri" oninput="checkUsername()"><small id="epUserHint" style="display:block;margin-top:5px;font-size:12px" class="muted">3-20 caratteri: lettere, numeri o _</small></div>
     <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
     ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
     <div class="row" style="gap:12px">
@@ -2918,16 +2921,51 @@ function openEditProfile(){
  openOverlay();
  ['genres','authors','loved','disliked'].forEach(renderChips);
 }
+/* Verifica live dello username nel profilo: formato + disponibilità su Supabase (con debounce).
+   Lo username attuale dell'utente è sempre considerato valido. */
+let _userChkTimer=null,_userOk=true;
+function checkUsername(){
+ const inp=$('#epUser'),hint=$('#epUserHint');if(!inp||!hint)return;
+ const v=inp.value.trim().replace(/^@/,'');
+ const current=((profile&&profile.username)||'').toLowerCase();
+ clearTimeout(_userChkTimer);
+ if(v.toLowerCase()===current){_userOk=true;hint.textContent='Questo è il tuo username attuale.';hint.style.color='';return}
+ if(!v){_userOk=true;hint.textContent='Lascia vuoto per rimuovere lo username.';hint.style.color='';return}
+ if(!/^[a-zA-Z0-9_]{3,20}$/.test(v)){_userOk=false;hint.textContent='3-20 caratteri: solo lettere, numeri o _ (niente spazi).';hint.style.color='var(--coral)';return}
+ _userOk=false;hint.textContent='Controllo disponibilità…';hint.style.color='';
+ _userChkTimer=setTimeout(async()=>{
+   try{
+     const {data:taken}=await supa.from('profiles').select('id').ilike('username',v).neq('id',authUser.id).limit(1);
+     if(taken&&taken.length){_userOk=false;hint.textContent='✗ Già preso, prova un altro.';hint.style.color='var(--coral)';}
+     else{_userOk=true;hint.textContent='✓ Disponibile!';hint.style.color='var(--sage)';}
+   }catch(e){_userOk=true;hint.textContent='Non ho potuto verificare ora: lo controllo al salvataggio.';hint.style.color='';}
+ },450);
+}
 async function saveProfile(){
  const name=$('#epName').value.trim()||(profile&&profile.name)||'Lettore';
+ const uInp=$('#epUser');
+ const uname=uInp?uInp.value.trim().replace(/^@/,''):((profile&&profile.username)||'');
+ const currentU=((profile&&profile.username)||'');
+ // Valida lo username solo se è cambiato
+ if(uname!==currentU){
+   if(uname&&!/^[a-zA-Z0-9_]{3,20}$/.test(uname)){alert('Username non valido: 3-20 caratteri, solo lettere, numeri o _.');return}
+   if(uname){
+     try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',uname).neq('id',authUser.id).limit(1);
+       if(taken&&taken.length){alert('Questo username è già stato preso. Scegline un altro.');return}
+     }catch(e){}
+   }
+ }
  const d=Object.assign({},(profile&&profile.data)||{},{
    genres:editSel.genres.slice(),authors:editSel.authors.slice(),
    loved:editSel.loved.slice(),disliked:editSel.disliked.slice(),
    pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
  });
- profile=Object.assign({},profile,{name,data:d});
- try{await supa.from('profiles').update({name,data:d}).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
+ const upd={name,data:d};
+ if(uname!==currentU)upd.username=uname||null;
+ profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d});
+ try{await supa.from('profiles').update(upd).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
+ const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account cloud ☁️');
  closeModal();renderProfiloCloud();
 }
 
