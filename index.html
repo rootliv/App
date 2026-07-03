@@ -2056,13 +2056,79 @@ function aiOn(){return true}
 function avFill(name,url){const su=safeImgUrl(url);return su?`<img src="${esc(su)}" alt="">`:ini2(name)}
 function myAvatar(){return (typeof profile!=='undefined'&&profile&&profile.data&&profile.data.avatar)||''}
 function applyMyAvatar(){const el=$('#meAv');if(el)el.innerHTML=avFill((profile&&profile.name)||'',myAvatar())}
-function chooseAvatar(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{const f=i.files&&i.files[0];if(f)processAvatar(f)};i.click()}
-function processAvatar(file){const fr=new FileReader();fr.onload=e=>{const img=new Image();img.onload=async()=>{
-  const S=224,cv=document.createElement('canvas');cv.width=S;cv.height=S;const ctx=cv.getContext('2d');
-  const m=Math.min(img.width,img.height),sx=(img.width-m)/2,sy=(img.height-m)/2;
-  ctx.drawImage(img,sx,sy,m,m,0,0,S,S);
-  await saveAvatar(cv.toDataURL('image/jpeg',0.78));
- };img.onerror=()=>alert('Immagine non valida.');img.src=e.target.result};fr.readAsDataURL(file);}
+function chooseAvatar(){const i=document.createElement('input');i.type='file';i.accept='image/*';i.onchange=()=>{const f=i.files&&i.files[0];if(f)openAvatarEditor(f)};i.click()}
+
+/* Editor foto profilo: l'utente sposta (trascinando) e ridimensiona (cursore zoom) l'immagine
+   dentro un riquadro quadrato; al salvataggio ritagliamo esattamente ciò che è visibile nel
+   riquadro. Sostituisce il vecchio ritaglio automatico al centro che tagliava le foto verticali. */
+let _avEd=null;
+function openAvatarEditor(file){
+ const fr=new FileReader();
+ fr.onload=e=>{
+   const img=new Image();
+   img.onload=()=>{
+     $('#modal').innerHTML=`
+      <div class="modal-top"><b>Regola la foto</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+      <div class="modal-body" style="text-align:center">
+        <p class="muted" style="font-size:12.5px;margin-bottom:14px">Trascina per spostare · usa il cursore per ingrandire</p>
+        <div id="avStage" style="width:260px;height:260px;margin:0 auto;border-radius:26px;overflow:hidden;position:relative;touch-action:none;background:#000;box-shadow:var(--shadow);cursor:grab">
+          <canvas id="avCanvas" width="260" height="260" style="display:block"></canvas>
+          <div style="position:absolute;inset:0;border-radius:26px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.5);pointer-events:none"></div>
+        </div>
+        <input id="avZoom" type="range" min="1" max="3" step="0.01" value="1" style="width:260px;margin:18px auto 0;display:block">
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+          <button class="btn" id="avSave" onclick="saveAvatarEdited()">💾 Salva foto</button>
+        </div>
+      </div>`;
+     openOverlay();
+     const cv=$('#avCanvas'),cx=cv.getContext('2d'),S=260;
+     const base=Math.max(S/img.width,S/img.height); // "cover": riempie il riquadro
+     _avEd={img,cx,S,base,scale:1,ox:0,oy:0,drag:false,lx:0,ly:0};
+     clampAndDraw();
+     const stage=$('#avStage');
+     const start=(x,y)=>{_avEd.drag=true;_avEd.lx=x;_avEd.ly=y;stage.style.cursor='grabbing'};
+     const move=(x,y)=>{if(!_avEd.drag)return;_avEd.ox+=x-_avEd.lx;_avEd.oy+=y-_avEd.ly;_avEd.lx=x;_avEd.ly=y;clampAndDraw()};
+     const end=()=>{_avEd.drag=false;stage.style.cursor='grab'};
+     stage.onmousedown=e=>start(e.clientX,e.clientY);
+     window.addEventListener('mousemove',_avMove=e=>move(e.clientX,e.clientY));
+     window.addEventListener('mouseup',_avUp=end);
+     stage.ontouchstart=e=>{const t=e.touches[0];start(t.clientX,t.clientY)};
+     stage.ontouchmove=e=>{const t=e.touches[0];move(t.clientX,t.clientY);e.preventDefault()};
+     stage.ontouchend=end;
+     $('#avZoom').oninput=ev=>{_avEd.scale=parseFloat(ev.target.value);clampAndDraw()};
+   };
+   img.onerror=()=>alert('Immagine non valida.');
+   img.src=e.target.result;
+ };
+ fr.readAsDataURL(file);
+}
+function clampAndDraw(){
+ const s=_avEd;if(!s)return;
+ const dw=s.img.width*s.base*s.scale, dh=s.img.height*s.base*s.scale;
+ // impedisce di trascinare fuori lasciando bordi vuoti
+ const maxX=(dw-s.S)/2, maxY=(dh-s.S)/2;
+ s.ox=Math.max(-maxX,Math.min(maxX,s.ox));
+ s.oy=Math.max(-maxY,Math.min(maxY,s.oy));
+ s.cx.clearRect(0,0,s.S,s.S);
+ s.cx.drawImage(s.img,(s.S-dw)/2+s.ox,(s.S-dh)/2+s.oy,dw,dh);
+}
+async function saveAvatarEdited(){
+ const s=_avEd;if(!s)return;
+ const btn=$('#avSave');if(btn){btn.disabled=true;btn.textContent='Salvo…'}
+ // ridisegna a risoluzione piena (224px) mantenendo la stessa inquadratura del riquadro
+ const OUT=224,out=document.createElement('canvas');out.width=OUT;out.height=OUT;
+ const octx=out.getContext('2d'),k=OUT/s.S;
+ const dw=s.img.width*s.base*s.scale*k, dh=s.img.height*s.base*s.scale*k;
+ octx.drawImage(s.img,(OUT-dw)/2+s.ox*k,(OUT-dh)/2+s.oy*k,dw,dh);
+ await saveAvatar(out.toDataURL('image/jpeg',0.82));
+ _avCleanup();
+}
+function _avCleanup(){
+ try{window.removeEventListener('mousemove',_avMove)}catch(e){}
+ try{window.removeEventListener('mouseup',_avUp)}catch(e){}
+ _avEd=null;
+}
+let _avMove=null,_avUp=null;
 function openAvatarMenu(){
  const url=myAvatar();const nm=(profile&&profile.name)||'?';
  $('#modal').innerHTML=`
@@ -3273,7 +3339,7 @@ function renderNotifCloud(){
  </div>`;
 }
 function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
-function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow=''}
+function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 /* ============ SUPABASE (account cloud) ============ */
