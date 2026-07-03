@@ -43,22 +43,24 @@
   --r:16px; --r-sm:12px;
 }
 [data-theme="dark"]{
-  --plum:#a5a0f5; --plum-dark:#0c0d0c; --plum-soft:#b8b4f8;
-  --coral:#a5a0f5; --coral-soft:#211f3a;
-  --gold:#d2ab4e; --gold-soft:#332b15;
-  --sage:#a5a0f5; --sage-soft:#211f3a;
+  /* Tema scuro "grigi profondi eleganti": basi grigio-neutre (né verdi né viola),
+     accenti coerenti col brand (verde salvia + oro) ma smorzati per lo scuro. */
+  --plum:#c9b6e0; --plum-dark:#0a0b0c; --plum-soft:#d8cae9;
+  --coral:#e0a487; --coral-soft:#2b2420;
+  --gold:#d4b05a; --gold-soft:#2e2814;
+  --sage:#9ec9a8; --sage-soft:#1e2a21;
   --sky:#8db9dd;
-  --bg:#111210; --bg2:#1b1d1a; --surface:#191b18; --surface2:#20231f;
-  --ink:#ededE7; --ink-soft:#a9a89f; --ink-faint:#79786f;
-  --line:#2a2c28;
-  --glow1:#16201c; --glow2:#15171a;
-  --hover:#232622; --glass:rgba(25,27,24,.82);
-  --brand-solid:#5b52e0;
-  --brand-grad:linear-gradient(120deg,#4f46c8,#6a62e8);
-  --gold-grad:linear-gradient(120deg,#bf9b3f,#d2ab4e);
-  --quote-bg:#1d1d28;
-  --ai-bg:#17172b;
-  --locked:repeating-linear-gradient(45deg,#1d201c,#1d201c 11px,#23261f 11px,#23261f 22px);
+  --bg:#121316; --bg2:#191b1e; --surface:#1c1e22; --surface2:#232529;
+  --ink:#eceef0; --ink-soft:#a6a9ad; --ink-faint:#74777c;
+  --line:#2e3136;
+  --glow1:#1a1d22; --glow2:#171a1f;
+  --hover:#26292e; --glass:rgba(28,30,34,.82);
+  --brand-solid:#5c8f6a;
+  --brand-grad:linear-gradient(120deg,#4d7a59,#63986f);
+  --gold-grad:linear-gradient(120deg,#bf9b3f,#d4b05a);
+  --quote-bg:#212429;
+  --ai-bg:#1d2126;
+  --locked:repeating-linear-gradient(45deg,#1f2226,#1f2226 11px,#26292e 11px,#26292e 22px);
   --shadow-sm:0 1px 3px rgba(0,0,0,.30);
   --shadow:0 16px 38px rgba(0,0,0,.45);
   --shadow-lg:0 30px 64px rgba(0,0,0,.6);
@@ -504,7 +506,7 @@ input[type=range]{accent-color:var(--coral)}
 
 /* ---- VISTA A SCAFFALE (Libreria) ---- */
 :root{--shelf:#ece2cf;--shelf-edge:#cdba94;--shelf-shadow:rgba(70,48,24,.30)}
-[data-theme="dark"]{--shelf:#2c2720;--shelf-edge:#15110b;--shelf-shadow:rgba(0,0,0,.62)}
+[data-theme="dark"]{--shelf:#292c31;--shelf-edge:#131518;--shelf-shadow:rgba(0,0,0,.62)}
 .shelf.case{gap:38px 16px}
 .shelf.case .book{display:flex;flex-direction:column}
 .shelf.case .cover{position:relative;z-index:1}
@@ -678,18 +680,20 @@ input[type=range]{accent-color:var(--coral)}
   --r:20px; --r-sm:14px;
 }
 [data-theme="dark"]{
-  --bg:#14130e; --bg2:#1d1b14; --surface:#1a1812; --surface2:#221f17;
-  --ink:#efe9dc; --ink-soft:#b1a895; --ink-faint:#7d7565;
-  --line:#2c2820;
-  --plum:#5db79d; --plum-dark:#0c0d0c; --plum-soft:#79ccb4;
-  --coral:#d4a65f; --coral-soft:#2b2114;
-  --gold:#d4a65f; --gold-soft:#2b2114;
-  --sage:#5db79d; --sage-soft:#15241e; --sky:#8db9dd;
-  --glow1:#13231d; --glow2:#1a1710; --hover:#262219; --glass:rgba(26,24,18,.8);
-  --brand-solid:#2f8c72;
-  --brand-grad:linear-gradient(135deg,#236b57,#33967a);
-  --gold-grad:linear-gradient(135deg,#b07d35,#d4a65f);
-  --quote-bg:#211d14; --ai-bg:#15241e;
+  /* Blocco effettivo del tema scuro (sovrascrive quello sopra perché successivo):
+     grigi neutri profondi + accenti brand verde/oro smorzati. */
+  --bg:#121316; --bg2:#191b1e; --surface:#1c1e22; --surface2:#232529;
+  --ink:#eceef0; --ink-soft:#a6a9ad; --ink-faint:#74777c;
+  --line:#2e3136;
+  --plum:#9ec9a8; --plum-dark:#0a0b0c; --plum-soft:#b6d8bd;
+  --coral:#d4b05a; --coral-soft:#2e2814;
+  --gold:#d4b05a; --gold-soft:#2e2814;
+  --sage:#9ec9a8; --sage-soft:#1e2a21; --sky:#8db9dd;
+  --glow1:#1a1d22; --glow2:#171a1f; --hover:#26292e; --glass:rgba(28,30,34,.82);
+  --brand-solid:#5c8f6a;
+  --brand-grad:linear-gradient(135deg,#4d7a59,#63986f);
+  --gold-grad:linear-gradient(135deg,#b07d35,#d4b05a);
+  --quote-bg:#212429; --ai-bg:#1d2126;
   --shadow-sm:0 1px 2px rgba(0,0,0,.4);
   --shadow:0 14px 36px -14px rgba(0,0,0,.6);
   --shadow-lg:0 36px 80px -22px rgba(0,0,0,.72);
