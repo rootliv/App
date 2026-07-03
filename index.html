@@ -13,7 +13,7 @@
      inline in tutta la pagina; rimuoverlo richiederebbe una riscrittura estesa dell'architettura
      (vedi report di sicurezza per i dettagli). object-src, frame-ancestors e base-uri sono comunque
      bloccati, e connect-src limita l'esfiltrazione dei dati alle sole API note dell'app. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://ogcgfemadhtzzhdjkjda.supabase.co https://www.googleapis.com https://openlibrary.org https://covers.openlibrary.org https://query.wikidata.org https://it.wikipedia.org https://photon.komoot.io https://*.basemaps.cartocdn.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://ogcgfemadhtzzhdjkjda.supabase.co https://www.googleapis.com https://openlibrary.org https://covers.openlibrary.org https://query.wikidata.org https://it.wikipedia.org https://photon.komoot.io https://*.basemaps.cartocdn.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Pàgina · Club del libro & libreria virtuale</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,17 +50,17 @@
   --gold:#d4b05a; --gold-soft:#2e2814;
   --sage:#9ec9a8; --sage-soft:#1e2a21;
   --sky:#8db9dd;
-  --bg:#121316; --bg2:#191b1e; --surface:#1c1e22; --surface2:#232529;
-  --ink:#eceef0; --ink-soft:#a6a9ad; --ink-faint:#74777c;
-  --line:#2e3136;
-  --glow1:#1a1d22; --glow2:#171a1f;
-  --hover:#26292e; --glass:rgba(28,30,34,.82);
-  --brand-solid:#5c8f6a;
-  --brand-grad:linear-gradient(120deg,#4d7a59,#63986f);
-  --gold-grad:linear-gradient(120deg,#bf9b3f,#d4b05a);
-  --quote-bg:#212429;
-  --ai-bg:#1d2126;
-  --locked:repeating-linear-gradient(45deg,#1f2226,#1f2226 11px,#26292e 11px,#26292e 22px);
+  --bg:#1e2024; --bg2:#25272c; --surface:#26292e; --surface2:#2e3137;
+  --ink:#eceef0; --ink-soft:#adb0b5; --ink-faint:#7c8087;
+  --line:#3a3e44;
+  --glow1:#22262b; --glow2:#1f2227;
+  --hover:#33373d; --glass:rgba(38,41,46,.82);
+  --brand-solid:#5f9b6e;
+  --brand-grad:linear-gradient(120deg,#4f8560,#68a577);
+  --gold-grad:linear-gradient(120deg,#b98f3f,#d9b866);
+  --quote-bg:#2b2e34;
+  --ai-bg:#282d2b;
+  --locked:repeating-linear-gradient(45deg,#26292e,#26292e 11px,#2e3137 11px,#2e3137 22px);
   --shadow-sm:0 1px 3px rgba(0,0,0,.30);
   --shadow:0 16px 38px rgba(0,0,0,.45);
   --shadow-lg:0 30px 64px rgba(0,0,0,.6);
@@ -311,7 +311,12 @@ input[type=range]{accent-color:var(--coral)}
 .event .date .etime{margin-top:6px;font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px 7px;white-space:nowrap}
 
 /* ===== MAP ===== */
-#map{height:460px;border-radius:18px;border:1px solid var(--line);z-index:1;box-shadow:var(--shadow)}
+#map{width:100%;height:460px;border-radius:18px;border:1px solid var(--line);z-index:1;box-shadow:var(--shadow);overflow:hidden;position:relative}
+/* Leaflet: i tasselli devono restare dentro il contenitore. Senza queste regole (o se il CSS
+   di Leaflet dal CDN tarda), i pane traboccano e la mappa appare "a pezzi" sfalsati. */
+.leaflet-container{width:100%;height:100%;background:var(--surface2)}
+.leaflet-container img.leaflet-tile{max-width:none!important;max-height:none!important;width:256px;height:256px}
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container{position:absolute;left:0;top:0}
 .leaflet-popup-content{font-family:'Inter';font-size:13px}
 .leaflet-popup-content b{font-family:'Fraunces';font-size:14px}
 .leaflet-popup-content-wrapper{border-radius:14px}
@@ -681,22 +686,22 @@ input[type=range]{accent-color:var(--coral)}
 }
 [data-theme="dark"]{
   /* Blocco effettivo del tema scuro (sovrascrive quello sopra perché successivo):
-     grigi neutri profondi + accenti brand verde/oro smorzati. */
-  --bg:#121316; --bg2:#191b1e; --surface:#1c1e22; --surface2:#232529;
-  --ink:#eceef0; --ink-soft:#a6a9ad; --ink-faint:#74777c;
-  --line:#2e3136;
-  --plum:#9ec9a8; --plum-dark:#0a0b0c; --plum-soft:#b6d8bd;
-  --coral:#d4b05a; --coral-soft:#2e2814;
-  --gold:#d4b05a; --gold-soft:#2e2814;
-  --sage:#9ec9a8; --sage-soft:#1e2a21; --sky:#8db9dd;
-  --glow1:#1a1d22; --glow2:#171a1f; --hover:#26292e; --glass:rgba(28,30,34,.82);
-  --brand-solid:#5c8f6a;
-  --brand-grad:linear-gradient(135deg,#4d7a59,#63986f);
-  --gold-grad:linear-gradient(135deg,#b07d35,#d4b05a);
-  --quote-bg:#212429; --ai-bg:#1d2126;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
-  --shadow:0 14px 36px -14px rgba(0,0,0,.6);
-  --shadow-lg:0 36px 80px -22px rgba(0,0,0,.72);
+     antracite morbido (non nero) + accenti brand verde/oro smorzati. */
+  --bg:#1e2024; --bg2:#25272c; --surface:#26292e; --surface2:#2e3137;
+  --ink:#eceef0; --ink-soft:#adb0b5; --ink-faint:#7c8087;
+  --line:#3a3e44;
+  --plum:#a6cfb0; --plum-dark:#0a0b0c; --plum-soft:#bcdcc3;
+  --coral:#d9b866; --coral-soft:#332c17;
+  --gold:#d9b866; --gold-soft:#332c17;
+  --sage:#a6cfb0; --sage-soft:#243026; --sky:#8db9dd;
+  --glow1:#22262b; --glow2:#1f2227; --hover:#33373d; --glass:rgba(38,41,46,.82);
+  --brand-solid:#5f9b6e;
+  --brand-grad:linear-gradient(135deg,#4f8560,#68a577);
+  --gold-grad:linear-gradient(135deg,#b98f3f,#d9b866);
+  --quote-bg:#2b2e34; --ai-bg:#282d2b;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow:0 14px 36px -14px rgba(0,0,0,.5);
+  --shadow-lg:0 36px 80px -22px rgba(0,0,0,.62);
 }
 /* tipografia: gerarchia più netta */
 h1,h2,h3,.serif{letter-spacing:-.02em}
