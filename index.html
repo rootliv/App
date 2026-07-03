@@ -907,8 +907,10 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div class="av" id="meAv">EM</div>
-      <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Lettrice · 4 club</small></div>
+      <div onclick="go('profilo')" title="Vai al profilo" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
+        <div class="av" id="meAv">EM</div>
+        <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Lettrice · 4 club</small></div>
+      </div>
       <button id="themeBtn" onclick="toggleTheme()" title="Tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;padding:4px">🌙</button>
       <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:17px;padding:4px">⎋</button>
     </div>
