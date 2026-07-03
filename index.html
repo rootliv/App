@@ -2745,27 +2745,40 @@ async function detectBookLocations(){
  if(!aiOn()){alert('Per rilevare automaticamente le ambientazioni, attiva prima l\'AI esterna nella sezione "Assistente AI".');return}
  if(typeof supa==='undefined'||!supa){alert('AI non disponibile.');return}
  if(curioMapBusy)return;curioMapBusy=true;
- const m=bookLocs();const todo=books.filter(b=>!m[normKey(b.t)]);
- const btn=$('#detectBtn');if(btn){btn.disabled=true;btn.textContent='⏳ Rilevo…'}
- if(!todo.length){toast('Ambientazioni già sulla mappa','🗺️');curioMapBusy=false;if(btn){btn.disabled=false;btn.textContent='✨ Rileva ambientazioni'}return}
- let done=0,errors=0;
+ const m=bookLocs();
+ // Ririleva sia i libri mai analizzati sia quelli rimasti "senza luogo" (in caso di errori passati)
+ const todo=books.filter(b=>{const e=m[normKey(b.t)];return !e||e.noPlace});
+ const btn=$('#detectBtn');if(btn){btn.disabled=true;}
+ if(!todo.length){toast('Ambientazioni già sulla mappa','🗺️');curioMapBusy=false;if(btn)btn.disabled=false;return}
+ let done=0,noPlaceN=0,errors=0,i=0;
  for(const b of todo){
+   i++;
+   if(btn)btn.textContent='⏳ '+i+'/'+todo.length;
    try{
-     const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which city and country is the book "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Answer ONLY with "City, Country" in ENGLISH (or just "Country"). If it is not a real place or it is unknown, answer only: UNKNOWN.'}});
-     if(error){errors++;continue}
+     const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which real-world city and country is the novel "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Reply ONLY with "City, Country" in English, or just "Country". If the setting is fictional/imaginary (invented world), or not a real place, or unknown, reply ONLY with the single word: UNKNOWN.'}});
+     if(error){errors++;continue}   // errore di rete: NON segna il libro, così verrà ritentato
      let ans=((data&&data.answer)||'').trim().split('\n')[0].replace(/^[-•\d.\s"']+/,'').replace(/["'.]+$/,'').slice(0,80);
-     if(!ans||/unknown|sconosciut/i.test(ans)){m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};setBookLocs(m);if(current==='mappa')renderMappaCloud();continue}
-     const g=await geocodeOne(ans);
-     if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};setBookLocs(m);done++;if(current==='mappa')renderMappaCloud()}
-     else{m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};setBookLocs(m);if(current==='mappa')renderMappaCloud()}
+     if(!ans||/unknown|sconosciut|fiction|imaginary|immaginar|invented|fantast/i.test(ans)){
+       m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};noPlaceN++;
+     }else{
+       const g=await geocodeOne(ans);
+       if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};done++;}
+       else{m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};noPlaceN++;}
+     }
+     setBookLocs(m);   // salva progressivamente, ma NON ridisegna (evita di distruggere il bottone del loop)
    }catch(e){errors++}
  }
  curioMapBusy=false;
- const noPlaceCount=Object.values(bookLocs()).filter(l=>l.noPlace).length;
- if(errors&&!done)toast('AI non raggiungibile: deploya la function "assistente"','⚠️');
- else if(done)toast('Aggiunti '+done+' libri'+(noPlaceCount?(' · '+noPlaceCount+' senza luogo reale'):''),'🗺️');
- else toast(noPlaceCount?'Nessun luogo reale da mappare':'Nessuna ambientazione trovata','🗺️');
- if(current==='mappa')renderMappaCloud();
+ if(errors&&!done&&!noPlaceN)toast('AI non raggiungibile: riprova o deploya la function "assistente"','⚠️');
+ else{
+   const parts=[];
+   if(done)parts.push(done+' sulla mappa');
+   if(noPlaceN)parts.push(noPlaceN+' senza luogo reale');
+   if(errors)parts.push(errors+' da riprovare');
+   toast(parts.length?parts.join(' · '):'Nessuna ambientazione trovata','🗺️');
+ }
+ if(current==='mappa')renderMappaCloud();   // un solo re-render, alla fine
+ else{const b2=$('#detectBtn');if(b2){b2.disabled=false;b2.textContent='✨ Rileva ambientazioni'}}
 }
 function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','🗺️');renderMappaCloud()}
 function renderMappaCloud(){
