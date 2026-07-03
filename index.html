@@ -2754,35 +2754,44 @@ async function detectBookLocations(){
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which city and country is the book "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Answer ONLY with "City, Country" in ENGLISH (or just "Country"). If it is not a real place or it is unknown, answer only: UNKNOWN.'}});
      if(error){errors++;continue}
      let ans=((data&&data.answer)||'').trim().split('\n')[0].replace(/^[-•\d.\s"']+/,'').replace(/["'.]+$/,'').slice(0,80);
-     if(!ans||/unknown|sconosciut/i.test(ans))continue;
+     if(!ans||/unknown|sconosciut/i.test(ans)){m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};setBookLocs(m);if(current==='mappa')renderMappaCloud();continue}
      const g=await geocodeOne(ans);
      if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};setBookLocs(m);done++;if(current==='mappa')renderMappaCloud()}
+     else{m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};setBookLocs(m);if(current==='mappa')renderMappaCloud()}
    }catch(e){errors++}
  }
  curioMapBusy=false;
+ const noPlaceCount=Object.values(bookLocs()).filter(l=>l.noPlace).length;
  if(errors&&!done)toast('AI non raggiungibile: deploya la function "assistente"','⚠️');
- else toast(done?('Aggiunti '+done+' libri'):'Nessuna ambientazione trovata','🗺️');
+ else if(done)toast('Aggiunti '+done+' libri'+(noPlaceCount?(' · '+noPlaceCount+' senza luogo reale'):''),'🗺️');
+ else toast(noPlaceCount?'Nessun luogo reale da mappare':'Nessuna ambientazione trovata','🗺️');
  if(current==='mappa')renderMappaCloud();
 }
 function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','🗺️');renderMappaCloud()}
 function renderMappaCloud(){
- const locs=Object.values(bookLocs());
+ const all=Object.values(bookLocs());
+ const locs=all.filter(l=>l.lat!=null);           // effettivamente sulla mappa
+ const noPlace=all.filter(l=>l.noPlace);          // rilevati come senza luogo reale
  const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
- const missing=books.filter(b=>!bookLocs()[normKey(b.t)]).length;
+ const todo=books.filter(b=>!bookLocs()[normKey(b.t)]).length;  // non ancora rilevati
  view.innerHTML=`
  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
    <div><h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div></div>
    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
      <span class="pill sky">🌍 ${countries.length} paesi · ${locs.length} libri</span>
-     ${locs.length?`<button class="btn ghost sm" onclick="clearMapLocs()">🗑 Svuota</button>`:''}
-     ${books.length?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:''}
+     ${all.length?`<button class="btn ghost sm" onclick="clearMapLocs()">🗑 Svuota</button>`:''}
+     ${todo?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:(books.length&&!all.length?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:'')}
    </div>
  </div>
  <div id="map"></div>
  <div class="card pad" style="margin-top:18px">
-   ${locs.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: <b>${countries.join(', ')||'—'}</b>.${missing?` ${missing} libri ancora da posizionare: premi "✨ Rileva ambientazioni".`:''}</div>`
+   ${locs.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: <b>${countries.join(', ')||'—'}</b>.${todo?` ${todo} libri ancora da posizionare: premi "✨ Rileva ambientazioni".`:''}</div>`
      :(books.length?`<div class="srch-empty">La mappa è pronta! Premi <b>✨ Rileva ambientazioni</b>: l'AI individua dove sono ambientati i tuoi libri e li posiziona sul planisfero. 🌏</div>`
        :`<div class="srch-empty">Aggiungi libri alla libreria e poi premi "Rileva ambientazioni" per vederli sulla mappa. 🌏</div>`)}
+   ${noPlace.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+     <div class="muted" style="font-size:12.5px;margin-bottom:8px">✨ ${noPlace.length} ${noPlace.length===1?'libro senza luogo reale':'libri senza luogo reale'} — ambientazione immaginaria o non specificata, quindi non compaiono sul planisfero:</div>
+     <div class="chips">${noPlace.map(l=>`<span class="pill gold" title="${esc(l.author||'')}">📖 ${esc(l.title)}</span>`).join('')}</div>
+   </div>`:''}
  </div>`;
  setTimeout(()=>initMapCloud(locs),60);
 }
