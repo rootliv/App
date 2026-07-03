@@ -346,6 +346,10 @@ input[type=range]{accent-color:var(--coral)}
 .botnav button .ic{font-size:20px}
 .botnav button.active{color:var(--plum)}
 .mtog{display:none}
+/* Hamburger: sfondo verde brand + icona bianca, così è ben visibile in entrambi i temi
+   (nel tema scuro, con sfondo neutro ereditato da .bell, risultava quasi invisibile). */
+.bell.mtog{background:var(--brand-solid);border-color:transparent;color:#fff}
+.bell.mtog:hover{filter:brightness(1.06);border-color:transparent}
 .sidebar-close{display:none;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:20px;padding:6px;margin-left:auto;align-items:center}
 
 @media(max-width:900px){
