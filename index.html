@@ -915,9 +915,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <button class="btn" id="rcBtn" style="width:100%;justify-content:center" onclick="completePasswordRecovery()">🔑 Imposta nuova password</button>
       </div>
 
-      <div class="auth-sep">oppure</div>
-      <button class="btn ghost" style="width:100%;justify-content:center" onclick="guest()">👀 Entra nella demo (dati di esempio)</button>
-      <div class="auth-note">🔒 Prototipo: i tuoi dati e la password sono salvati solo su questo dispositivo, nel browser. Non è ancora un sistema sicuro per dati reali — useremo un account cloud nella fase successiva.</div>
+      <div class="auth-note">🔒 I tuoi dati sono protetti da un account personale e sincronizzati in sicurezza sul cloud.</div>
     </div>
   </div>
 </div>
@@ -3691,7 +3689,6 @@ function startApp(target){
  }
  if(passwordRecoveryActive)return;
  if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui sei stata invitata.';const tt=$('#authTitle');if(tt)tt.textContent='Sei stata invitata in un club 📖';}
- if(localStorage.getItem('pagina_session')==='__demo__'&&!pendingJoin)guest();
 })();
 </script>
 </body>
