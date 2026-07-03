@@ -1561,15 +1561,29 @@ renders.mappa=()=>{
  setTimeout(initMap,60);
 };
 let mapObj;
+/* Dopo aver creato una mappa Leaflet dentro un contenitore appena inserito nel DOM, le
+   dimensioni possono non essere ancora corrette: i tasselli risultano disallineati/tagliati
+   (il bug "mappa sminchiata"). invalidateSize() forza Leaflet a rimisurare il contenitore.
+   Lo chiamiamo su più frame per coprire il caso in cui il layout non è ancora stabile. */
+function fixMapSize(m){
+ if(!m)return;
+ const kick=()=>{try{m.invalidateSize(true)}catch(e){}};
+ requestAnimationFrame(kick);
+ setTimeout(kick,120);
+ setTimeout(kick,400);
+}
 function initMap(){
  if(mapObj){mapObj.remove();mapObj=null}
  mapObj=L.map('map',{scrollWheelZoom:false}).setView([20,10],2);
+ mapObj.on('focus',()=>mapObj.scrollWheelZoom.enable());
+ mapObj.on('blur',()=>mapObj.scrollWheelZoom.disable());
  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
  const icon=L.divIcon({className:'',html:'<div style="background:#6d2540;color:#fff;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa14a"><span style="transform:rotate(45deg);font-size:14px">📖</span></div>',iconSize:[32,32],iconAnchor:[16,30]});
  books.forEach(b=>b.set.forEach(s=>{
    L.marker([s.lat,s.lng],{icon}).addTo(mapObj)
     .bindPopup(`<b>${esc(b.t)}</b><br>${esc(b.a)}<br><span style="color:#766a61">📍 ${esc(s.city||s.c)}, ${esc(s.c)}</span>`);
  }));
+ fixMapSize(mapObj);
 }
 
 renders.incontri=()=>{
@@ -2749,11 +2763,14 @@ function initMapCloud(locs){
  if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
  if(typeof L==='undefined')return;
  mapObj=L.map('map',{scrollWheelZoom:false}).setView([25,12],2);
+ mapObj.on('focus',()=>mapObj.scrollWheelZoom.enable());
+ mapObj.on('blur',()=>mapObj.scrollWheelZoom.disable());
  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
  const icon=L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:13px">📖</span></div>',iconSize:[30,30],iconAnchor:[15,28]});
  const pts=locs.filter(l=>l.lat!=null);
  pts.forEach(l=>L.marker([l.lat,l.lng],{icon}).addTo(mapObj).bindPopup('<b>'+esc(l.title)+'</b><br>'+esc(l.author||'')+'<br><span style="color:#766a61">📍 '+esc(l.place)+'</span>'));
- if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}}
+ fixMapSize(mapObj);
+ if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));setTimeout(()=>{try{mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}},160)}catch(e){}}
 }
 /* ============ PROFILO (cloud) ============ */
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
