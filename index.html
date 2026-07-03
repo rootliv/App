@@ -244,6 +244,16 @@ input[type=range]{accent-color:var(--coral)}
 .chipopt{font-family:inherit;font-size:12.5px;font-weight:600;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:7px 13px;cursor:pointer;transition:.15s}
 .chipopt:hover{border-color:var(--coral);color:var(--plum)}
 .chipopt.on{background:var(--brand-solid);color:#fff;border-color:var(--brand-solid)}
+/* Gruppo "non graditi": lo stato selezionato è rosso tenue con una ✕, così si distingue a
+   colpo d'occhio dai gruppi "graditi" (verdi) senza colorare tutta la pagina. */
+.chipopt.no.on{background:#fbe3df;color:#b03a2e;border-color:#e3a8a3}
+.chipopt.no:hover{border-color:#e3a8a3;color:#b03a2e}
+.pref-group{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;background:var(--surface2)}
+.pref-group.no{background:#fdf1ef;border-color:#f0d5d0}
+[data-theme="dark"] .pref-group.no{background:#2a1b19;border-color:#4a2f2b}
+[data-theme="dark"] .chipopt.no.on{background:#4a2320;color:#f0a89e;border-color:#7a3a34}
+.pref-group h4{font-size:13.5px;margin:0 0 3px}
+.pref-group .pref-hint{font-size:11.5px;color:var(--ink-faint);margin-bottom:11px;display:block}
 .chipadd{display:flex;gap:8px}
 .chipadd input{flex:1}
 .acbox{display:none;border:1px solid var(--line);border-radius:12px;margin-top:6px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow-sm);max-height:240px;overflow-y:auto}
@@ -2869,20 +2879,27 @@ function renderAc(key,list){
 function pickAc(key,btn){const v=btn.dataset.v;if(!editSel[key].includes(v))editSel[key].push(v);const inp=$('#ca_'+key);if(inp)inp.value='';const box=$('#ac_'+key);if(box){box.style.display='none';box.innerHTML=''}renderChips(key)}
 function renderChips(key){
  const el=$('#cg_'+key);if(!el)return;
+ const isNo=(key==='disliked');
  const all=[...new Set((PROFILE_SUGGEST[key]||[]).concat(editSel[key]))];
- el.innerHTML=all.map(v=>{const on=editSel[key].includes(v);return `<button type="button" class="chipopt${on?' on':''}" data-v="${esc(v)}" onclick="toggleChip('${key}',this)">${esc(v)}${on?' ✓':''}</button>`}).join('');
+ el.innerHTML=all.map(v=>{const on=editSel[key].includes(v);return `<button type="button" class="chipopt${isNo?' no':''}${on?' on':''}" data-v="${esc(v)}" onclick="toggleChip('${key}',this)">${esc(v)}${on?(isNo?' ✕':' ✓'):''}</button>`}).join('');
 }
 function toggleChip(key,btn){const v=btn.dataset.v;const i=editSel[key].indexOf(v);if(i>=0)editSel[key].splice(i,1);else editSel[key].push(v);renderChips(key)}
 function addCustom(key){const inp=$('#ca_'+key);const v=(inp.value||'').trim();if(!v)return;if(!editSel[key].includes(v))editSel[key].push(v);inp.value='';renderChips(key)}
 function openEditProfile(){
  const d=(profile&&profile.data)||{};
  editSel={genres:(d.genres||[]).slice(),authors:(d.authors||[]).slice(),loved:(d.loved||[]).slice(),disliked:(d.disliked||[]).slice()};
- const groups=[['genres','📗 Generi preferiti','Aggiungi un genere…'],['authors','✍️ Autori preferiti','Aggiungi un autore…'],['loved','💛 Libri del cuore','Aggiungi un libro…'],['disliked','🚫 Generi/temi non graditi','Aggiungi…']];
+ const groups=[
+   ['genres','📗 Generi preferiti','Che tipo di storie ami leggere','Aggiungi un genere…',false],
+   ['authors','✍️ Autori preferiti','Le firme che segui','Aggiungi un autore…',false],
+   ['loved','💛 Libri del cuore','I titoli a cui sei più affezionata','Aggiungi un libro…',false],
+   ['disliked','🚫 Generi/temi da evitare','Cosa NON vuoi ti venga consigliato','Aggiungi…',true]
+ ];
  $('#modal').innerHTML=`
   <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
-    ${groups.map(g=>`<div class="field"><label>${g[1]}</label><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[2]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
+    <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
+    ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
     <div class="row" style="gap:12px">
       <div class="field" style="flex:1;min-width:120px"><label>Ritmo (pag/giorno)</label><input id="epPace" type="number" min="0" value="${d.pace||''}"></div>
       <div class="field" style="flex:1;min-width:120px"><label>Obiettivo annuale (libri)</label><input id="epGoal" type="number" min="0" value="${d.goal||''}"></div>
