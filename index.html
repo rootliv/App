@@ -1544,7 +1544,11 @@ console.log('%cPàgina build: v37 (curiosità libri letti evidenziate)','color:#
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
    localStorage.setItem('gbkey','LA_TUA_CHIAVE') e ricarica.                       */
-let GB_KEY='AIzaSyD8nDA3GWeUMOOOhB2NKeHRmh3SK30aR0Q';
+// Google Books API key: NON è hardcoded nel codice (finirebbe pubblica su GitHub e sfruttabile
+// da altri, consumando la tua quota). La chiave è FACOLTATIVA — senza, la ricerca libri funziona
+// comunque con la quota base di Google. Per usarne una tua (ristretta al tuo dominio e alla sola
+// Books API), impostala una volta dalla console del browser:  localStorage.setItem('gbkey','LA_TUA_CHIAVE')
+let GB_KEY='';
 try{const k=(localStorage.getItem('gbkey')||'').trim();if(k)GB_KEY=k;}catch(e){}
 function gbKey(){return GB_KEY?('&key='+encodeURIComponent(GB_KEY)):''}
 function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
