@@ -213,10 +213,10 @@ input[type=range]{accent-color:var(--coral)}
 .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:26px}
 .book{cursor:pointer;transition:.2s}
 .book{position:relative}
-.ai-x{position:absolute;top:6px;right:6px;z-index:3;width:24px;height:24px;border-radius:50%;
-  border:none;background:rgba(0,0,0,.42);color:#fff;font-size:12px;line-height:1;cursor:pointer;
-  display:grid;place-items:center;opacity:.85;transition:.15s}
-.ai-x:hover{background:#c0392b;opacity:1;transform:scale(1.08)}
+.ai-x{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;
+  border:none;background:rgba(20,25,22,.55);color:#fff;font-size:10px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;opacity:.6;transition:.15s;backdrop-filter:blur(2px)}
+.ai-x:hover{background:#c0392b;opacity:1}
 .book:hover{transform:translateY(-6px)}
 .cover{aspect-ratio:2/3;border-radius:6px 12px 12px 6px;position:relative;overflow:hidden;color:#fff;
   display:flex;flex-direction:column;justify-content:flex-end;padding:16px 16px 18px;
@@ -2739,7 +2739,7 @@ function aiRecSignature(){
  const d=(profile&&profile.data)||{};
  const parts=[(d.authors||[]),(d.genres||[]),(d.loved||[]),(d.disliked||[]),books.map(b=>b.t)]
    .map(a=>(a||[]).slice().sort().join('|'));
- return parts.join('§');
+ return 'v2§'+parts.join('§');
 }
 function aiRecCache(){try{return JSON.parse(localStorage.getItem(aiRecKey())||'null')}catch(e){return null}}
 function setAiRecCache(o){try{localStorage.setItem(aiRecKey(),JSON.stringify(o))}catch(e){}}
@@ -2778,7 +2778,7 @@ Libri del cuore: ${loved.join(', ')||'—'}
 Già in libreria (NON riproporre): ${libraryTitles.join('; ')||'—'}
 Già scartati dall'utente (NON riproporre): ${excluded.join('; ')||'—'}
 Da evitare: ${disliked.join(', ')||'—'}
-Regole: proponi libri NUOVI, reali ed esistenti, affini ai gusti; varia gli autori; niente spoiler. Per ciascuno una motivazione breve e personale (max 18 parole).
+Regole: proponi libri NUOVI, reali ed esistenti, affini ai gusti; VARIA molto gli autori (max 1 libro per autore); evita i titoli più ovvi e arcinoti che questa persona conosce già; niente riassunti/analisi/guide, solo romanzi/opere originali; niente spoiler. Per ciascuno una motivazione breve e personale (max 18 parole).
 Rispondi SOLO con JSON valido: array di 6 oggetti [{"titolo":"...","autore":"...","perche":"..."}]. Nessun altro testo.`;
    try{
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:prompt}});
@@ -2797,22 +2797,33 @@ Rispondi SOLO con JSON valido: array di 6 oggetti [{"titolo":"...","autore":"...
  recs=recs.filter(r=>!have.has(normKey(r.titolo)) && !exSet.has(normKey(r.titolo)));
  if(!recs.length){return loadAiRecsFallback();}
 
- // 3) VERIFICA anti-allucinazione: tengo solo i titoli che esistono davvero nell'archivio,
- //    e ne aggancio copertina/trama reali. Mostro progressivamente.
+ // 3) VERIFICA anti-allucinazione + dedup + qualità:
+ //    - il titolo trovato deve combaciare con quello consigliato (no allucinazioni)
+ //    - niente doppioni (per titolo E per autore)
+ //    - scarto edizioni "analisi/riassunto/guida" e i libri già in libreria
  aiRecsData=[];
- renderAiRecs(true); // stato "sto verificando"
+ renderAiRecs(true);
+ const usedTitles=new Set(books.map(b=>normKey(b.t)));   // già in libreria
+ const usedAuthors=new Set();                            // max 1 libro per autore
+ const badEdition=/(analisi|riassunto|guida|summary|study guide|sintesi|commento|schede? di lettura)/i;
  for(const r of recs){
    if(aiRecsData.length>=6)break;
-   let best=null;
-   try{const res=await doSearch((r.titolo||'')+' '+(r.autore||''));best=res&&res[0];}catch(e){}
-   if(!best)continue; // titolo non trovato → probabile allucinazione, scarto
-   // controllo di coerenza: il titolo trovato deve somigliare a quello consigliato
-   if(!titlesRoughlyMatch(r.titolo,best.t))continue;
+   let res=[];
+   try{res=await doSearch((r.titolo||'')+' '+(r.autore||''))}catch(e){}
+   if(!res||!res.length)continue;
+   const best=res.find(c=>c && c.t
+     && titlesRoughlyMatch(r.titolo,c.t)
+     && !badEdition.test(c.t)
+     && !usedTitles.has(normKey(c.t)));
+   if(!best)continue;
+   const ak=normKey(best.a||r.autore||'');
+   if(ak && usedAuthors.has(ak))continue;   // già un libro di questo autore
+   usedTitles.add(normKey(best.t));
+   if(ak)usedAuthors.add(ak);
    aiRecsData.push({t:best.t,a:best.a||r.autore||'',reason:r.perche||'',coverUrl:best.coverUrl,trama:best.trama,year:best.year,pg:best.pg,isbn:best.isbn,lang:best.lang,found:best});
    renderAiRecs();
  }
  if(!aiRecsData.length){return loadAiRecsFallback();}
- // 4) salva in cache con la firma corrente
  setAiRecCache({sig:aiRecSignature(),recs:aiRecsData.slice(),excluded});
 }
 // due titoli "combaciano" se condividono abbastanza parole significative
