@@ -946,7 +946,6 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       </div>
 
       <div id="formReg" style="display:none">
-        <div class="field"><label>Nome e cognome</label><input id="rName" placeholder="Es. Elena Marchetti"></div>
         <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off" onkeydown="if(event.key==='Enter')register()"></div>
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
         <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
@@ -3646,10 +3645,8 @@ function traduciErrore(m){m=(m||'').toLowerCase();
 
 async function register(){
  clearErr();
- const name=$('#rName').value.trim();
  const username=$('#rUser').value.trim().replace(/^@/,'');
  const email=$('#rEmail').value.trim().toLowerCase(),pass=$('#rPass').value;
- if(!name)return showErr('Inserisci il tuo nome.');
  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username))return showErr('Username: 3-20 caratteri, solo lettere, numeri o _ (niente spazi).');
  if(!/^\S+@\S+\.\S+$/.test(email))return showErr('Inserisci un\'email valida.');
  const pwIssues=passwordIssues(pass,{email,username});
@@ -3659,6 +3656,9 @@ async function register(){
  try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',username).limit(1);
    if(taken&&taken.length)return showErr('Questo username è già stato preso. Scegline un altro.');
  }catch(e){}
+ // Nessun nome richiesto in fase di registrazione: usiamo lo username come nome iniziale,
+ // modificabile in seguito dal profilo.
+ const name=username;
  const {data,error}=await supa.auth.signUp({email,password:pass,options:{data:{name,username}}});
  if(error)return showErr(traduciErrore(error.message));
  if(!data.session)return showErr('Account creato. Conferma l\'email ricevuta, poi accedi.');
