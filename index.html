@@ -2919,9 +2919,7 @@ function renderProfiloCloud(){
  </div>
  <div class="card pad" style="margin-top:18px">
    <h3 style="font-size:16px;margin-bottom:12px">🔒 Sicurezza</h3>
-   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Per cambiare password, esci dall'account e usa "Password dimenticata?" nella schermata di accesso: ti manderemo un link sicuro via email.</div>
-   <hr style="margin:16px 0">
-   <div class="muted" style="font-size:13px;margin-bottom:10px">Eliminare l'account è permanente: rimuove il profilo, la libreria personale, le note e l'iscrizione ai club. Non si può annullare.</div>
+   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Eliminare l'account è permanente: rimuove il profilo, la libreria personale, le note e l'iscrizione ai club. Non si può annullare.</div>
    <button class="btn danger sm" onclick="openDeleteAccount()">🗑️ Elimina account</button>`:`<div class="muted" style="font-size:13px">Sei in modalità dimostrativa: crea un account cloud per gestire la sicurezza del tuo profilo.</div>`}
  </div>`;
 }
@@ -3054,8 +3052,7 @@ function openDeleteAccount(){
   <div class="modal-top"><b>🗑️ Elimina account</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="auth-err" id="daErr"></div>
-    <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">Questa azione è <b>permanente e non reversibile</b>: verranno eliminati il tuo profilo, la libreria personale, le note condivise, i voti/proposte e l'iscrizione a tutti i club. Se sei l'unica amministratrice di un club, anche il club e i suoi contenuti verranno eliminati.</p>
-    <div class="field"><label>Scrivi <b>ELIMINA</b> per confermare</label><input id="daConfirm" autocomplete="off" placeholder="ELIMINA"></div>
+    <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account.</p>
     <div class="field"><label>Password attuale</label><input id="daPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')deleteAccount()"></div>
     <button class="btn danger" id="daBtn" onclick="deleteAccount()">🗑️ Elimina definitivamente il mio account</button>
   </div>`;
@@ -3063,10 +3060,8 @@ function openDeleteAccount(){
 }
 function daShowErr(m){const e=$('#daErr');if(e){e.textContent=m;e.classList.add('show')}}
 async function deleteAccount(){
- const confirm=($('#daConfirm').value||'').trim().toUpperCase();
  const pass=$('#daPass').value;
  const e=$('#daErr');if(e)e.classList.remove('show');
- if(confirm!=='ELIMINA')return daShowErr('Scrivi ELIMINA (in maiuscolo) per confermare.');
  if(!pass)return daShowErr('Inserisci la password attuale.');
  const btn=$('#daBtn');if(btn){btn.disabled=true;btn.textContent='Elimino…'}
  try{
