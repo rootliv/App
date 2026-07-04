@@ -214,6 +214,13 @@ input[type=range]{accent-color:var(--coral)}
 .book{cursor:pointer;transition:.2s}
 .book{position:relative}
 .ob-step{display:flex;gap:13px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface2)}
+.bookmark-track{position:relative;height:14px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);cursor:pointer;overflow:visible;margin-top:6px}
+.booknotes{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
+.booknote{position:relative;padding:2px 0}
+.booknote-actions{display:flex;gap:6px;margin-top:6px}
+.booknote .note-when{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
+.bookmark-fill{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--gold),var(--coral));transition:width .35s}
+.bookmark-tag{position:absolute;top:-11px;transform:translateX(-50%);font-size:22px;transition:left .35s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));pointer-events:none;line-height:1}
 .ob-step .ob-ic{font-size:24px;flex:none;width:30px;text-align:center}
 .ob-step b{font-size:13.5px;display:block;margin-bottom:2px}
 .ai-x{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;
@@ -1448,18 +1455,24 @@ function openBook(id){
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
       ${b.rate?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
-      ${b.status==='reading'?`<div style="margin-top:12px">
-        <div class="bar"><i id="progBar" style="width:${b.prog||0}%"></i></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:10px">
-          <span class="muted" style="font-size:12px" id="progLabel">${b.prog||0}% completato${b.pg?(' · pag. '+Math.round((b.pg*(b.prog||0))/100)+' di '+b.pg):''}</span>
+      ${b.status==='reading'?`<div class="bookmark-wrap" style="margin-top:14px">
+        ${b.pg?`
+        <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
+          <div class="bookmark-fill" id="bmFill" style="width:${Math.round(((b.prog||0))*1)}%"></div>
+          <div class="bookmark-tag" id="bmTag" style="left:${Math.min(100,b.prog||0)}%">🔖</div>
         </div>
-        <input type="range" min="0" max="100" value="${b.prog||0}" style="width:100%;margin-top:8px" oninput="previewProgress(${b.id},this.value)" onchange="setProgress(${b.id},this.value)">
-        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
-          <button class="btn ghost sm" onclick="setProgress(${b.id},25)">¼</button>
-          <button class="btn ghost sm" onclick="setProgress(${b.id},50)">½</button>
-          <button class="btn ghost sm" onclick="setProgress(${b.id},75)">¾</button>
-          <button class="btn ghost sm" onclick="setProgress(${b.id},100)">Finito ✓</button>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
+          <span class="muted" style="font-size:13px">Sono a pagina</span>
+          <input id="bmPage" type="number" min="0" max="${b.pg}" value="${Math.round((b.pg*(b.prog||0))/100)}" style="width:70px;text-align:center;padding:7px 8px;font-size:14px;font-weight:700" onchange="setPage(${b.id},${b.pg},this.value)">
+          <span class="muted" style="font-size:13px">di ${b.pg}</span>
         </div>
+        <div style="text-align:center;margin-top:8px"><button class="btn gold sm" onclick="setPage(${b.id},${b.pg},${b.pg})">✓ Ho finito il libro</button></div>
+        `:`
+        <div class="muted" style="font-size:13px;text-align:center;margin-bottom:10px">Quante pagine ha questo libro? Così il segnalibro sa dove metterti.</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <input id="bmTotal" type="number" min="1" placeholder="es. 302" style="width:90px;text-align:center;padding:8px" onkeydown="if(event.key==='Enter')setTotalPages(${b.id},this.value)">
+          <button class="btn sm" onclick="setTotalPages(${b.id},$('#bmTotal').value)">Imposta</button>
+        </div>`}
       </div>`:''}
       ${buyLinks(b.t,b.a)}
     </div>
@@ -1471,14 +1484,21 @@ function openBook(id){
     ${b.quote?`<div class="quote">${b.quote}</div>`:''}
     <hr>
     <div class="field" style="margin:0"><label>📝 Le tue note personali</label>
-      ${noteEditing
-        ? `<textarea id="bookNote" rows="4" placeholder="Scrivi qui un pensiero, una citazione, una riflessione…">${esc(b.note||'')}</textarea>
-           <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sm" onclick="saveBookNote(${b.id})">💾 Salva nota</button><button class="btn ghost sm" onclick="cancelNote(${b.id})">Annulla</button></div>`
-        : (b.note
-           ? `<div class="usernote">“${esc(b.note)}”</div><button class="btn ghost sm" style="margin-top:10px" onclick="editNote(${b.id})">✏️ Modifica nota</button>`
-           : `<div class="muted" style="font-size:13.5px;padding:2px 0 4px">Non hai ancora scritto note per questo libro.</div><button class="btn ghost sm" onclick="editNote(${b.id})">＋ Aggiungi nota</button>`)}
+      ${(()=>{const notes=getNotes(b);return `
+        ${notes.length?`<div class="booknotes">${notes.map((n,idx)=>editNoteIdx===idx
+          ? `<div class="booknote"><textarea id="editNoteTa${idx}" rows="3">${esc(n.t)}</textarea>
+             <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditBookNote(${b.id},${idx})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditBookNote(${b.id})">Annulla</button></div></div>`
+          : `<div class="booknote"><div class="usernote" style="margin:0">“${esc(n.t)}”</div>
+             ${n.d?`<time class="note-when">${fmtNoteDate(n.d)}</time>`:''}
+             <div class="booknote-actions"><button class="btn ghost sm" onclick="editBookNoteAt(${b.id},${idx})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteBookNote(${b.id},${idx})" title="Elimina">🗑</button></div></div>`
+        ).join('')}</div>`:`<div class="muted" style="font-size:13.5px;padding:2px 0 8px">Non hai ancora scritto note per questo libro.</div>`}
+        <div style="margin-top:10px"><textarea id="newNoteTa" rows="2" placeholder="Aggiungi una nota, una citazione, un pensiero…"></textarea>
+        <button class="btn ghost sm" style="margin-top:8px" onclick="addBookNote(${b.id})">＋ Aggiungi nota</button></div>
+      `})()}
     </div>
-    <div class="field" style="margin-top:18px"><label>⭐ La tua valutazione</label><div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div></div>
+    <div class="field" style="margin-top:18px"><label>⭐ La tua valutazione</label>${b.status==='read'
+      ? `<div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div>`
+      : `<div class="muted" style="font-size:13px;padding:2px 0">Potrai valutare il libro quando l'avrai finito. ${b.status==='reading'?'Continua così! 📖':''}</div>`}</div>
     <hr>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1501,6 +1521,34 @@ function removeBook(id){
 function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
 let noteEditing=false,noteBookId=null;
 function saveBookNote(id){const b=book(id);const ta=$('#bookNote');if(ta)b.note=(ta.value||'').trim();persistBook(id,{note:b.note||''});noteEditing=false;openBook(id)}
+/* Note personali multiple: salvate come JSON nel campo testo 'note' (schema DB invariato).
+   Retrocompatibile: se 'note' è testo semplice (vecchia nota singola), lo leggiamo come 1 nota. */
+function getNotes(b){
+ if(!b||!b.note)return [];
+ try{const arr=JSON.parse(b.note);if(Array.isArray(arr))return arr;}catch(e){}
+ // vecchio formato: stringa singola
+ return b.note.trim()?[{t:b.note.trim(),d:null}]:[];
+}
+function saveNotes(id,arr){const b=book(id);if(!b)return;b.note=JSON.stringify(arr);persistBook(id,{note:b.note});}
+function addBookNote(id){
+ const ta=$('#newNoteTa');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;
+ const arr=getNotes(book(id));arr.push({t:v,d:new Date().toISOString()});
+ saveNotes(id,arr);openBook(id);
+}
+function deleteBookNote(id,idx){
+ const arr=getNotes(book(id));if(idx<0||idx>=arr.length)return;
+ if(!confirm('Eliminare questa nota?'))return;
+ arr.splice(idx,1);saveNotes(id,arr);openBook(id);
+}
+let editNoteIdx=-1;
+function editBookNoteAt(id,idx){editNoteIdx=idx;openBook(id);}
+function saveEditBookNote(id,idx){
+ const ta=$('#editNoteTa'+idx);if(!ta)return;const v=(ta.value||'').trim();
+ const arr=getNotes(book(id));if(idx<0||idx>=arr.length)return;
+ if(!v){arr.splice(idx,1);}else{arr[idx].t=v;}
+ editNoteIdx=-1;saveNotes(id,arr);openBook(id);
+}
+function cancelEditBookNote(id){editNoteIdx=-1;openBook(id);}
 function editNote(id){noteEditing=true;openBook(id)}
 function cancelNote(id){noteEditing=false;openBook(id)}
 async function enrichBook(b){
@@ -1529,17 +1577,28 @@ async function enrichBook(b){
  return changed;
 }
 function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&!b.prog)b.prog=0;persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
-function previewProgress(id,v){v=Math.max(0,Math.min(100,parseInt(v)||0));
- const bar=$('#progBar'),lab=$('#progLabel');const b=book(id);
- if(bar)bar.style.width=v+'%';
- if(lab)lab.textContent=v+'% completato'+((b&&b.pg)?(' · pag. '+Math.round((b.pg*v)/100)+' di '+b.pg):'');
+/* Segnalibro virtuale a numero di pagina. Internamente il progresso resta in % (b.prog) per
+   compatibilità, ma l'utente ragiona in pagine: "sono a pagina 130 di 302". */
+function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(total)||0;
+ if(total<1){alert('Inserisci un numero di pagine valido.');return}
+ b.pg=total;persistBook(id,{pages:total});openBook(id); // ridisegna con il segnalibro
 }
-function setProgress(id,v){const b=book(id);if(!b)return;
- v=Math.max(0,Math.min(100,parseInt(v)||0));
- b.prog=v;
- if(v>=100){b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
- persistBook(id,{progress:v});
- previewProgress(id,v);
+function setPage(id,total,page){const b=book(id);if(!b)return;
+ total=parseInt(total)||b.pg||0;page=Math.max(0,Math.min(total,parseInt(page)||0));
+ const pct=total?Math.round((page/total)*100):0;
+ if(page>=total&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
+ b.prog=pct;persistBook(id,{progress:pct});
+ // aggiorna la UI del segnalibro senza ricaricare tutto
+ const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
+ if(fill)fill.style.width=pct+'%';
+ if(tag)tag.style.left=Math.min(100,pct)+'%';
+ if(inp)inp.value=page;
+}
+function bmClick(ev,id,total){
+ const track=$('#bmTrack');if(!track)return;
+ const rect=track.getBoundingClientRect();
+ const x=Math.max(0,Math.min(1,(ev.clientX-rect.left)/rect.width));
+ setPage(id,total,Math.round(total*x));
 }
 function openAi(id){
  const s=aiSuggest.find(x=>x.id===id);
