@@ -212,6 +212,11 @@ input[type=range]{accent-color:var(--coral)}
 /* ===== BOOK COVERS ===== */
 .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:26px}
 .book{cursor:pointer;transition:.2s}
+.book{position:relative}
+.ai-x{position:absolute;top:6px;right:6px;z-index:3;width:24px;height:24px;border-radius:50%;
+  border:none;background:rgba(0,0,0,.42);color:#fff;font-size:12px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;opacity:.85;transition:.15s}
+.ai-x:hover{background:#c0392b;opacity:1;transform:scale(1.08)}
 .book:hover{transform:translateY(-6px)}
 .cover{aspect-ratio:2/3;border-radius:6px 12px 12px 6px;position:relative;overflow:hidden;color:#fff;
   display:flex;flex-direction:column;justify-content:flex-end;padding:16px 16px 18px;
@@ -2725,7 +2730,22 @@ function renderAiCloud(){
  </div>`;
  renderChat();
 }
-async function loadAiRecs(){
+/* ---- Consigli AI: cache locale + verifica titoli + rigenera + escludi ----
+   Chiave cache legata all'utente. Salviamo i consigli con una "firma" dei gusti+libreria:
+   se nulla è cambiato, mostriamo dalla cache all'istante (niente attesa, niente instabilità).
+   La lista "esclusi" (dai 'non questo') viene passata al modello e persiste. */
+function aiRecKey(){return 'pagina_airecs_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
+function aiRecSignature(){
+ const d=(profile&&profile.data)||{};
+ const parts=[(d.authors||[]),(d.genres||[]),(d.loved||[]),(d.disliked||[]),books.map(b=>b.t)]
+   .map(a=>(a||[]).slice().sort().join('|'));
+ return parts.join('§');
+}
+function aiRecCache(){try{return JSON.parse(localStorage.getItem(aiRecKey())||'null')}catch(e){return null}}
+function setAiRecCache(o){try{localStorage.setItem(aiRecKey(),JSON.stringify(o))}catch(e){}}
+function aiExcluded(){const c=aiRecCache();return (c&&Array.isArray(c.excluded))?c.excluded:[]}
+
+async function loadAiRecs(force){
  const box=$('#aiRecs');if(!box)return;
  const d=(profile&&profile.data)||{};
  const authors=[...new Set([...(d.authors||[]), ...books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean)])].slice(0,8);
@@ -2733,58 +2753,102 @@ async function loadAiRecs(){
  const loved=(d.loved||[]).slice(0,8);
  const libraryTitles=[...new Set(books.map(b=>b.t).filter(Boolean))].slice(0,20);
  const disliked=(d.disliked||[]);
- // Se non c'è nulla su cui basarsi, invita a completare il profilo.
  if(!authors.length && !genres.length && !loved.length && !libraryTitles.length){
    box.innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:42px">✨</div>
      <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="go('profilo')">Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">Aggiungi un libro</button></div></div>`;return;
  }
- // Chiedo al modello veri consigli (titoli NUOVI e affini) con una motivazione personale.
+
+ // 1) CACHE: se la firma coincide e non è una rigenerazione forzata, mostra subito.
+ const cache=aiRecCache();
+ if(!force && cache && cache.sig===aiRecSignature() && Array.isArray(cache.recs) && cache.recs.length){
+   aiRecsData=cache.recs.slice();
+   renderAiRecs();
+   return;
+ }
+
+ const excluded=aiExcluded();
+ // 2) chiedo i consigli al modello
  let recs=null;
  if(typeof supa!=='undefined'&&supa){
    const prompt=`Sei un libraio esperto. Consiglia 6 libri a una persona con questi gusti.
 Autori amati: ${authors.join(', ')||'—'}
 Generi preferiti: ${genres.join(', ')||'—'}
 Libri del cuore: ${loved.join(', ')||'—'}
-Già in libreria (NON riproporre questi): ${libraryTitles.join('; ')||'—'}
+Già in libreria (NON riproporre): ${libraryTitles.join('; ')||'—'}
+Già scartati dall'utente (NON riproporre): ${excluded.join('; ')||'—'}
 Da evitare: ${disliked.join(', ')||'—'}
-Regole: proponi libri NUOVI e affini ai gusti (non gli stessi già posseduti), varia gli autori, niente spoiler. Per ciascuno scrivi una motivazione breve e personale (max 18 parole) sul perché piacerà a QUESTA persona.
-Rispondi SOLO con JSON valido, un array di 6 oggetti: [{"titolo":"...","autore":"...","perche":"..."}]. Nessun altro testo.`;
+Regole: proponi libri NUOVI, reali ed esistenti, affini ai gusti; varia gli autori; niente spoiler. Per ciascuno una motivazione breve e personale (max 18 parole).
+Rispondi SOLO con JSON valido: array di 6 oggetti [{"titolo":"...","autore":"...","perche":"..."}]. Nessun altro testo.`;
    try{
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:prompt}});
      if(!error && data && data.answer){
        const m=data.answer.match(/\[[\s\S]*\]/);
        if(m){const arr=JSON.parse(m[0]);
-         if(Array.isArray(arr)&&arr.length)recs=arr.filter(x=>x&&x.titolo).slice(0,6);
+         if(Array.isArray(arr)&&arr.length)recs=arr.filter(x=>x&&x.titolo).slice(0,8);
        }
      }
    }catch(e){}
  }
- // Fallback: se l'AI non risponde, uso la ricerca per autori/generi (logica precedente).
  if(!recs||!recs.length){return loadAiRecsFallback();}
 
- // Mostro subito i consigli con motivazione; le copertine reali arrivano progressivamente.
  const have=new Set(books.map(b=>normKey(b.t)));
- recs=recs.filter(r=>!have.has(normKey(r.titolo)));
+ const exSet=new Set(excluded.map(normKey));
+ recs=recs.filter(r=>!have.has(normKey(r.titolo)) && !exSet.has(normKey(r.titolo)));
  if(!recs.length){return loadAiRecsFallback();}
- aiRecsData=recs.map(r=>({t:r.titolo,a:r.autore||'',reason:r.perche||'',coverUrl:null}));
- renderAiRecs();
- // arricchisco con copertina + dati reali, una alla volta
- for(let i=0;i<aiRecsData.length;i++){
-   try{
-     const res=await doSearch(aiRecsData[i].t+' '+(aiRecsData[i].a||''));
-     const best=res&&res[0];
-     if(best){aiRecsData[i]=Object.assign({},aiRecsData[i],{t:best.t,a:best.a||aiRecsData[i].a,coverUrl:best.coverUrl,trama:best.trama,year:best.year,pg:best.pg,isbn:best.isbn,lang:best.lang,found:best});
-       renderAiRecs();}
-   }catch(e){}
+
+ // 3) VERIFICA anti-allucinazione: tengo solo i titoli che esistono davvero nell'archivio,
+ //    e ne aggancio copertina/trama reali. Mostro progressivamente.
+ aiRecsData=[];
+ renderAiRecs(true); // stato "sto verificando"
+ for(const r of recs){
+   if(aiRecsData.length>=6)break;
+   let best=null;
+   try{const res=await doSearch((r.titolo||'')+' '+(r.autore||''));best=res&&res[0];}catch(e){}
+   if(!best)continue; // titolo non trovato → probabile allucinazione, scarto
+   // controllo di coerenza: il titolo trovato deve somigliare a quello consigliato
+   if(!titlesRoughlyMatch(r.titolo,best.t))continue;
+   aiRecsData.push({t:best.t,a:best.a||r.autore||'',reason:r.perche||'',coverUrl:best.coverUrl,trama:best.trama,year:best.year,pg:best.pg,isbn:best.isbn,lang:best.lang,found:best});
+   renderAiRecs();
  }
+ if(!aiRecsData.length){return loadAiRecsFallback();}
+ // 4) salva in cache con la firma corrente
+ setAiRecCache({sig:aiRecSignature(),recs:aiRecsData.slice(),excluded});
+}
+// due titoli "combaciano" se condividono abbastanza parole significative
+function titlesRoughlyMatch(a,b){
+ const norm=s=>normKey(s).split(/\s+/).filter(w=>w.length>2);
+ const wa=new Set(norm(a)),wb=norm(b);
+ if(!wa.size||!wb.length)return false;
+ const common=wb.filter(w=>wa.has(w)).length;
+ return common>=1 && common/Math.min(wa.size,wb.length)>=0.5;
 }
 let aiRecsData=[];
-function renderAiRecs(){
+function excludeAiRec(i){
+ const it=aiRecsData[i];if(!it)return;
+ const cache=aiRecCache()||{};
+ const excluded=Array.isArray(cache.excluded)?cache.excluded:[];
+ if(!excluded.map(normKey).includes(normKey(it.t)))excluded.push(it.t);
+ aiRecsData.splice(i,1);
+ setAiRecCache({sig:aiRecSignature(),recs:aiRecsData.slice(),excluded});
+ renderAiRecs();
+ // se ne restano pochi, rigenera per ripopolare
+ if(aiRecsData.length<3)loadAiRecs(true);
+}
+function renderAiRecs(verifying){
  const box=$('#aiRecs');if(!box)return;
  searchResults=aiRecsData.map(r=>r.found||{t:r.t,a:r.a,coverUrl:r.coverUrl,trama:r.trama,year:r.year,pg:r.pg,isbn:r.isbn,lang:r.lang});
- box.innerHTML=`<div class="shelf">${aiRecsData.map((s,i)=>`
+ const header=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+   <button class="btn ghost sm" onclick="loadAiRecs(true)">🔄 Aggiornali</button></div>`;
+ if(!aiRecsData.length){
+   box.innerHTML=header+(verifying
+     ? `<div class="shelf">${Array(4).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div>`
+     : `<div class="srch-empty">Nessun consiglio al momento. Prova ad aggiornare o completa il profilo.</div>`);
+   return;
+ }
+ box.innerHTML=header+`<div class="shelf">${aiRecsData.map((s,i)=>`
    <div class="book">
+     <button class="ai-x" title="Non questo" onclick="event.stopPropagation();excludeAiRec(${i})">✕</button>
      ${coverEl(i,s.t,s.a,'✨',s.coverUrl)}
      <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
        ${s.reason?`<div style="font-size:11.5px;margin-top:5px;color:var(--sage);font-weight:600;line-height:1.4">✨ ${esc(s.reason)}</div>`:''}
