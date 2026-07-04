@@ -215,6 +215,12 @@ input[type=range]{accent-color:var(--coral)}
 .book{position:relative}
 .ob-step{display:flex;gap:13px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface2)}
 .bookmark-track{position:relative;height:14px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);cursor:pointer;overflow:visible;margin-top:6px}
+.bm-page-input,#bmTotal{width:78px;text-align:center;padding:9px 8px;font-size:15px;font-weight:700;
+  border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);outline:none;
+  -moz-appearance:textfield}
+.bm-page-input:focus,#bmTotal:focus{border-color:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+.bm-page-input::-webkit-outer-spin-button,.bm-page-input::-webkit-inner-spin-button,
+#bmTotal::-webkit-outer-spin-button,#bmTotal::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .booknotes{display:flex;flex-direction:column;gap:10px;margin-bottom:4px}
 .booknote{position:relative;padding:2px 0}
 .booknote-actions{display:flex;gap:6px;margin-top:6px}
@@ -1134,7 +1140,7 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
  return`<div class="book" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
    <div class="ledge"></div>
-   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="bar" style="margin-top:7px;height:6px"><i style="width:${b.prog||0}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${b.prog||0}%</div>`:''}</div>
+   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="bar" style="margin-top:7px;height:6px"><i style="width:${b.prog||0}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${b.prog||0}%</div>`:''}</div>
  </div>`}
 
 /* ============ NAV ============ */
@@ -1454,7 +1460,7 @@ function openBook(id){
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
-      ${b.rate?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
+      ${(b.rate&&b.status==='read')?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
       ${b.status==='reading'?`<div class="bookmark-wrap" style="margin-top:14px">
         ${b.pg?`
         <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
@@ -1463,14 +1469,13 @@ function openBook(id){
         </div>
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px">
           <span class="muted" style="font-size:13px">Sono a pagina</span>
-          <input id="bmPage" type="number" min="0" max="${b.pg}" value="${Math.round((b.pg*(b.prog||0))/100)}" style="width:70px;text-align:center;padding:7px 8px;font-size:14px;font-weight:700" onchange="setPage(${b.id},${b.pg},this.value)">
+          <input id="bmPage" type="number" min="0" max="${b.pg}" value="${Math.round((b.pg*(b.prog||0))/100)}" class="bm-page-input" onchange="setPage(${b.id},${b.pg},this.value)">
           <span class="muted" style="font-size:13px">di ${b.pg}</span>
         </div>
-        <div style="text-align:center;margin-top:8px"><button class="btn gold sm" onclick="setPage(${b.id},${b.pg},${b.pg})">✓ Ho finito il libro</button></div>
         `:`
         <div class="muted" style="font-size:13px;text-align:center;margin-bottom:10px">Quante pagine ha questo libro? Così il segnalibro sa dove metterti.</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:8px">
-          <input id="bmTotal" type="number" min="1" placeholder="es. 302" style="width:90px;text-align:center;padding:8px" onkeydown="if(event.key==='Enter')setTotalPages(${b.id},this.value)">
+          <input id="bmTotal" type="number" min="1" placeholder="es. 302" onkeydown="if(event.key==='Enter')setTotalPages(${b.id},this.value)">
           <button class="btn sm" onclick="setTotalPages(${b.id},$('#bmTotal').value)">Imposta</button>
         </div>`}
       </div>`:''}
