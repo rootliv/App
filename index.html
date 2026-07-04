@@ -1126,7 +1126,7 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
  return`<div class="book" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
    <div class="ledge"></div>
-   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}</div>
+   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${b.rate?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="bar" style="margin-top:7px;height:6px"><i style="width:${b.prog||0}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${b.prog||0}%</div>`:''}</div>
  </div>`}
 
 /* ============ NAV ============ */
@@ -1447,7 +1447,19 @@ function openBook(id){
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
       ${b.rate?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
-      ${b.status==='reading'?`<div style="margin-top:10px"><div class="bar"><i style="width:${b.prog}%"></i></div><div class="muted" style="font-size:12px;margin-top:6px">${b.prog}% completato</div></div>`:''}
+      ${b.status==='reading'?`<div style="margin-top:12px">
+        <div class="bar"><i id="progBar" style="width:${b.prog||0}%"></i></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:10px">
+          <span class="muted" style="font-size:12px" id="progLabel">${b.prog||0}% completato${b.pg?(' · pag. '+Math.round((b.pg*(b.prog||0))/100)+' di '+b.pg):''}</span>
+        </div>
+        <input type="range" min="0" max="100" value="${b.prog||0}" style="width:100%;margin-top:8px" oninput="previewProgress(${b.id},this.value)" onchange="setProgress(${b.id},this.value)">
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <button class="btn ghost sm" onclick="setProgress(${b.id},25)">¼</button>
+          <button class="btn ghost sm" onclick="setProgress(${b.id},50)">½</button>
+          <button class="btn ghost sm" onclick="setProgress(${b.id},75)">¾</button>
+          <button class="btn ghost sm" onclick="setProgress(${b.id},100)">Finito ✓</button>
+        </div>
+      </div>`:''}
       ${buyLinks(b.t,b.a)}
     </div>
   </div>
@@ -1516,6 +1528,18 @@ async function enrichBook(b){
  return changed;
 }
 function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&!b.prog)b.prog=0;persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
+function previewProgress(id,v){v=Math.max(0,Math.min(100,parseInt(v)||0));
+ const bar=$('#progBar'),lab=$('#progLabel');const b=book(id);
+ if(bar)bar.style.width=v+'%';
+ if(lab)lab.textContent=v+'% completato'+((b&&b.pg)?(' · pag. '+Math.round((b.pg*v)/100)+' di '+b.pg):'');
+}
+function setProgress(id,v){const b=book(id);if(!b)return;
+ v=Math.max(0,Math.min(100,parseInt(v)||0));
+ b.prog=v;
+ if(v>=100){b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
+ persistBook(id,{progress:v});
+ previewProgress(id,v);
+}
 function openAi(id){
  const s=aiSuggest.find(x=>x.id===id);
  $('#modal').innerHTML=`
