@@ -371,6 +371,7 @@ input[type=range]{accent-color:var(--coral)}
 .notif{display:flex;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
 .notif:last-child{border:none}
 .notif .ni{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:19px;flex:none}
+[data-theme="dark"] .notif .ni{filter:saturate(.7) brightness(.72)}
 .notif b{font-size:14px}
 .notif p{font-size:13px;color:var(--ink-soft);margin-top:2px}
 .notif time{font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
@@ -1566,7 +1567,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v37 (curiosità libri letti evidenziate)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v38 (progresso lettura, onboarding, dark mode)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
