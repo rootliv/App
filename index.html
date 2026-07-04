@@ -2553,23 +2553,64 @@ function posKey(){return 'pagina_bookpos_'+((typeof authUser!=='undefined'&&auth
 function bookPos(title){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}}
 function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=Math.max(1,p|0);localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}} // mai sotto 1
 function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
-function stepPos(title,d){const mn=diaryMinPos();setBookPos(title,Math.max(mn,bookPos(title)+d));if(curDiaryClub)paintDiary(curDiaryClub);}
+function stepPos(title,d){const mn=diaryMinPos();const np=Math.max(mn,bookPos(title)+d);setBookPos(title,np);syncReadingPos(title,np);if(curDiaryClub)paintDiary(curDiaryClub);}
+/* Scrive la pagina di lettura nel DB: è ciò che la RLS anti-spoiler usa per decidere quali
+   note altrui l'utente può leggere. Dopo l'avanzamento ricarichiamo le note dal server, così
+   quelle appena sbloccate arrivano davvero (prima non erano nemmeno state scaricate). */
+let _syncPosT=null;
+function syncReadingPos(title,pos){
+ if(mode!=='cloud'||!supa||!curDiaryClub)return;
+ const club=myClubs.find(c=>c.id===curDiaryClub);if(!club)return;
+ clearTimeout(_syncPosT);
+ _syncPosT=setTimeout(async()=>{
+   try{
+     await supa.from('reading_progress').upsert({user_id:authUser.id,club_id:club.id,book_title:title,position:Math.max(1,pos|0),updated_at:new Date().toISOString()},{onConflict:'user_id,club_id,book_title'});
+     await loadClubNotes(club);renderNotesList();
+   }catch(e){}
+ },350);
+}
 function clubBookPages(c){const b=books.find(x=>normKey(x.t)===normKey(c.current_title||''));return (b&&b.pg)||0}
 function fmtNoteDate(s){try{const d=new Date(s);if(isNaN(d))return'';return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'})}catch(e){return''}}
 async function loadClubNotes(c){
- const {data}=await supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title).order('position');
- cloudNotes=data||[];
+ // Sicurezza anti-spoiler: NON scarichiamo il testo delle note altrui che superano la
+ // pagina di lettura dell'utente. Prima leggiamo la nostra posizione, poi chiediamo:
+ //  - tutte le proprie note (sempre visibili)
+ //  - le note altrui solo fino alla propria pagina (position <= pos)
+ // Le note altrui "più avanti" vengono solo CONTATE (senza testo), per mostrare "🔒 N più avanti".
+ // NB: la protezione reale è la RLS su Supabase (vedi migration): questo filtro client evita
+ // di trasferire inutilmente gli spoiler, ma è la policy DB a impedirne la lettura non autorizzata.
+ const uid=authUser&&authUser.id;
+ const pos=Math.max(1,bookPos(c.current_title||'')|0);
+ const base=supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title);
+ let visible=[];
+ try{
+   const {data}=await supa.from('notes').select('*')
+     .eq('club_id',c.id).eq('book_title',c.current_title)
+     .or(`user_id.eq.${uid},position.lte.${pos}`)
+     .order('position');
+   visible=data||[];
+ }catch(e){visible=[]}
+ // conteggio note altrui ancora bloccate (senza testo): solo id/position
+ let lockedAhead=0;
+ try{
+   const {data:locked}=await supa.from('notes').select('id,position,user_id')
+     .eq('club_id',c.id).eq('book_title',c.current_title)
+     .neq('user_id',uid).gt('position',pos);
+   lockedAhead=(locked||[]).length;
+ }catch(e){lockedAhead=0}
+ cloudNotes=visible; cloudNotesLocked=lockedAhead;
  const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
  if(ids.length){const {data:profs}=await supa.from('profiles').select('id,name,username,data').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
 }
+let cloudNotesLocked=0;
 function renderNotesList(){
  const el=$('#notesList');if(!el)return;
- if(!cloudNotes.length){el.innerHTML='<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>';return}
+ const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">🔒 ${cloudNotesLocked} ${cloudNotesLocked===1?'nota più avanti nel libro':'note più avanti nel libro'} — si sbloccano man mano che avanzi con la lettura.</div></div>`:'';
+ if(!cloudNotes.length){el.innerHTML=(lockedNote||'<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>');return}
  const pos=bookPos(curDiaryTitle);
  el.innerHTML=cloudNotes.map(n=>{
    const nm=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].name)||'Lettore';
    const own=n.user_id===authUser.id;
-   const reached=pos>=n.position;
    const when=fmtNoteDate(n.created_at);
    const sc=parseScope(n.text);const lab=sc.label||('pag. '+n.position);
    const av=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].data&&noteAuthors[n.user_id].data.avatar)||'';
@@ -2579,13 +2620,13 @@ function renderNotesList(){
        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
    }
    const actions=own?`<div class="note-actions"><button class="btn ghost sm" onclick="editClubNote(${n.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteClubNote(${n.id})" title="Elimina">🗑</button></div>`:'';
+   // Tutte le note qui presenti sono già "sbloccate" (le altre non sono nemmeno state scaricate).
+   // Per le note altrui teniamo il tocca-per-svelare come cortesia anti-spoiler visivo.
    const body=own
      ? `<p class="note-body" style="font-size:14px;line-height:1.6;margin-top:10px">${esc(sc.clean)}</p>`
-     : reached
-       ? `<p class="note-body reach" onclick="this.classList.toggle('show');try{this.classList.contains('show')&&toast('Nota svelata','👁')}catch(e){}">${esc(sc.clean)}</p><div class="note-hint">👁 Tocca per leggere / nascondere</div>`
-       : `<div class="note-locked-bars"><span></span><span></span><span></span></div><div class="note-hint locked-hint">🔒 Si sblocca a <b>${lab}</b></div>`;
-   return `<div class="note fade${(!own&&!reached)?' locked':''}">${head}${body}${actions}</div>`;
- }).join('');
+     : `<p class="note-body reach" onclick="this.classList.toggle('show');try{this.classList.contains('show')&&toast('Nota svelata','👁')}catch(e){}">${esc(sc.clean)}</p><div class="note-hint">👁 Tocca per leggere / nascondere</div>`;
+   return `<div class="note fade">${head}${body}${actions}</div>`;
+ }).join('')+lockedNote;
 }
 let noteScope='page';
 function setNoteScope(k){noteScope=k;
