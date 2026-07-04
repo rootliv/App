@@ -1185,105 +1185,9 @@ function go(id){
 /* ============ RENDERERS ============ */
 const renders={};
 
-renders.home=()=>{
- if(mode==='cloud')return renderHomeCloud();
- const reading=books.filter(b=>b.status==='reading');
- view.innerHTML=`
- <div class="hero">
-   <div class="eyebrow">Sabato 27 giugno</div>
-   <h1>Bentornata, Elena 👋</h1>
-   <p>Sei a metà de <b>La casa degli spiriti</b> con Le Pagine Erranti. Mancano 6 giorni all'incontro: sei perfettamente in linea con il tuo piano di lettura.</p>
-   <button class="btn" onclick="go('calendario')">📅 Vedi il piano di oggi</button>
- </div>
- <div class="stat-row">
-   <div class="stat"><div class="ic">📚</div><div class="n">37</div><div class="l">Libri letti</div></div>
-   <div class="stat"><div class="ic">👥</div><div class="n">4</div><div class="l">Club attivi</div></div>
-   <div class="stat"><div class="ic">🌍</div><div class="n">12</div><div class="l">Paesi esplorati</div></div>
-   <div class="stat"><div class="ic">🎯</div><div class="n">8/40</div><div class="l">Obiettivo 2026</div></div>
- </div>
+renders.home=()=>renderHomeCloud();
 
- <div class="sec-title">📖 Continua a leggere</div>
- <div class="row">
-  ${reading.map(b=>`
-   <div class="card pad" style="flex:1;min-width:290px;cursor:pointer" onclick="openBook(${b.id})">
-     <div style="display:flex;gap:16px">
-       <div style="width:74px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
-       <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:17px">${esc(b.t)}</b>
-         <div class="muted" style="font-size:13px;margin:2px 0 12px">${esc(b.a)}</div>
-         <div class="bar"><i style="width:${b.prog}%"></i></div>
-         <div class="muted" style="font-size:12px;margin-top:7px">${b.prog}% · pag. ${Math.round(b.pg*b.prog/100)} di ${b.pg}</div>
-       </div>
-     </div>
-   </div>`).join('')}
- </div>
-
- <div class="sec-title">📚 Curiosità della settimana</div>
- <div id="curioCard"></div>
-
- <div class="sec-title">✨ Il consiglio AI di oggi</div>
- <div class="card pad ai-card">
-   <div style="font-size:32px">🤖</div>
-   <div style="flex:1">
-     <div class="ai-bubble">Visti i tuoi gusti (realismo magico, saghe familiari), penso che <b>Pachinko</b> di Min Jin Lee ti conquisterebbe. <span class="match">Compatibilità 94%</span>.</div>
-     <button class="btn gold sm" style="margin-top:13px" onclick="go('ai')">Scopri perché →</button>
-   </div>
- </div>
-
- <div class="sec-title">🔔 Ti aspettano</div>
- <div class="card pad">
-   <div class="set-row"><div>🗳️ <b>Votazione aperta</b> · Sorelle di Carta sceglie il prossimo libro</div><button class="btn sm" onclick="go('club')">Vota</button></div>
-   <div class="set-row"><div>📅 <b>Incontro</b> · Le Pagine Erranti, 12 luglio</div><button class="btn ghost sm" onclick="go('incontri')">Dettagli</button></div>
-   <div class="set-row"><div>📝 <b>Nuova nota</b> di Sofia sul Cap. 9</div><button class="btn ghost sm" onclick="go('diario')">Leggi</button></div>
- </div>`;
- curioOverride=0;renderCuriosity();
-};
-
-renders.profilo=()=>{
- if(mode==='cloud')return renderProfiloCloud();
- view.innerHTML=`
- <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-   <div style="width:92px;height:92px;border-radius:26px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:34px;font-weight:600;box-shadow:var(--shadow)">EM</div>
-   <div style="flex:1;min-width:200px">
-     <h2 style="font-size:27px">Elena Marchetti</h2>
-     <div class="muted">📍 Roma · Lettrice dal 2019</div>
-     <div class="chips" style="margin-top:12px">
-       <span class="pill gold">🔥 Ritmo: 28 pag/giorno</span>
-       <span class="pill green">🎯 Obiettivo 2026: 40 libri</span>
-       <span class="pill sky">👥 4 club</span>
-     </div>
-   </div>
-   <button class="btn ghost">✏️ Modifica profilo</button>
- </div>
-
- <div class="row" style="margin-top:18px">
-   <div class="card pad" style="flex:1;min-width:270px">
-     <h3 style="font-size:16px;margin-bottom:12px">📗 Generi preferiti</h3>
-     <div class="chips"><span class="pill">Realismo magico</span><span class="pill">Narrativa</span><span class="pill">Romanzo storico</span><span class="pill">Formazione</span></div>
-     <h3 style="font-size:16px;margin:20px 0 12px">✍️ Autori preferiti</h3>
-     <div class="chips"><span class="pill">Isabel Allende</span><span class="pill">García Márquez</span><span class="pill">Elena Ferrante</span></div>
-   </div>
-   <div class="card pad" style="flex:1;min-width:270px">
-     <h3 style="font-size:16px;margin-bottom:12px">💛 Libri del cuore</h3>
-     <div class="chips"><span class="pill green">Cent'anni di solitudine</span><span class="pill green">Norwegian Wood</span></div>
-     <h3 style="font-size:16px;margin:20px 0 12px">🚫 Non fanno per me</h3>
-     <div class="chips"><span class="pill coral">Horror estremo</span><span class="pill coral">Manualistica tecnica</span></div>
-   </div>
- </div>
-
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:14px">🎯 Obiettivo di lettura 2026</h3>
-   <div class="bar"><i style="width:20%"></i></div>
-   <div class="muted" style="font-size:13px;margin-top:9px">8 di 40 libri completati · sei in anticipo di 2 libri sulla tabella!</div>
-   <hr>
-   <div class="card pad ai-card" style="align-items:center;box-shadow:none">
-     <div style="font-size:26px">✨</div>
-     <div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">Consigli di lettura su misura</b>
-       <div class="muted" style="font-size:13px;margin-top:2px">In base ai tuoi generi, autori e alla tua libreria, l'assistente ti propone nuovi libri.</div></div>
-     <button class="btn gold sm" onclick="libTab='ai';go('libreria')">Vedi consigli</button>
-   </div>
- </div>`;
-};
+renders.profilo=()=>renderProfiloCloud();
 
 let libTab='all';
 renders.libreria=()=>{
@@ -1316,123 +1220,9 @@ renders.libreria=()=>{
 };
 
 let clubTab=1;
-renders.club=()=>{
- if(mode==='cloud')return renderClubCloud();
- const c=clubs.find(x=>x.id===clubTab);const b=book(c.book);
- view.innerHTML=`
- <div class="row" style="margin-bottom:6px">
-  ${clubs.map(cl=>`
-   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;transition:.18s;${cl.id===clubTab?'border:2px solid var(--coral);box-shadow:var(--shadow)':''}" onclick="clubTab=${cl.id};renders.club()">
-     <div style="font-size:28px">${cl.emoji}</div>
-     <b style="font-family:'Fraunces';font-size:16px;display:block;margin-top:6px">${esc(cl.name)}</b>
-     <div class="muted" style="font-size:12.5px">${cl.members} membri · ${cl.role}</div>
-   </div>`).join('')}
-   <div class="card pad" style="flex:1;min-width:200px;cursor:pointer;display:grid;place-items:center;border-style:dashed;background:transparent" onclick="alert('Qui potrai creare un nuovo club o inserire un codice di invito.')">
-     <div style="text-align:center;color:var(--ink-soft)"><div style="font-size:28px">＋</div>Crea o unisciti</div>
-   </div>
- </div>
+renders.club=()=>renderClubCloud();
 
- <div class="card pad" style="margin-top:18px">
-   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
-     <div><h2 style="font-size:23px">${c.emoji} ${esc(c.name)}</h2><div class="muted">${esc(c.desc)}</div></div>
-     <span class="pill gold">Tuo ruolo: ${c.role}</span>
-   </div>
-   <hr>
-   <div class="row">
-     <div style="flex:2;min-width:260px">
-       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📖 Libro del mese</div>
-       <div style="display:flex;gap:14px;cursor:pointer" onclick="openBook(${b.id})">
-         <div style="width:64px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
-         <div><b style="font-family:'Fraunces';font-size:17px">${esc(b.t)}</b><div class="muted" style="font-size:13px">${esc(b.a)}</div>
-         <div class="pill sky" style="margin-top:10px">🎲 Sceglie: ${esc(c.chooser)}</div></div>
-       </div>
-     </div>
-     <div style="flex:1;min-width:200px">
-       <div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;font-weight:700">📅 Prossimo incontro</div>
-       <b style="font-family:'Fraunces';font-size:22px;color:var(--plum)">${c.next}</b>
-       <div class="muted" style="font-size:13px;margin-top:8px">Progresso medio del club</div>
-       <div class="bar" style="margin-top:7px"><i style="width:52%"></i></div>
-     </div>
-   </div>
- </div>
-
- <div class="row" style="margin-top:18px">
-   <div class="card pad" style="flex:1;min-width:290px">
-     <h3 style="font-size:16px;margin-bottom:8px">👥 Membri e ruoli</h3>
-     ${members.map(m=>`<div class="member"><div class="av" style="background:${m.col}">${ini(m.n)}</div>
-       <div style="flex:1"><b style="font-size:14px">${m.n}${m.me?' (tu)':''}</b><div class="muted" style="font-size:12.5px">${m.role}</div></div>
-       <div style="width:84px"><div class="bar"><i style="width:${m.prog}%"></i></div><div class="muted" style="font-size:11px;margin-top:4px;text-align:right">${m.prog}%</div></div>
-     </div>`).join('')}
-   </div>
-   <div class="card pad" style="flex:1;min-width:290px">
-     <h3 style="font-size:16px;margin-bottom:6px">🗳️ Votazione prossimo libro</h3>
-     <div class="muted" style="font-size:13px;margin-bottom:14px">Proposte da ${clubs[3].chooser} · chiude tra 3 giorni</div>
-     ${votes.map(v=>`<div style="margin-bottom:14px">
-       <div style="display:flex;justify-content:space-between;font-size:14px"><b>${esc(v.t)}</b><span class="muted">${v.v} voti</span></div>
-       <div class="muted" style="font-size:12px">${esc(v.a)}</div>
-       <div class="bar" style="margin-top:6px"><i style="width:${v.v/5*100}%"></i></div>
-       <button class="btn ghost sm" style="margin-top:8px" onclick="this.textContent='✓ Votato!';this.disabled=true;this.style.opacity=.7">Vota</button>
-     </div>`).join('')}
-   </div>
- </div>
-
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:10px">📚 Storico letture del club</h3>
-   <div class="muted" style="font-size:13.5px">Cent'anni di solitudine · Norwegian Wood · Il deserto dei Tartari · La casa degli spiriti (in corso) — 14 libri letti insieme dal 2021.</div>
- </div>`;
-};
-
-renders.ai=()=>{
- if(mode==='cloud')return renderAiCloud();
- view.innerHTML=`
- <div class="card pad ai-card" style="margin-bottom:18px">
-   <div style="font-size:32px">🤖</div>
-   <div style="flex:1">
-     <b style="font-family:'Fraunces';font-size:19px">Ciao Elena, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Conosco i tuoi gusti e quelli dei tuoi club. Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler in base a dove sei arrivata.</p>
-   </div>
- </div>
-
- <div class="sec-title">📕 Consigliati per te</div>
- <div class="row">
-  ${aiSuggest.map(s=>`
-   <div class="card pad" style="flex:1;min-width:300px">
-     <div style="display:flex;gap:14px">
-       <div style="width:70px;flex:none">${coverEl(s.ci,s.t,'')}</div>
-       <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:17px">${esc(s.t)}</b>
-         <div class="muted" style="font-size:13px">${esc(s.a)} · ${esc(s.g)}</div>
-         <div class="compat"><span class="match">${s.compat}%</span><div class="bar"><i style="width:${s.compat}%"></i></div></div>
-       </div>
-     </div>
-     <p style="font-size:13.5px;margin:12px 0 10px;line-height:1.55">${s.trama}</p>
-     <div class="muted" style="font-size:12px;font-weight:700;margin-bottom:5px">Perché è adatto a te:</div>
-     <ul style="font-size:13px;padding-left:18px;color:var(--ink-soft);line-height:1.7">${s.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-     ${buyLinks(s.t,s.a)}
-   </div>`).join('')}
- </div>
-
- <div class="sec-title">👥 Per il club "Le Pagine Erranti"</div>
- <div class="card pad">
-   <div class="ai-bubble">Analizzando i gusti degli 8 membri (5 amano il realismo magico, 3 preferiscono ambientazioni internazionali), il libro più adatto al gruppo è <b>Pachinko</b>. Mette d'accordo chi cerca emozione familiare e chi vuole scoprire culture lontane. <span class="match">Compatibilità di gruppo 91%</span>.</div>
- </div>
-
- <div class="sec-title">🛠️ Strumenti AI per la discussione</div>
- <div class="suggest">
-   <button onclick="aiAsk('Genera 5 domande per la discussione finale')">💬 Domande di discussione</button>
-   <button onclick="aiAsk('Suggerisci temi di dibattito')">⚖️ Temi di dibattito</button>
-   <button onclick="aiAsk('Spiega i riferimenti storici')">🏛️ Riferimenti storici</button>
-   <button onclick="aiAsk('Curiosità sull\\'autrice')">✨ Curiosità autore</button>
-   <button onclick="aiAsk('Citazioni significative')">❝ Citazioni</button>
-   <button onclick="aiAsk('Spunto di riflessione (senza spoiler, sono al cap. 8)')">🔒 Spunto senza spoiler</button>
- </div>
- <div id="aiOut" style="margin-top:14px"></div>
- <div class="chatbox">
-   <input id="aiText" placeholder="Es. trovami Solaris, consigliami un giallo…" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
-   <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
- </div>
- <div class="muted" style="font-size:11.5px;margin-top:9px">💡 In questo prototipo le risposte AI sono esempi pre-impostati. Collegheremo un modello AI vero in una fase successiva.</div>`;
-};
+renders.ai=()=>renderAiCloud();
 const aiAnswers={
  'Genera 5 domande per la discussione finale':"<b>Domande per l'incontro finale:</b><br>1. Come cambia il significato della 'casa' nel corso delle tre generazioni?<br>2. Clara e i suoi poteri: realtà, metafora o forma di resistenza?<br>3. In che modo la Storia politica del Cile entra nelle vite private dei Trueba?<br>4. Esteban è un villain, una vittima o entrambi?<br>5. Cosa significa il quaderno di Clara per la memoria familiare?",
  'Suggerisci temi di dibattito':"<b>Temi per il dibattito:</b><br>• Memoria personale vs. memoria collettiva<br>• Il ciclo della violenza e la possibilità del perdono<br>• Il ruolo delle donne come custodi della famiglia<br>• Realismo magico come linguaggio del trauma storico",
@@ -1600,47 +1390,9 @@ function genPlan(){
 }
 
 let myPos=8;
-renders.diario=()=>{
- if(mode==='cloud')return renderDiarioCloud();
- view.innerHTML=`
- <div class="card pad" style="margin-bottom:18px">
-   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
-     <div><h3 style="font-size:16px">✍️ Diario condiviso · La casa degli spiriti</h3><div class="muted" style="font-size:13px;margin-top:2px">Le note dei membri si sbloccano solo quando raggiungi quel punto del libro. Niente spoiler. 🔒</div></div>
-     <div style="text-align:right"><div class="muted" style="font-size:12px;margin-bottom:4px">Sei al capitolo</div><div style="display:flex;align-items:center;gap:10px"><input type="range" min="1" max="14" value="${myPos}" oninput="myPos=+this.value;save();renders.diario()" style="width:140px"><b style="font-family:'Fraunces';font-size:22px;color:var(--plum)">${myPos}</b></div></div>
-   </div>
- </div>
+renders.diario=()=>renderDiarioCloud();
 
- <div class="row" style="margin-bottom:18px">
-   <button class="btn">＋ Nota condivisa</button>
-   <button class="btn ghost">🔒 Nota privata</button>
-   <button class="btn ghost">❝ Aggiungi citazione</button>
- </div>
-
- <div class="sec-title">📝 Note del club</div>
- ${notes.slice().sort((a,b)=>a.pos-b.pos).map(n=>{
-   const locked=n.pos>myPos;
-   if(locked)return`<div class="note locked"><div class="lock-msg">🔒 <div><b>Nota bloccata</b> · ${n.who} ha scritto qualcosa a <b>${n.posTxt}</b>. Si sblocca quando arrivi a quel punto.</div></div></div>`;
-   return`<div class="note fade"><div class="nh"><div class="av" style="background:${n.col}">${ini(n.who)}</div><b>${n.who}</b><span class="pill">${n.posTxt}</span><time style="margin-left:auto">${n.time}</time></div><p style="font-size:14px;line-height:1.6">${n.txt}</p></div>`;
- }).join('')}
-
- <div class="sec-title">🔒 Le mie note private</div>
- <div class="note" style="border-left:3px solid var(--coral)"><div class="nh"><b>Solo per te</b><span class="pill gold">Cap. 7</span></div><p style="font-size:14px">Tema ricorrente: le donne tengono in piedi la famiglia mentre gli uomini la mettono in crisi. Da riprendere all'incontro.</p></div>`;
-};
-
-renders.mappa=()=>{
- if(mode==='cloud')return renderMappaCloud();
- view.innerHTML=`
- <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-   <div class="tabs"><button class="active">Tutti i miei libri</button><button onclick="alert('Filtro per club (demo)')">Per club</button><button onclick="alert('Filtro per anno (demo)')">Per anno</button><button onclick="alert('Filtro per genere (demo)')">Per genere</button></div>
-   <span class="pill sky">🌍 12 paesi · 6 libri sulla mappa</span>
- </div>
- <div id="map"></div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:6px">🧭 Il viaggio del club "Le Pagine Erranti"</h3>
-   <div class="muted" style="font-size:13.5px;line-height:1.6">Dal Cile di Allende alla Colombia di Macondo, dal Giappone di Murakami alla Napoli di Ferrante: 4 continenti esplorati insieme nell'ultimo anno. Prossima tappa proposta dall'AI: la Corea/Giappone di "Pachinko". 🌏</div>
- </div>`;
- setTimeout(initMap,60);
-};
+renders.mappa=()=>renderMappaCloud();
 let mapObj;
 /* Dopo aver creato una mappa Leaflet dentro un contenitore appena inserito nel DOM, le
    dimensioni possono non essere ancora corrette: i tasselli risultano disallineati/tagliati
@@ -1667,47 +1419,9 @@ function initMap(){
  fixMapSize(mapObj);
 }
 
-renders.incontri=()=>{
- if(mode==='cloud')return renderIncontriCloud();
- view.innerHTML=`
- <div class="row" style="margin-bottom:18px">
-   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">3</div><div class="muted" style="font-size:13px">Incontri in programma</div></div>
-   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">5</div><div class="muted" style="font-size:13px">Giorni al prossimo</div></div>
-   <div class="card pad" style="flex:1;min-width:180px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:32px;color:var(--plum)">19</div><div class="muted" style="font-size:13px">Partecipanti totali</div></div>
- </div>
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">📅 Prossimi incontri</h3><button class="btn sm">＋ Nuovo incontro</button></div>
- <div class="card pad">
-   ${meetings.map(m=>{const cl=clubs[m.ci];return`
-     <div class="event">
-       <div class="date"><b>${m.d}</b><small>${m.m}</small></div>
-       <div style="flex:1">
-         <b style="font-family:'Fraunces';font-size:16px">${esc(m.title)}</b>
-         <div class="muted" style="font-size:13px;margin:4px 0 8px">${cl.emoji} ${esc(cl.name)} · 📖 ${esc(m.book)}</div>
-         <div class="chips"><span class="pill ${m.link?'sky':'coral'}">${m.link?'🎥 '+esc(m.where):'📍 '+esc(m.where)}</span></div>
-       </div>
-       <div style="text-align:right">
-         <div class="avstack" style="justify-content:flex-end;margin-bottom:10px">${Array.from({length:Math.min(4,m.who)}).map((_,i)=>`<div class="av" style="background:${pal(i)[0]}">${String.fromCharCode(65+i)}</div>`).join('')}${m.who>4?`<div class="av" style="background:#cfc3b4;color:#5a5048">+${m.who-4}</div>`:''}</div>
-         ${m.link?'<button class="btn sm">Partecipa</button>':'<button class="btn ghost sm">Ci sarò</button>'}
-       </div>
-     </div>`}).join('')}
- </div>`;
-};
+renders.incontri=()=>renderIncontriCloud();
 
-renders.notifiche=()=>{
- if(mode==='cloud')return renderNotifCloud();
- const opts=['📖 Promemoria di lettura','📅 Incontro imminente','📚 Nuovo libro scelto','📝 Nuova nota disponibile','🗳️ Votazione aperta','🔄 Piano di lettura aggiornato','✨ Curiosità giornaliera','💛 Membro rimasto indietro'];
- view.innerHTML=`
- <div class="row">
-   <div class="card pad" style="flex:1.4;min-width:300px">
-     <h3 style="font-size:16px;margin-bottom:6px">🔔 Recenti</h3>
-     ${notifs.map(n=>`<div class="notif"><div class="ni" style="background:${n.bg}">${n.ic}</div><div style="flex:1"><b>${n.t}</b><p>${n.p}</p></div><time>${n.time}</time></div>`).join('')}
-   </div>
-   <div class="card pad" style="flex:1;min-width:260px">
-     <h3 style="font-size:16px;margin-bottom:6px">⚙️ Cosa vuoi ricevere</h3>
-     ${opts.map((o,i)=>`<div class="set-row"><div>${o}</div><div class="toggle ${i===7?'':'on'}" onclick="this.classList.toggle('on')"></div></div>`).join('')}
-   </div>
- </div>`;
-};
+renders.notifiche=()=>renderNotifCloud();
 
 /* ============ MODALS ============ */
 function openBook(id){
@@ -3866,13 +3580,6 @@ async function loadProfile(){
    if(data)profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at}}catch(e){}
 }
 
-function guest(){
- mode='demo';session='__demo__';localStorage.setItem('pagina_session','__demo__');
- const d=localStorage.getItem('pagina_data___demo__');
- if(d){try{const o=JSON.parse(d);if(Array.isArray(o.books))books=o.books;if(typeof o.myPos==='number')myPos=o.myPos}catch(e){}}
- else{books=JSON.parse(JSON.stringify(seedBooks));myPos=8;save()}
- startApp();
-}
 async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localStorage.removeItem('pagina_session');location.reload()}
 
 /* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
