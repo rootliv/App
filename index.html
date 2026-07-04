@@ -213,6 +213,9 @@ input[type=range]{accent-color:var(--coral)}
 .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:26px}
 .book{cursor:pointer;transition:.2s}
 .book{position:relative}
+.ob-step{display:flex;gap:13px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface2)}
+.ob-step .ob-ic{font-size:24px;flex:none;width:30px;text-align:center}
+.ob-step b{font-size:13.5px;display:block;margin-bottom:2px}
 .ai-x{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;
   border:none;background:rgba(20,25,22,.55);color:#fff;font-size:10px;line-height:1;cursor:pointer;
   display:grid;place-items:center;opacity:.6;transition:.15s;backdrop-filter:blur(2px)}
@@ -3614,6 +3617,50 @@ function startApp(target){
  $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(username?'@'+username:'Account cloud ☁️');
  buildNav();go(target||'home');
  enrichCovers();
+ maybeShowOnboarding();
+}
+
+/* ---- Onboarding primo accesso: appare una sola volta, per accompagnare l'utente nuovo che
+   altrimenti atterrerebbe su un'app vuota. Il flag 'onboarded' è salvato nel profilo (Supabase),
+   con ripiego su localStorage; si può saltare e non riappare. ---- */
+function onboardingDone(){
+ if(profile&&profile.data&&profile.data.onboarded)return true;
+ try{if(localStorage.getItem('pagina_onboarded_'+((authUser&&authUser.id)||''))==='1')return true}catch(e){}
+ return false;
+}
+async function markOnboarded(){
+ try{localStorage.setItem('pagina_onboarded_'+((authUser&&authUser.id)||''),'1')}catch(e){}
+ if(mode==='cloud'&&supa&&authUser){
+   if(!profile)profile={};profile.data=Object.assign({},profile.data||{},{onboarded:true});
+   try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}
+ }
+}
+function maybeShowOnboarding(){
+ // solo per chi non l'ha già visto e non ha ancora dati (utente davvero nuovo)
+ if(onboardingDone())return;
+ if(typeof pendingJoin!=='undefined'&&pendingJoin)return; // sta entrando via invito
+ if((books&&books.length)|| (myClubs&&myClubs.length))return;
+ const first=((profile&&profile.name)||'').split(' ')[0]||'';
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>👋 Benvenuta${first?(' '+esc(first)):''}!</b></div>
+  <div class="modal-body">
+    <p style="font-size:14px;line-height:1.6;margin-bottom:18px">Pàgina è il tuo spazio per leggere, tenere traccia dei libri e condividere lo stesso libro con altri. Bastano tre mosse per iniziare 👇</p>
+    <div class="ob-step"><div class="ob-ic">📚</div><div><b>Aggiungi il tuo primo libro</b><div class="muted" style="font-size:12.5px">Cerca un titolo: copertina, trama e dettagli arrivano da soli.</div></div></div>
+    <div class="ob-step"><div class="ob-ic">🎯</div><div><b>Racconta i tuoi gusti</b><div class="muted" style="font-size:12.5px">Generi e autori preferiti, così l'assistente ti consiglia i libri giusti.</div></div></div>
+    <div class="ob-step"><div class="ob-ic">👥</div><div><b>Crea o unisciti a un club</b><div class="muted" style="font-size:12.5px">Leggete lo stesso libro, con note condivise e incontri.</div></div></div>
+    <div style="display:flex;flex-direction:column;gap:9px;margin-top:22px">
+      <button class="btn" onclick="obGo('addbook')">📚 Aggiungi il primo libro</button>
+      <button class="btn ghost" onclick="obGo('profilo')">🎯 Completa il profilo</button>
+      <button class="btn ghost" onclick="obGo('skip')" style="color:var(--ink-faint)">Lo farò dopo</button>
+    </div>
+  </div>`;
+ openOverlay();
+}
+function obGo(what){
+ markOnboarded();
+ closeModal();
+ if(what==='addbook'){go('libreria');setTimeout(()=>{try{openAddBook()}catch(e){}},250);}
+ else if(what==='profilo'){go('profilo');setTimeout(()=>{try{openEditProfile()}catch(e){}},250);}
 }
 
 /* ============ INIT ============ */
