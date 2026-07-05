@@ -1386,55 +1386,90 @@ renders.calendario=()=>{
      <div class="muted" style="max-width:420px;margin:0 auto 18px">Aggiungi un libro "in lettura" o "da leggere" e qui creeremo un piano per arrivare pronta all'incontro.</div>
      <button class="btn" onclick="go('libreria')">📚 Vai alla libreria</button>
    </div>`;return;}
+ // preseleziona il libro in lettura, se c'è
+ const reading=planBooks.find(b=>b.status==='reading');
+ const defId=(reading||planBooks[0]).id;
+ // data di default: primo incontro futuro legato al libro del club, altrimenti fra 14 giorni
+ const meetFor=(title)=>{const c=myClubs.find(x=>normKey(x.current_title||'')===normKey(title||''));if(!c)return null;const ms=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));return ms[0]||null;};
+ const defBook=book(defId);
+ const defMeet=meetFor(defBook.t);
+ const defDate=defMeet?String(defMeet.date).slice(0,10):isoInDays(14);
  view.innerHTML=`
- <div class="row">
-   <div class="card pad" style="flex:1;min-width:300px">
-     <h3 style="font-size:16px;margin-bottom:16px">⚙️ Imposta il tuo ritmo</h3>
-     <div class="field"><label>Libro</label><select id="cBook">${planBooks.map(b=>`<option value="${b.id}">${esc(b.t)}</option>`).join('')}</select></div>
-     <div class="field"><label>Come preferisci misurare?</label><select id="cMode"><option value="pages">Pagine al giorno</option><option value="chapters">Capitoli al giorno</option><option value="days">Giorni a settimana disponibili</option></select></div>
-     <div class="field"><label>Quanto? (numero)</label><input id="cAmt" type="number" value="25" min="1"></div>
-     <div class="field"><label>Data dell'incontro</label><input id="cDate" type="date" value="2026-07-12"></div>
-     <button class="btn" style="width:100%;justify-content:center" onclick="genPlan()">📅 Genera il mio piano</button>
-   </div>
-   <div class="card pad" style="flex:1.3;min-width:300px" id="planOut">
-     <div style="text-align:center;padding:50px 10px"><div style="font-size:40px">🗓️</div><div class="muted" style="margin-top:12px">Imposta il tuo ritmo e genera un piano personalizzato per arrivare pronta all'incontro.</div></div>
-   </div>
+ <div class="card pad" style="margin-bottom:16px">
+   <h3 style="font-size:16px;margin-bottom:16px">⚙️ Il tuo piano di lettura</h3>
+   <div class="field"><label>Libro</label><select id="cBook" onchange="planBookChanged()">${planBooks.map(b=>`<option value="${b.id}" ${b.id===defId?'selected':''}>${esc(b.t)}</option>`).join('')}</select></div>
+   <div id="meetInfo"></div>
+   <div class="field"><label>Data dell'incontro / obiettivo</label><input id="cDate" type="date" value="${defDate}"></div>
+   <div class="field"><label>Pagine al giorno <span class="muted" style="font-weight:400">(lascia vuoto e lo calcolo io)</span></label><input id="cAmt" type="number" min="1" placeholder="calcolo automatico" value="${(profile&&profile.data&&profile.data.pace)||''}"></div>
+   <button class="btn" style="width:100%;justify-content:center" onclick="genPlan()">🗓️ Genera il mio piano</button>
  </div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:8px">🧩 Funziona con ogni tipo di libro</h3>
-   <div class="muted" style="font-size:13.5px;line-height:1.6">Il piano si adatta a libri con capitoli, libri senza capitoli (per pagina o percentuale), saggi, raccolte di racconti e libri divisi in parti o sezioni. Se resti indietro, l'app ricalcola automaticamente il ritmo per i giorni rimanenti.</div>
- </div>`;
+ <div id="planOut"></div>`;
+ planBookChanged();
 };
-function genPlan(){
- const b=book(+$('#cBook').value);
- const mode=$('#cMode').value;const amt=Math.max(1,+$('#cAmt').value||1);
- const meet=new Date($('#cDate').value);const today=new Date('2026-06-27');
- const days=Math.max(1,Math.round((meet-today)/86400000));
- const remainingPg=Math.round(b.pg*(1-b.prog/100));
- let unit,total;
- if(mode==='pages'){unit='pagine';total=Math.ceil(remainingPg/amt)}
- else if(mode==='chapters'){const remCh=Math.ceil(b.ch*(1-b.prog/100));unit='capitoli';total=Math.ceil(remCh/amt)}
- else{const sessions=amt;unit='pagine/sessione';total=Math.ceil(days/7*sessions)}
- const need=Math.ceil(remainingPg/days);
- const onTrack=mode==='pages'?amt>=need:true;
- const dayNames=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
- let rows='';let acc=Math.round(b.pg*b.prog/100);
- const show=Math.min(days,7);
- for(let i=1;i<=show;i++){const dt=new Date(today.getTime()+i*86400000);
-   acc=Math.min(b.pg,acc+need);
-   rows+=`<div class="plan-day"><div class="d"><b>${dt.getDate()}</b><small>${dayNames[dt.getDay()]}</small></div>
-     <div style="flex:1"><b style="font-size:14px">${need} ${mode==='chapters'?'capitoli':'pagine'}</b><div class="muted" style="font-size:12px">fino a pag. ${acc}</div></div>
-     <div class="bar" style="width:90px"><i style="width:${Math.round(acc/b.pg*100)}%"></i></div></div>`;
+function planBookChanged(){
+ const b=book(+$('#cBook').value);if(!b)return;
+ const c=myClubs.find(x=>normKey(x.current_title||'')===normKey(b.t||''));
+ const ms=c?(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date))):[];
+ const meet=ms[0]||null;
+ const info=$('#meetInfo');
+ if(info){
+   info.innerHTML=meet
+     ? `<div class="note" style="margin-bottom:12px;padding:10px 12px"><div style="font-size:12.5px">📅 <b>${esc(c.name)}</b> ha un incontro il <b>${fmtNoteDate(meet.date)}</b> su questo libro: ho impostato quella data.</div></div>`
+     : (c?`<div class="muted" style="font-size:12px;margin-bottom:12px">Questo è il libro del club <b>${esc(c.name)}</b>, ma non c'è un incontro in programma: imposta tu una data obiettivo.</div>`:'');
  }
- $('#planOut').innerHTML=`
+ if(meet){const d=$('#cDate');if(d)d.value=String(meet.date).slice(0,10);}
+}
+function genPlan(){
+ const b=book(+$('#cBook').value);if(!b)return;
+ // punto di partenza: da dove sei col segnalibro (prog%). Pagine totali dal libro.
+ const totalPg=b.pg||0;
+ const startPg=Math.round(totalPg*((b.prog||0)/100));
+ const remainingPg=Math.max(0,totalPg-startPg);
+ const meet=new Date($('#cDate').value+'T00:00:00');
+ const today=new Date(todayStr()+'T00:00:00');
+ const days=Math.max(1,Math.round((meet-today)/86400000));
+ if(!totalPg){
+   $('#planOut').innerHTML=`<div class="card pad"><div class="srch-empty">Per questo libro non conosco il numero di pagine. Aprilo dalla libreria e imposta il totale pagine (col segnalibro), poi torna qui. 📖</div></div>`;
+   return;
+ }
+ if(remainingPg<=0){
+   $('#planOut').innerHTML=`<div class="card pad" style="text-align:center;padding:36px 16px"><div style="font-size:40px">🎉</div><div style="margin-top:10px"><b>Hai già finito "${esc(b.t)}"!</b></div><div class="muted" style="font-size:13px;margin-top:6px">Non serve un piano. Segnalo come letto se non l'hai già fatto.</div></div>`;
+   return;
+ }
+ // pagine/giorno: se l'utente le imposta le uso, altrimenti calcolo quelle necessarie per l'incontro
+ const amtInput=($('#cAmt').value||'').trim();
+ const needed=Math.ceil(remainingPg/days);
+ const perDay=amtInput?Math.max(1,parseInt(amtInput)):needed;
+ const autocalc=!amtInput;
+ const daysToFinish=Math.ceil(remainingPg/perDay);
+ const finishDate=new Date(today.getTime()+daysToFinish*86400000);
+ const onTrack=perDay>=needed;
+ const dayNames=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+ const monthN=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+ let rows='';let acc=startPg;
+ const show=Math.min(daysToFinish,7);
+ for(let i=1;i<=show;i++){
+   const dt=new Date(today.getTime()+i*86400000);
+   acc=Math.min(totalPg,acc+perDay);
+   rows+=`<div class="plan-day"><div class="d"><b>${dt.getDate()}</b><small>${dayNames[dt.getDay()]}</small></div>
+     <div style="flex:1"><b style="font-size:14px">${perDay} pagine</b><div class="muted" style="font-size:12px">fino a pag. ${acc}</div></div>
+     <div class="bar" style="width:90px"><i style="width:${Math.round(acc/totalPg*100)}%"></i></div></div>`;
+ }
+ const finishStr=finishDate.getDate()+' '+monthN[finishDate.getMonth()];
+ $('#planOut').innerHTML=`<div class="card pad">
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
      <h3 style="font-size:16px">📖 Piano per "${esc(b.t)}"</h3>
-     <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo da aumentare'}</span>
+     <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo alto'}</span>
    </div>
-   <div class="muted" style="font-size:13px;margin:8px 0 14px">${days} giorni all'incontro · ~${remainingPg} pagine da leggere · servono ~<b>${need} pagine al giorno</b>.</div>
-   ${!onTrack?`<div class="note locked" style="margin-bottom:12px"><b>Consiglio:</b> con ${amt} ${unit} al giorno arrivi un po' corta. Prova ad alzare a ${need} per finire in tempo, oppure aggiungi un paio di sessioni.</div>`:''}
+   <div class="muted" style="font-size:13px;margin:8px 0 4px">Sei a pag. ${startPg} di ${totalPg} · restano <b>${remainingPg} pagine</b>.</div>
+   <div class="muted" style="font-size:13px;margin-bottom:14px">
+     ${autocalc
+       ? `Per arrivare pronta il <b>${fmtNoteDate($('#cDate').value)}</b> (${days} giorni) leggi ~<b>${perDay} pagine al giorno</b>.`
+       : `A <b>${perDay} pagine al giorno</b> finisci intorno al <b>${finishStr}</b> (${daysToFinish} giorni).${onTrack?'':' L\'incontro è prima: valuta di alzare il ritmo a ~'+needed+' pag/giorno.'}`}
+   </div>
    ${rows}
-   ${days>7?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">…e così via per i restanti ${days-7} giorni</div>`:''}`;
+   ${daysToFinish>7?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">…e così via per i restanti ${daysToFinish-7} giorni</div>`:''}
+ </div>`;
 }
 
 let myPos=8;
@@ -1688,7 +1723,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v42 (sottotitolo club dinamico)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v43 (piano lettura intelligente, refresh auto, menu)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1988,6 +2023,7 @@ async function purgePastMeetings(){        // elimina automaticamente gli incont
  myMeetings=(myMeetings||[]).filter(m=>!past.some(p=>p.id===m.id));
 }
 function todayStr(){return new Date().toISOString().slice(0,10)}
+function isoInDays(n){return new Date(Date.now()+n*86400000).toISOString().slice(0,10)}
 function fmtDateParts(d){const p=String(d).slice(0,10).split('-');const M=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];return {d:+p[2]||'',m:M[(+p[1]||1)-1]}}
 function daysTo(d){return Math.round((new Date(String(d).slice(0,10))-new Date(todayStr()))/86400000)}
 function upcomingMeetings(){const t=todayStr();return (myMeetings||[]).filter(m=>m.date&&String(m.date).slice(0,10)>=t).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
@@ -3754,6 +3790,20 @@ function save(){ // demo: salva tutto localmente; cloud: solo la posizione di le
 function persistBook(id,patch){
  if(mode==='cloud'&&supa){supa.from('books').update(patch).eq('id',id).then(()=>{},()=>{})}
  else save();
+ refreshView();
+}
+/* Refresh automatico: ridisegna la sezione corrente dopo una modifica ai dati, così l'utente
+   non deve ricaricare la pagina. Non tocca eventuali modali aperti (che si gestiscono da soli). */
+let _refreshT=null;
+function refreshView(){
+ clearTimeout(_refreshT);
+ _refreshT=setTimeout(()=>{
+   try{
+     // se un modale è aperto, non ridisegnare la vista sotto (il modale si aggiorna da sé)
+     const ov=$('#overlay');if(ov&&ov.classList.contains('open'))return;
+     if(current&&renders[current])renders[current]();
+   }catch(e){}
+ },60);
 }
 
 function startApp(target){
