@@ -1293,6 +1293,19 @@ function renderChat(){
  const last=out.lastElementChild;if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function aiClear(){aiChat=[];renderChat()}
+/* Strumenti di discussione per l'incontro: prompt mirati sul libro scelto, poi passati ad aiAsk. */
+function aiDiscuss(kind,book){
+ const b=book||'';
+ const P={
+   domande:`Genera 10 domande di discussione stimolanti e aperte per un incontro di un club del libro su "${b}". Numerale, variando tra trama, personaggi, temi e riflessioni personali. Nessuno spoiler del finale.`,
+   temi:`Elenca i principali temi e spunti di dibattito di "${b}" per un club del libro, ognuno con una domanda che apra il confronto tra opinioni diverse. Niente spoiler del finale.`,
+   personaggi:`Analizza i personaggi principali di "${b}" per una discussione di gruppo: motivazioni, evoluzione e una domanda su ciascuno da porre al club. Niente spoiler del finale.`,
+   rompighiaccio:`Proponi 3 domande "rompighiaccio" leggere e coinvolgenti per aprire un incontro del club del libro su "${b}", adatte anche a chi non ha ancora finito. Niente spoiler.`,
+   citazioni:`Indica alcune citazioni significative di "${b}" (o passaggi memorabili descritti senza rivelarli integralmente) e per ciascuna una domanda da discutere in gruppo. Niente spoiler del finale.`,
+   contesto:`Spiega il contesto storico, culturale e i riferimenti utili per capire e discutere "${b}" in un club del libro. Sintetico e chiaro. Niente spoiler del finale.`
+ };
+ return aiAsk(P[kind]||P.domande);
+}
 async function aiAsk(q){
  if(!q||!q.trim())return;q=q.trim();
  const t=$('#aiText');if(t)t.value='';
@@ -1661,7 +1674,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v39 (segnalibro trascinabile, profilo, dark)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v40 (assistente per discussione incontri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2567,42 +2580,39 @@ function renderAiCloud(){
  const nm=((profile&&profile.name)||'Lettrice').split(' ')[0];
  const reading=books.find(b=>b.status==='reading');
  const club=myClubs[0];
+ // libro su cui verte la discussione: quello del club (se presente), altrimenti quello in lettura
+ const discBook=(club&&club.current_title)||(reading&&reading.t)||'';
+ const nextMeeting=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <div style="font-size:32px">🤖</div>
    <div style="flex:1">
      <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Posso consigliarti libri, spiegarti riferimenti, generare domande per la discussione ed evitare spoiler. ${reading?('Stai leggendo <b>'+esc(reading.t)+'</b>.'):'Aggiungi un libro alla libreria per consigli su misura.'}</p>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler. ${discBook?('Libro in discussione: <b>'+esc(discBook)+'</b>.'):'Scegli un libro nel club o mettine uno in lettura per iniziare.'}</p>
    </div>
  </div>
 
- <div class="sec-title">📕 Qualche idea di lettura</div>
- <div class="row">
-  ${aiSuggest.map(s=>`
-   <div class="card pad" style="flex:1;min-width:300px">
-     <div style="display:flex;gap:14px">
-       <div style="width:70px;flex:none">${coverEl(s.ci,s.t,'')}</div>
-       <div style="flex:1"><b style="font-family:'Fraunces';font-size:17px">${s.t}</b><div class="muted" style="font-size:13px">${s.a} · ${s.g}</div>
-         <div class="compat"><span class="match">${s.compat}%</span><div class="bar"><i style="width:${s.compat}%"></i></div></div></div>
-     </div>
-     <p style="font-size:13.5px;margin:12px 0 10px;line-height:1.55">${s.trama}</p>
-     ${buyLinks(s.t,s.a)}
-   </div>`).join('')}
+ <div class="sec-title">🎙️ Prepara il prossimo incontro</div>
+ <div class="card pad" style="margin-bottom:18px">
+   <p style="font-size:13.5px;line-height:1.6;margin-bottom:${discBook?'14px':'4px'}">
+     ${discBook
+       ? `Genero spunti pronti da usare per discutere <b>${esc(discBook)}</b>${nextMeeting?(' all\'incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}. Scegli cosa ti serve:`
+       : `Quando il club ha un libro in corso, qui trovi domande e spunti pronti per l'incontro. Intanto puoi usarli sul libro che stai leggendo.`}
+   </p>
+   ${discBook?`<div class="suggest">
+     <button onclick="aiDiscuss('domande',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">💬 10 domande per l'incontro</button>
+     <button onclick="aiDiscuss('temi',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">⚖️ Temi di dibattito</button>
+     <button onclick="aiDiscuss('personaggi',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">👤 Analisi dei personaggi</button>
+     <button onclick="aiDiscuss('rompighiaccio',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">🎲 Domanda rompighiaccio</button>
+     <button onclick="aiDiscuss('citazioni',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">❝ Citazioni da commentare</button>
+     <button onclick="aiDiscuss('contesto',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">🏛️ Contesto e riferimenti</button>
+   </div>`:''}
  </div>
 
- ${club?`<div class="sec-title">👥 Per il club "${esc(club.name)}"</div>
- <div class="card pad"><div class="ai-bubble">Posso analizzare i gusti dei membri di <b>${esc(club.name)}</b> e proporre un libro che metta d'accordo il gruppo, con il livello di compatibilità. ${club.current_title?('Ora state leggendo <b>'+esc(club.current_title)+'</b>.'):'Avviate una scelta del libro dal club per iniziare.'}</div></div>`:''}
-
- <div class="sec-title">🛠️ Strumenti AI per la discussione</div>
- <div class="suggest">
-   <button onclick="aiAsk('Genera 5 domande per la discussione finale')">💬 Domande di discussione</button>
-   <button onclick="aiAsk('Suggerisci temi di dibattito')">⚖️ Temi di dibattito</button>
-   <button onclick="aiAsk('Spiega i riferimenti storici')">🏛️ Riferimenti storici</button>
-   <button onclick="aiAsk('Citazioni significative')">❝ Citazioni</button>
- </div>
- <div id="aiOut" class="ai-chat" style="margin-top:14px"></div>
+ <div class="sec-title">💬 Chiedi all'assistente</div>
+ <div id="aiOut" class="ai-chat" style="margin-top:6px"></div>
  <div class="chatbox">
-   <input id="aiText" placeholder="Scrivi un messaggio… (es. consigliami un giallo)" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <input id="aiText" placeholder="Scrivi un messaggio… (es. spiegami il finale senza spoiler)" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
    <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
