@@ -350,6 +350,14 @@ input[type=range]{accent-color:var(--coral)}
 
 /* ===== PLAN ===== */
 .plan-day{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+.plan-summary{display:flex;gap:10px}
+.rate-stars.pulse{animation:ratePulse 1.6s ease-in-out infinite}
+@keyframes ratePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.rate-stars span{transition:transform .1s}
+.rate-stars span:active{transform:scale(1.2)}
+.plan-stat{flex:1;text-align:center;background:var(--surface2);border:1px solid var(--line);border-radius:14px;padding:14px 8px}
+.plan-stat .ps-num{font-family:'Fraunces';font-size:24px;font-weight:600;color:var(--plum);line-height:1.1}
+.plan-stat .ps-lab{font-size:11px;color:var(--ink-soft);margin-top:5px;line-height:1.3}
 .plan-day:last-child{border:none}
 .plan-day .d{width:56px;text-align:center;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:8px 0}
 .plan-day .d b{display:block;font-family:'Fraunces';font-size:18px;color:var(--plum);line-height:1}
@@ -1444,28 +1452,25 @@ function genPlan(){
  const monthN=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
  const finishDate=new Date(today.getTime()+daysToFinish*86400000);
  const finishStr=finishDate.getDate()+' '+monthN[finishDate.getMonth()];
- let rows='';let acc=startPg;const show=Math.min(daysToFinish,7);
- for(let i=1;i<=show;i++){
-   const dt=new Date(today.getTime()+i*86400000);
-   acc=Math.min(totalPg,acc+perDay);
-   rows+=`<div class="plan-day"><div class="d"><b>${dt.getDate()}</b><small>${dayNames[dt.getDay()]}</small></div>
-     <div style="flex:1"><b style="font-size:14px">${perDay} pagine</b><div class="muted" style="font-size:12px">fino a pag. ${acc}</div></div>
-     <div class="bar" style="width:90px"><i style="width:${Math.round(acc/totalPg*100)}%"></i></div></div>`;
- }
+ const pctNow=Math.round((startPg/totalPg)*100);
  out.innerHTML=`<div class="card pad">
-   <div class="note" style="margin-bottom:14px;padding:10px 12px"><div style="font-size:12.5px">📅 Incontro di <b>${esc(club.name)}</b> il <b>${fmtNoteDate(meet.date)}</b> · tra ${days} giorni</div></div>
+   <div class="note" style="margin-bottom:16px;padding:10px 12px"><div style="font-size:12.5px">📅 Incontro di <b>${esc(club.name)}</b> il <b>${fmtNoteDate(meet.date)}</b> · tra ${days} ${days===1?'giorno':'giorni'}</div></div>
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
      <h3 style="font-size:16px">📖 "${esc(b.t)}"</h3>
      <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo alto'}</span>
    </div>
-   <div class="muted" style="font-size:13px;margin:8px 0 4px">Sei a pag. ${startPg} di ${totalPg} · restano <b>${remainingPg} pagine</b>.</div>
-   <div class="muted" style="font-size:13px;margin-bottom:14px">
-     ${autocalc
-       ? `Per arrivare in tempo leggi ~<b>${perDay} pagine al giorno</b>.`
-       : `A <b>${perDay} pagine al giorno</b> finisci intorno al <b>${finishStr}</b>.${onTrack?'':' L\'incontro è prima: alza il ritmo a ~'+needed+' pag/giorno per finire in tempo.'}`}
+   <div class="bar" style="margin:12px 0 6px;height:8px"><i style="width:${pctNow}%"></i></div>
+   <div class="muted" style="font-size:13px;margin-bottom:18px">Sei a pag. <b>${startPg}</b> di ${totalPg} · restano <b>${remainingPg} pagine</b>.</div>
+   <div class="plan-summary">
+     <div class="plan-stat"><div class="ps-num">${perDay}</div><div class="ps-lab">pagine<br>al giorno</div></div>
+     <div class="plan-stat"><div class="ps-num">${autocalc?days:daysToFinish}</div><div class="ps-lab">giorni<br>${autocalc?'all\'incontro':'per finire'}</div></div>
+     <div class="plan-stat"><div class="ps-num" style="font-size:17px">${autocalc?fmtNoteDate(meet.date):finishStr}</div><div class="ps-lab">${autocalc?'traguardo':'fine lettura'}</div></div>
    </div>
-   ${rows}
-   ${daysToFinish>7?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">…e così via per i restanti ${daysToFinish-7} giorni</div>`:''}
+   <div class="muted" style="font-size:13px;margin-top:16px;line-height:1.6">
+     ${autocalc
+       ? `Leggendo <b>${perDay} pagine al giorno</b> arrivi all'incontro con il libro finito. 📖`
+       : (onTrack?`A questo ritmo finisci intorno al <b>${finishStr}</b>, in tempo per l'incontro. 👍`:`A <b>${perDay} pagine al giorno</b> non arrivi in tempo: servono almeno <b>${needed} pagine al giorno</b>.`)}
+   </div>
  </div>`;
 }
 
@@ -1564,7 +1569,7 @@ function openBook(id){
       `})()}
     </div>
     <div class="field" style="margin-top:18px"><label>⭐ La tua valutazione</label>${b.status==='read'
-      ? `<div class="stars" style="font-size:28px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div>`
+      ? `${!b.rate?`<div class="muted" style="font-size:13px;margin-bottom:8px">Hai finito il libro 🎉 Che voto gli dai?</div>`:''}<div class="stars rate-stars${!b.rate?' pulse':''}" style="font-size:32px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div>`
       : `<div class="muted" style="font-size:13px;padding:2px 0">Potrai valutare il libro quando l'avrai finito. ${b.status==='reading'?'Continua così! 📖':''}</div>`}</div>
     <hr>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
@@ -1654,7 +1659,7 @@ function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(to
 function setPage(id,total,page){const b=book(id);if(!b)return;
  total=parseInt(total)||b.pg||0;page=Math.max(0,Math.min(total,parseInt(page)||0));
  const pct=total?Math.round((page/total)*100):0;
- if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
+ if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉 Lascia una recensione');openBook(id);return;}
  b.prog=pct;persistBook(id,{progress:pct});
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
  if(fill)fill.style.width=pct+'%';
@@ -1718,7 +1723,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v44 (fix ridondanze nome, testi neutri, audit)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v45 (piano riepilogo pulito, recensione a fine libro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2964,7 +2969,7 @@ function renderProfiloCloud(){
    <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${safeImgUrl(d.avatar)?`<img src="${esc(safeImgUrl(d.avatar))}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
    <div style="flex:1;min-width:200px">
      ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
-       ? `<h2 style="font-size:26px">@${esc(p.username)}</h2><div class="muted">Iscrizione dal ${yr}</div>`
+       ? `<h2 style="font-size:26px">${esc(p.name)}</h2><div class="muted">Iscrizione dal ${yr}</div>`
        : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
      <div class="chips" style="margin-top:10px">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
@@ -3809,7 +3814,7 @@ function startApp(target){
  const username=mode==='demo'?'':((profile&&profile.username)||'');
  // Evita di ripetere lo stesso testo due volte quando nome e username coincidono.
  const same=username&&name&&name.toLowerCase()===username.toLowerCase();
- $('#meName').textContent=same?('@'+username):name;
+ $('#meName').textContent=name;
  $('#meAv').innerHTML=avFill(name,myAvatar());
  $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(same?'Account cloud ☁️':(username?'@'+username:'Account cloud ☁️'));
  buildNav();go(target||'home');
