@@ -412,10 +412,12 @@ input[type=range]{accent-color:var(--coral)}
    (nel tema scuro, con sfondo neutro ereditato da .bell, risultava quasi invisibile). */
 .bell.mtog{background:var(--brand-solid);border-color:transparent;color:#fff}
 .bell.mtog:hover{filter:brightness(1.06);border-color:transparent}
+#sidebarScrim{position:fixed;inset:0;z-index:39;background:rgba(0,0,0,0);transition:background .28s;pointer-events:none}
+#sidebarScrim.show{background:rgba(0,0,0,.42);pointer-events:auto}
 .sidebar-close{display:none;background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:20px;padding:6px;margin-left:auto;align-items:center}
 
 @media(max-width:900px){
-  .sidebar{inset:0 auto 0 0;border-radius:0 24px 24px 0;transform:translateX(-105%);transition:.28s;
+  .sidebar{inset:0 auto 0 0;border-radius:0 24px 24px 0;transform:translateX(-105%);transition:.28s;z-index:40;
     padding-bottom:calc(20px + env(safe-area-inset-bottom));overflow-y:auto}
   .sidebar.show{transform:none}
   .main{margin-left:0}
@@ -1191,6 +1193,14 @@ function toggleSidebar(show){
  const open=typeof show==='boolean'?show:!sb.classList.contains('show');
  sb.classList.toggle('show',open);
  document.body.classList.toggle('sidebar-open',open);
+ // Scrim cliccabile: toccando fuori dal menu (sull'area scura) si chiude.
+ let scrim=document.getElementById('sidebarScrim');
+ if(open){
+   if(!scrim){scrim=document.createElement('div');scrim.id='sidebarScrim';scrim.onclick=()=>toggleSidebar(false);document.body.appendChild(scrim);}
+   requestAnimationFrame(()=>scrim.classList.add('show'));
+ }else if(scrim){
+   scrim.classList.remove('show');
+ }
 }
 function go(id){
  current=id;const p=pages.find(x=>x.id===id);
