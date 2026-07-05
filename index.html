@@ -1674,7 +1674,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v40 (assistente per discussione incontri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v41 (assistente: libro club vs personale)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2579,25 +2579,32 @@ function paintDiary(c){
 function renderAiCloud(){
  const nm=((profile&&profile.name)||'Lettrice').split(' ')[0];
  const reading=books.find(b=>b.status==='reading');
- const club=myClubs[0];
- // libro su cui verte la discussione: quello del club (se presente), altrimenti quello in lettura
- const discBook=(club&&club.current_title)||(reading&&reading.t)||'';
+ // Libro del CLUB con una lettura in corso (è quello di cui si discute agli incontri).
+ const clubBook=myClubs.find(c=>c.current_title);
+ const clubTitle=clubBook?clubBook.current_title:'';
+ // Libro personale in lettura (fallback: strumenti utili anche fuori da un club).
+ const readTitle=reading?reading.t:'';
+ // Su cosa lavorano gli strumenti, e come lo presentiamo (club vs lettura personale).
+ const discBook=clubTitle||readTitle;
+ const inClub=!!clubTitle;
  const nextMeeting=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <div style="font-size:32px">🤖</div>
    <div style="flex:1">
      <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler. ${discBook?('Libro in discussione: <b>'+esc(discBook)+'</b>.'):'Scegli un libro nel club o mettine uno in lettura per iniziare.'}</p>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler. ${inClub?('Il club sta leggendo <b>'+esc(clubTitle)+'</b>.'):(readTitle?('Stai leggendo <b>'+esc(readTitle)+'</b>.'):'Scegli un libro nel club o mettine uno in lettura per iniziare.')}</p>
    </div>
  </div>
 
- <div class="sec-title">🎙️ Prepara il prossimo incontro</div>
+ <div class="sec-title">🎙️ ${inClub?'Prepara il prossimo incontro':'Spunti di lettura'}</div>
  <div class="card pad" style="margin-bottom:18px">
    <p style="font-size:13.5px;line-height:1.6;margin-bottom:${discBook?'14px':'4px'}">
      ${discBook
-       ? `Genero spunti pronti da usare per discutere <b>${esc(discBook)}</b>${nextMeeting?(' all\'incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}. Scegli cosa ti serve:`
-       : `Quando il club ha un libro in corso, qui trovi domande e spunti pronti per l'incontro. Intanto puoi usarli sul libro che stai leggendo.`}
+       ? (inClub
+          ? `Genero spunti pronti da usare per discutere <b>${esc(clubTitle)}</b> nel club${nextMeeting?(' all\'incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}. Scegli cosa ti serve:`
+          : `Non c'è ancora un libro in corso in un club, ma posso prepararti spunti su <b>${esc(readTitle)}</b> che stai leggendo — utili se vorrai proporlo o discuterne:`)
+       : `Quando un tuo club avvia la lettura di un libro, qui trovi domande e spunti pronti per l'incontro. In alternativa, metti un libro "in lettura" nella Libreria.`}
    </p>
    ${discBook?`<div class="suggest">
      <button onclick="aiDiscuss('domande',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">💬 10 domande per l'incontro</button>
