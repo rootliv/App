@@ -214,6 +214,8 @@ input[type=range]{accent-color:var(--coral)}
 .book{cursor:pointer;transition:.2s}
 .book{position:relative}
 .ob-step{display:flex;gap:13px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface2)}
+.card-prog{margin-top:8px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.card-prog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--coral))}
 .bookmark-track{position:relative;height:14px;border-radius:8px;background:var(--surface2);border:1px solid var(--line);cursor:pointer;overflow:visible;margin-top:6px}
 .bm-page-input,#bmTotal{width:78px;text-align:center;padding:9px 8px;font-size:15px;font-weight:700;
   border:1.5px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);outline:none;
@@ -226,7 +228,8 @@ input[type=range]{accent-color:var(--coral)}
 .booknote-actions{display:flex;gap:6px;margin-top:6px}
 .booknote .note-when{display:block;font-size:11px;color:var(--ink-faint);margin-top:3px}
 .bookmark-fill{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:linear-gradient(90deg,var(--gold),var(--coral));transition:width .35s}
-.bookmark-tag{position:absolute;top:-11px;transform:translateX(-50%);font-size:22px;transition:left .35s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));pointer-events:none;line-height:1}
+.bookmark-tag{position:absolute;top:-11px;transform:translateX(-50%);font-size:22px;transition:left .35s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));line-height:1;cursor:grab}
+.bookmark-track:active .bookmark-tag{cursor:grabbing}
 .ob-step .ob-ic{font-size:24px;flex:none;width:30px;text-align:center}
 .ob-step b{font-size:13.5px;display:block;margin-bottom:2px}
 .ai-x{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;border-radius:50%;
@@ -307,9 +310,10 @@ input[type=range]{accent-color:var(--coral)}
    colpo d'occhio dai gruppi "graditi" (verdi) senza colorare tutta la pagina. */
 .chipopt.no.on{background:#fbe3df;color:#b03a2e;border-color:#e3a8a3}
 .chipopt.no:hover{border-color:#e3a8a3;color:#b03a2e}
-.pref-group{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;background:var(--surface2);overflow:hidden}
-.pref-group.no{background:#fdf1ef;border-color:#f0d5d0}
-[data-theme="dark"] .pref-group.no{background:#2a1b19;border-color:#4a2f2b}
+.pref-group{border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px;background:var(--surface2);overflow:hidden;border-left:4px solid var(--sage)}
+.pref-group.no{background:#fdf1ef;border-color:#f0d5d0;border-left-color:#d9736a}
+[data-theme="dark"] .pref-group{background:linear-gradient(180deg,rgba(94,155,110,.10),transparent 60%),var(--surface2);border-left-color:#5f9b6e}
+[data-theme="dark"] .pref-group.no{background:linear-gradient(180deg,rgba(200,90,80,.13),transparent 60%),var(--surface2);border-color:#4a2f2b;border-left-color:#b5544c}
 [data-theme="dark"] .chipopt.no.on{background:#4a2320;color:#f0a89e;border-color:#7a3a34}
 .pref-group h4{font-size:13.5px;margin:0 0 3px}
 .pref-group .pref-hint{font-size:11.5px;color:var(--ink-faint);margin-bottom:11px;display:block}
@@ -1140,7 +1144,7 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
  return`<div class="book" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
    <div class="ledge"></div>
-   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="bar" style="margin-top:7px;height:6px"><i style="width:${b.prog||0}%"></i></div><div class="muted" style="font-size:10.5px;margin-top:3px">${b.prog||0}%</div>`:''}</div>
+   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="card-prog" title="${b.prog||0}% letto"><i style="width:${b.prog||0}%"></i></div>`:''}</div>
  </div>`}
 
 /* ============ NAV ============ */
@@ -1516,6 +1520,7 @@ function openBook(id){
     <div class="muted" style="font-size:11.5px;margin-top:12px">Valutazione e stato si salvano automaticamente.</div>
   </div>`;
  openOverlay();
+ if(b.status==='reading'&&b.pg)setTimeout(()=>bmDragSetup(b.id,b.pg),50);
  enrichBook(b).then(ch=>{if(ch&&!noteEditing&&$('#overlay').classList.contains('open'))openBook(id)});
 }
 function removeBook(id){
@@ -1605,6 +1610,31 @@ function bmClick(ev,id,total){
  const x=Math.max(0,Math.min(1,(ev.clientX-rect.left)/rect.width));
  setPage(id,total,Math.round(total*x));
 }
+/* Trascinamento del segnalibro: aggiorna la pagina live mentre trascini, salva al rilascio. */
+let _bmDrag=null;
+function bmDragSetup(id,total){
+ const track=$('#bmTrack');if(!track)return;
+ const posFromX=(clientX)=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(clientX-r.left)/r.width));};
+ const moveTo=(frac,save)=>{
+   const page=Math.round(total*frac);const pct=Math.round(frac*100);
+   const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
+   if(fill){fill.style.transition='none';fill.style.width=pct+'%';}
+   if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}
+   if(inp)inp.value=page;
+   if(save)setPage(id,total,page);
+ };
+ const start=(clientX)=>{_bmDrag={id,total};moveTo(posFromX(clientX),false);};
+ const move=(clientX)=>{if(!_bmDrag)return;moveTo(posFromX(clientX),false);};
+ const end=(clientX)=>{if(!_bmDrag)return;moveTo(posFromX(clientX),true);_bmDrag=null;
+   const fill=$('#bmFill'),tag=$('#bmTag');if(fill)fill.style.transition='';if(tag)tag.style.transition='';};
+ track.onmousedown=e=>{e.preventDefault();start(e.clientX);};
+ window.addEventListener('mousemove',_bmMove=e=>move(e.clientX));
+ window.addEventListener('mouseup',_bmUp=e=>end(e.clientX));
+ track.ontouchstart=e=>{start(e.touches[0].clientX);};
+ track.ontouchmove=e=>{move(e.touches[0].clientX);e.preventDefault();};
+ track.ontouchend=e=>{end((e.changedTouches[0]||{}).clientX||0);};
+}
+let _bmMove=null,_bmUp=null;
 function openAi(id){
  const s=aiSuggest.find(x=>x.id===id);
  $('#modal').innerHTML=`
@@ -1631,7 +1661,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v38 (progresso lettura, onboarding, dark mode)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v39 (segnalibro trascinabile, profilo, dark)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2913,10 +2943,10 @@ function renderProfiloCloud(){
  </div>`;
 }
 const PROFILE_SUGGEST={
- genres:['Romanzo','Giallo','Thriller','Fantasy','Fantascienza','Storico','Rosa','Horror','Avventura','Classici','Saggistica','Biografia','Poesia','Young Adult','Realismo magico','Distopia','Memoir','Romanzo di formazione','Umoristico','Noir'],
- authors:['Elena Ferrante','Italo Calvino','Umberto Eco','Dino Buzzati','Isabel Allende','Gabriel García Márquez','Haruki Murakami','Jane Austen','Stephen King','Agatha Christie','J.R.R. Tolkien','Fëdor Dostoevskij','Virginia Woolf','George Orwell','Margaret Atwood','Alessandro Baricco','Niccolò Ammaniti','Banana Yoshimoto'],
- loved:["Cent'anni di solitudine","Il nome della rosa","Orgoglio e pregiudizio","1984","Il piccolo principe","Norwegian Wood","L'amica geniale","Il Signore degli Anelli","Delitto e castigo","La casa degli spiriti","Il deserto dei Tartari","Se questo è un uomo"],
- disliked:['Horror estremo','Splatter','Manualistica tecnica','Romance erotico','Saggistica accademica','Politica','Self-help','Fantasy molto lungo']
+ genres:['Romanzo','Giallo','Thriller','Fantasy','Fantascienza','Storico','Horror','Classici','Poesia','Realismo magico','Distopia','Noir'],
+ authors:['Elena Ferrante','Italo Calvino','Umberto Eco','Isabel Allende','Haruki Murakami','Jane Austen','Stephen King','J.R.R. Tolkien','Fëdor Dostoevskij','George Orwell'],
+ loved:["Cent'anni di solitudine","Il nome della rosa","1984","Il piccolo principe","L'amica geniale","Il Signore degli Anelli","Delitto e castigo"],
+ disliked:['Horror estremo','Splatter','Romance erotico','Saggistica accademica','Self-help','Politica']
 };
 let editSel={genres:[],authors:[],loved:[],disliked:[]};
 const GENRE_POOL=['Romanzo','Romanzo storico','Romanzo di formazione','Giallo','Thriller','Noir','Poliziesco','Fantasy','Fantascienza','Distopia','Horror','Gotico','Rosa','Romance','Avventura','Classici','Letteratura contemporanea','Saggistica','Biografia','Autobiografia','Memoir','Poesia','Teatro','Young Adult','Per ragazzi','Realismo magico','Umoristico','Satira','Graphic novel','Fumetto','Epica','Mistero','Spionaggio','Western','Cyberpunk','Steampunk','Urban fantasy','Racconti','Filosofia','Storia','Viaggi','Cucina','Self-help','Psicologia','Religione','Politica','Economia','Scienza','True crime','Romanzo psicologico'];
@@ -2970,7 +3000,6 @@ function openEditProfile(){
  $('#modal').innerHTML=`
   <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <div class="field"><label>Nome</label><input id="epName" value="${esc((profile&&profile.name))}"></div>
     <div class="field"><label>Username</label><input id="epUser" value="${esc((profile&&profile.username)||'')}" autocapitalize="off" autocomplete="off" placeholder="es. alice_libri" oninput="checkUsername()"><small id="epUserHint" style="display:block;margin-top:5px;font-size:12px" class="muted">3-20 caratteri: lettere, numeri o _</small></div>
     <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
     ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
@@ -3004,9 +3033,9 @@ function checkUsername(){
  },450);
 }
 async function saveProfile(){
- const name=$('#epName').value.trim()||(profile&&profile.name)||'Lettore';
  const uInp=$('#epUser');
  const uname=uInp?uInp.value.trim().replace(/^@/,''):((profile&&profile.username)||'');
+ const name=uname||(profile&&profile.name)||'Lettore';
  const currentU=((profile&&profile.username)||'');
  // Valida lo username solo se è cambiato
  if(uname!==currentU){
@@ -3481,7 +3510,7 @@ function renderNotifCloud(){
  </div>`;
 }
 function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
-function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}}
+function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 /* ============ SUPABASE (account cloud) ============ */
