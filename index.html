@@ -1011,7 +1011,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     <div class="side-foot">
       <div onclick="go('profilo')" title="Vai al profilo" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
         <div class="av" id="meAv">EM</div>
-        <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Lettrice · 4 club</small></div>
+        <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Account</small></div>
       </div>
       <button id="themeBtn" onclick="toggleTheme()" title="Tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;padding:4px">🌙</button>
       <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:17px;padding:4px">⎋</button>
@@ -1158,7 +1158,7 @@ const pages=[
  {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
  {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
  {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
- {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva pronta all\'incontro',grp:'Strumenti'},
+ {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Strumenti'},
  {id:'mappa',ic:'🗺️',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Strumenti'},
  {id:'notifiche',ic:'🔔',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Strumenti'},
 ];
@@ -1378,76 +1378,73 @@ function localAssistant(q,ctx){
 }
 
 renders.calendario=()=>{
- const planBooks=books.filter(b=>b.status!=='read');
- if(!planBooks.length){
-   view.innerHTML=`<div class="card pad" style="text-align:center;padding:48px 20px">
+ // Il piano di lettura ha senso SOLO per i libri di un club con un incontro già fissato:
+ // l'obiettivo è "arrivare pronta a quell'incontro". Niente date inventate.
+ const items=planItems();
+ if(!items.length){
+   view.innerHTML=`<div class="card pad" style="text-align:center;padding:46px 22px">
      <div style="font-size:44px">🗓️</div>
-     <h2 style="font-size:21px;margin:10px 0 6px">Nessun libro da pianificare</h2>
-     <div class="muted" style="max-width:420px;margin:0 auto 18px">Aggiungi un libro "in lettura" o "da leggere" e qui creeremo un piano per arrivare pronta all'incontro.</div>
-     <button class="btn" onclick="go('libreria')">📚 Vai alla libreria</button>
-   </div>`;return;}
- // preseleziona il libro in lettura, se c'è
- const reading=planBooks.find(b=>b.status==='reading');
- const defId=(reading||planBooks[0]).id;
- // data di default: primo incontro futuro legato al libro del club, altrimenti fra 14 giorni
- const meetFor=(title)=>{const c=myClubs.find(x=>normKey(x.current_title||'')===normKey(title||''));if(!c)return null;const ms=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));return ms[0]||null;};
- const defBook=book(defId);
- const defMeet=meetFor(defBook.t);
- const defDate=defMeet?String(defMeet.date).slice(0,10):isoInDays(14);
+     <h2 style="font-size:21px;margin:10px 0 8px">Nessun incontro da preparare</h2>
+     <div class="muted" style="max-width:440px;margin:0 auto 20px;line-height:1.6">Il piano di lettura ti aiuta ad arrivare in tempo agli incontri del club. Servono due cose: un club che stia leggendo un libro, e un incontro fissato in calendario per quel libro.</div>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+       <button class="btn" onclick="go('club')">👥 Vai ai club</button>
+       <button class="btn ghost" onclick="go('incontri')">📅 Fissa un incontro</button>
+     </div>
+   </div>`;return;
+ }
+ const defId=items[0].book.id;
  view.innerHTML=`
  <div class="card pad" style="margin-bottom:16px">
-   <h3 style="font-size:16px;margin-bottom:16px">⚙️ Il tuo piano di lettura</h3>
-   <div class="field"><label>Libro</label><select id="cBook" onchange="planBookChanged()">${planBooks.map(b=>`<option value="${b.id}" ${b.id===defId?'selected':''}>${esc(b.t)}</option>`).join('')}</select></div>
-   <div id="meetInfo"></div>
-   <div class="field"><label>Data dell'incontro / obiettivo</label><input id="cDate" type="date" value="${defDate}"></div>
-   <div class="field"><label>Pagine al giorno <span class="muted" style="font-weight:400">(lascia vuoto e lo calcolo io)</span></label><input id="cAmt" type="number" min="1" placeholder="calcolo automatico" value="${(profile&&profile.data&&profile.data.pace)||''}"></div>
-   <button class="btn" style="width:100%;justify-content:center" onclick="genPlan()">🗓️ Genera il mio piano</button>
+   <h3 style="font-size:16px;margin-bottom:6px">🗓️ Prepara la lettura per l'incontro</h3>
+   <div class="muted" style="font-size:12.5px;margin-bottom:16px">Ti dico quanto leggere al giorno per finire in tempo — oppure imposti tu il ritmo e ti dico quando finisci.</div>
+   <div class="field"><label>Incontro</label><select id="cItem" onchange="genPlan()">${items.map((it,i)=>`<option value="${i}">${esc(it.book.t)} · ${esc(it.club.name)} · ${fmtNoteDate(it.meet.date)}</option>`).join('')}</select></div>
+   <div class="field"><label>Pagine al giorno <span class="muted" style="font-weight:400">(vuoto = lo calcolo io)</span></label><input id="cAmt" type="number" min="1" placeholder="calcolo automatico" oninput="genPlan()" value=""></div>
  </div>
  <div id="planOut"></div>`;
- planBookChanged();
+ genPlan();
 };
-function planBookChanged(){
- const b=book(+$('#cBook').value);if(!b)return;
- const c=myClubs.find(x=>normKey(x.current_title||'')===normKey(b.t||''));
- const ms=c?(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date))):[];
- const meet=ms[0]||null;
- const info=$('#meetInfo');
- if(info){
-   info.innerHTML=meet
-     ? `<div class="note" style="margin-bottom:12px;padding:10px 12px"><div style="font-size:12.5px">📅 <b>${esc(c.name)}</b> ha un incontro il <b>${fmtNoteDate(meet.date)}</b> su questo libro: ho impostato quella data.</div></div>`
-     : (c?`<div class="muted" style="font-size:12px;margin-bottom:12px">Questo è il libro del club <b>${esc(c.name)}</b>, ma non c'è un incontro in programma: imposta tu una data obiettivo.</div>`:'');
- }
- if(meet){const d=$('#cDate');if(d)d.value=String(meet.date).slice(0,10);}
+// Libri di un mio club che hanno un incontro futuro fissato, con l'incontro più vicino.
+function planItems(){
+ const out=[];
+ (myClubs||[]).forEach(c=>{
+   if(!c.current_title)return;
+   const b=books.find(x=>normKey(x.t)===normKey(c.current_title));
+   if(!b||b.status==='read')return;
+   const ms=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+   if(!ms.length)return;
+   out.push({club:c,book:b,meet:ms[0]});
+ });
+ // ordina per incontro più imminente
+ return out.sort((a,b)=>String(a.meet.date).localeCompare(String(b.meet.date)));
 }
 function genPlan(){
- const b=book(+$('#cBook').value);if(!b)return;
- // punto di partenza: da dove sei col segnalibro (prog%). Pagine totali dal libro.
+ const items=planItems();const idx=Math.max(0,Math.min(items.length-1,+(($('#cItem')||{}).value||0)));
+ const it=items[idx];if(!it){return;}
+ const b=it.book, meet=it.meet, club=it.club;
+ const out=$('#planOut');if(!out)return;
  const totalPg=b.pg||0;
+ if(!totalPg){
+   out.innerHTML=`<div class="card pad"><div class="srch-empty">Per "${esc(b.t)}" non conosco il numero di pagine. Aprilo dalla libreria e impostalo con il segnalibro, poi torna qui. 📖</div></div>`;return;
+ }
  const startPg=Math.round(totalPg*((b.prog||0)/100));
  const remainingPg=Math.max(0,totalPg-startPg);
- const meet=new Date($('#cDate').value+'T00:00:00');
  const today=new Date(todayStr()+'T00:00:00');
- const days=Math.max(1,Math.round((meet-today)/86400000));
- if(!totalPg){
-   $('#planOut').innerHTML=`<div class="card pad"><div class="srch-empty">Per questo libro non conosco il numero di pagine. Aprilo dalla libreria e imposta il totale pagine (col segnalibro), poi torna qui. 📖</div></div>`;
-   return;
- }
+ const meetDate=new Date(String(meet.date).slice(0,10)+'T00:00:00');
+ const days=Math.max(1,Math.round((meetDate-today)/86400000));
  if(remainingPg<=0){
-   $('#planOut').innerHTML=`<div class="card pad" style="text-align:center;padding:36px 16px"><div style="font-size:40px">🎉</div><div style="margin-top:10px"><b>Hai già finito "${esc(b.t)}"!</b></div><div class="muted" style="font-size:13px;margin-top:6px">Non serve un piano. Segnalo come letto se non l'hai già fatto.</div></div>`;
-   return;
+   out.innerHTML=`<div class="card pad" style="text-align:center;padding:34px 16px"><div style="font-size:40px">🎉</div><div style="margin-top:10px"><b>Hai già finito "${esc(b.t)}"</b></div><div class="muted" style="font-size:13px;margin-top:6px">Sei in pari con la lettura del ${fmtNoteDate(meet.date)}.</div></div>`;return;
  }
- // pagine/giorno: se l'utente le imposta le uso, altrimenti calcolo quelle necessarie per l'incontro
- const amtInput=($('#cAmt').value||'').trim();
  const needed=Math.ceil(remainingPg/days);
+ const amtInput=(($('#cAmt')||{}).value||'').trim();
  const perDay=amtInput?Math.max(1,parseInt(amtInput)):needed;
  const autocalc=!amtInput;
  const daysToFinish=Math.ceil(remainingPg/perDay);
- const finishDate=new Date(today.getTime()+daysToFinish*86400000);
  const onTrack=perDay>=needed;
  const dayNames=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
  const monthN=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
- let rows='';let acc=startPg;
- const show=Math.min(daysToFinish,7);
+ const finishDate=new Date(today.getTime()+daysToFinish*86400000);
+ const finishStr=finishDate.getDate()+' '+monthN[finishDate.getMonth()];
+ let rows='';let acc=startPg;const show=Math.min(daysToFinish,7);
  for(let i=1;i<=show;i++){
    const dt=new Date(today.getTime()+i*86400000);
    acc=Math.min(totalPg,acc+perDay);
@@ -1455,17 +1452,17 @@ function genPlan(){
      <div style="flex:1"><b style="font-size:14px">${perDay} pagine</b><div class="muted" style="font-size:12px">fino a pag. ${acc}</div></div>
      <div class="bar" style="width:90px"><i style="width:${Math.round(acc/totalPg*100)}%"></i></div></div>`;
  }
- const finishStr=finishDate.getDate()+' '+monthN[finishDate.getMonth()];
- $('#planOut').innerHTML=`<div class="card pad">
+ out.innerHTML=`<div class="card pad">
+   <div class="note" style="margin-bottom:14px;padding:10px 12px"><div style="font-size:12.5px">📅 Incontro di <b>${esc(club.name)}</b> il <b>${fmtNoteDate(meet.date)}</b> · tra ${days} giorni</div></div>
    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-     <h3 style="font-size:16px">📖 Piano per "${esc(b.t)}"</h3>
+     <h3 style="font-size:16px">📖 "${esc(b.t)}"</h3>
      <span class="pill ${onTrack?'green':'gold'}">${onTrack?'✓ In linea':'⚠️ Ritmo alto'}</span>
    </div>
    <div class="muted" style="font-size:13px;margin:8px 0 4px">Sei a pag. ${startPg} di ${totalPg} · restano <b>${remainingPg} pagine</b>.</div>
    <div class="muted" style="font-size:13px;margin-bottom:14px">
      ${autocalc
-       ? `Per arrivare pronta il <b>${fmtNoteDate($('#cDate').value)}</b> (${days} giorni) leggi ~<b>${perDay} pagine al giorno</b>.`
-       : `A <b>${perDay} pagine al giorno</b> finisci intorno al <b>${finishStr}</b> (${daysToFinish} giorni).${onTrack?'':' L\'incontro è prima: valuta di alzare il ritmo a ~'+needed+' pag/giorno.'}`}
+       ? `Per arrivare in tempo leggi ~<b>${perDay} pagine al giorno</b>.`
+       : `A <b>${perDay} pagine al giorno</b> finisci intorno al <b>${finishStr}</b>.${onTrack?'':' L\'incontro è prima: alza il ritmo a ~'+needed+' pag/giorno per finire in tempo.'}`}
    </div>
    ${rows}
    ${daysToFinish>7?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">…e così via per i restanti ${daysToFinish-7} giorni</div>`:''}
@@ -1526,7 +1523,6 @@ function openBook(id){
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
-      ${(b.rate&&b.status==='read')?`<div class="stars" style="font-size:18px">${stars(b.rate)}</div>`:''}
       ${b.status==='reading'?`<div class="bookmark-wrap" style="margin-top:14px">
         ${b.pg?`
         <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
@@ -1658,9 +1654,8 @@ function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(to
 function setPage(id,total,page){const b=book(id);if(!b)return;
  total=parseInt(total)||b.pg||0;page=Math.max(0,Math.min(total,parseInt(page)||0));
  const pct=total?Math.round((page/total)*100):0;
- if(page>=total&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
+ if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');closeModal();go(current);return;}
  b.prog=pct;persistBook(id,{progress:pct});
- // aggiorna la UI del segnalibro senza ricaricare tutto
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
  if(fill)fill.style.width=pct+'%';
  if(tag)tag.style.left=Math.min(100,pct)+'%';
@@ -1678,7 +1673,7 @@ function bmDragSetup(id,total){
  const track=$('#bmTrack');if(!track)return;
  const posFromX=(clientX)=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(clientX-r.left)/r.width));};
  const moveTo=(frac,save)=>{
-   const page=Math.round(total*frac);const pct=Math.round(frac*100);
+   const page=frac>=0.995?total:Math.round(total*frac);const pct=Math.round(frac*100);
    const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
    if(fill){fill.style.transition='none';fill.style.width=pct+'%';}
    if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}
@@ -1723,7 +1718,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v43 (piano lettura intelligente, refresh auto, menu)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v44 (fix ridondanze nome, testi neutri, audit)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2032,7 +2027,7 @@ function pendingItems(){
  const items=[];
  myClubs.forEach(c=>{
    if(c.selection_mode==='voting')items.push({ic:'🗳️',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id});
-   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' sei stata sorteggiata: scegli il libro.',go:'club',cid:c.id});
+   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' è il tuo turno: scegli il libro.',go:'club',cid:c.id});
  });
  upcomingMeetings().slice(0,2).forEach(m=>{const dd=daysTo(m.date);items.push({ic:'📅',bg:'#e1edf6',t:'Incontro '+(dd===0?'oggi':'tra '+dd+'g'),p:esc(m.title||'Incontro')+' · '+esc(clubName(m.club_id)),go:'incontri'})});
  myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'✍️',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario'}));
@@ -2627,7 +2622,7 @@ function paintDiary(c){
 }
 
 function renderAiCloud(){
- const nm=((profile&&profile.name)||'Lettrice').split(' ')[0];
+ const nm=((profile&&profile.name)||'Lettore').split(' ')[0];
  const reading=books.find(b=>b.status==='reading');
  // Libro del CLUB con una lettura in corso (è quello di cui si discute agli incontri).
  const clubBook=myClubs.find(c=>c.current_title);
@@ -2968,8 +2963,9 @@ function renderProfiloCloud(){
  <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
    <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${safeImgUrl(d.avatar)?`<img src="${esc(safeImgUrl(d.avatar))}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
    <div style="flex:1;min-width:200px">
-     <h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2>
-     <div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscritta dal ${yr}</div>
+     ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
+       ? `<h2 style="font-size:26px">@${esc(p.username)}</h2><div class="muted">Iscrizione dal ${yr}</div>`
+       : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
      <div class="chips" style="margin-top:10px">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
        ${goal?`<span class="pill green">🎯 Obiettivo ${goal} libri</span>`:''}
@@ -3410,7 +3406,7 @@ function renderHomeCloud(){
  const reading=books.filter(b=>b.status==='reading');
  const up=upcomingMeetings();const next=up[0];
  const items=pendingItems();
- const nm=(profile&&profile.name)||'Lettrice';
+ const nm=(profile&&profile.name)||'Lettore';
  view.innerHTML=`
  <div class="hero">
    <div class="eyebrow">Il tuo spazio lettura ☁️</div>
@@ -3809,11 +3805,13 @@ function refreshView(){
 function startApp(target){
  $('#auth').style.display='none';
  $('#appRoot').style.display='flex';
- const name=mode==='demo'?'Ospite Demo':((profile&&profile.name)||'Lettrice');
+ const name=mode==='demo'?'Ospite Demo':((profile&&profile.name)||'Lettore');
  const username=mode==='demo'?'':((profile&&profile.username)||'');
- $('#meName').textContent=name;
+ // Evita di ripetere lo stesso testo due volte quando nome e username coincidono.
+ const same=username&&name&&name.toLowerCase()===username.toLowerCase();
+ $('#meName').textContent=same?('@'+username):name;
  $('#meAv').innerHTML=avFill(name,myAvatar());
- $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(username?'@'+username:'Account cloud ☁️');
+ $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(same?'Account cloud ☁️':(username?'@'+username:'Account cloud ☁️'));
  buildNav();go(target||'home');
  enrichCovers();
  maybeShowOnboarding();
@@ -3841,7 +3839,7 @@ function maybeShowOnboarding(){
  if((books&&books.length)|| (myClubs&&myClubs.length))return;
  const first=((profile&&profile.name)||'').split(' ')[0]||'';
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>👋 Benvenuta${first?(' '+esc(first)):''}!</b></div>
+  <div class="modal-top"><b>👋 Benvenuto${first?(' '+esc(first)):''}!</b></div>
   <div class="modal-body">
     <p style="font-size:14px;line-height:1.6;margin-bottom:18px">Pàgina è il tuo spazio per leggere, tenere traccia dei libri e condividere lo stesso libro con altri. Bastano tre mosse per iniziare 👇</p>
     <div class="ob-step"><div class="ob-ic">📚</div><div><b>Aggiungi il tuo primo libro</b><div class="muted" style="font-size:12.5px">Cerca un titolo: copertina, trama e dettagli arrivano da soli.</div></div></div>
@@ -3871,7 +3869,7 @@ function obGo(what){
    }catch(e){}
  }
  if(passwordRecoveryActive)return;
- if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui sei stata invitata.';const tt=$('#authTitle');if(tt)tt.textContent='Sei stata invitata in un club 📖';}
+ if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui hai ricevuto un invito.';const tt=$('#authTitle');if(tt)tt.textContent='Hai un invito a un club 📖';}
 })();
 
 /* ---- PWA: registra il service worker (installabilità + ripiego offline).
