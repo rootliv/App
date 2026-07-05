@@ -1152,7 +1152,7 @@ const pages=[
  {id:'home',ic:'🏠',label:'Home',title:'Home',sub:'Il tuo angolo di lettura',grp:'Tu'},
  {id:'profilo',ic:'👤',label:'Profilo',title:'Profilo lettore',sub:'Chi sei come lettrice',grp:'Tu'},
  {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
- {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'4 club · libri condivisi',grp:'Insieme'},
+ {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
  {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
  {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
  {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
@@ -1194,7 +1194,11 @@ function toggleSidebar(show){
 }
 function go(id){
  current=id;const p=pages.find(x=>x.id===id);
- $('#pageTitle').textContent=p.title;$('#pageSub').textContent=p.sub;
+ $('#pageTitle').textContent=p.title;
+ // Sottotitolo dinamico per i club (il valore statico era un residuo dei dati demo).
+ let sub=p.sub;
+ if(id==='club'){const n=(myClubs&&myClubs.length)||0;sub=n?(n+' '+(n===1?'club':'club')+' · libri condivisi'):'Crea o unisciti a un club';}
+ $('#pageSub').textContent=sub;
  document.querySelectorAll('#nav button,#botnav button').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
  view.classList.remove('fade');void view.offsetWidth;view.classList.add('fade');
  renders[id]();
@@ -1674,7 +1678,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v41 (assistente: libro club vs personale)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v42 (sottotitolo club dinamico)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
