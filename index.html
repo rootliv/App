@@ -1031,7 +1031,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     <div class="side-foot">
       <div onclick="go('profilo')" title="Vai al profilo" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
         <div class="av" id="meAv">EM</div>
-        <div style="flex:1;min-width:0"><b id="meName">Elena Marchetti</b><small id="meSub">Account</small></div>
+        <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
       <button id="themeBtn" onclick="toggleTheme()" title="Tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;padding:4px">🌙</button>
       <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:17px;padding:4px">⎋</button>
@@ -1682,7 +1682,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v54 (foto club, descrizione, kit incontro, conferma metodo)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v55 (AI non disponibile, modale descrizione club, placeholder neutro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2094,16 +2094,24 @@ function changeClubImage(clubId){
  const i=document.createElement('input');i.type='file';i.accept='image/*';
  i.onchange=()=>{const f=i.files&&i.files[0];if(f)openAvatarEditor(f)};i.click();
 }
-async function editClubDesc(clubId){
+function editClubDesc(clubId){
  const c=myClubs.find(x=>x.id===clubId)||{};
- const val=prompt('Descrizione del club:',c.description||'');
- if(val===null)return;
- const desc=val.trim();
- if(c)c.description=desc;
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>✏️ Descrizione del club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="field"><label>Descrizione</label><textarea id="clubDescTa" rows="4" placeholder="Una breve descrizione del club…">${esc(c.description||'')}</textarea></div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveClubDesc(${clubId})">💾 Salva</button>
+  </div>`;
+ openOverlay();
+}
+async function saveClubDesc(clubId){
+ const ta=$('#clubDescTa');if(!ta)return;
+ const desc=(ta.value||'').trim();
+ const c=myClubs.find(x=>x.id===clubId);if(c)c.description=desc;
  try{const {error}=await supa.from('clubs').update({description:desc}).eq('id',clubId);
    if(error){alert('Non riesco a salvare: '+error.message);return;}}
  catch(e){alert('Errore: '+e.message);return;}
- renderClubCloud();
+ closeModal();renderClubCloud();
 }
 function _avCleanup(){
  try{window.removeEventListener('mousemove',_avMove)}catch(e){}
@@ -2766,13 +2774,14 @@ Regole: proponi libri NUOVI, reali ed esistenti, affini ai gusti; VARIA molto gl
 Rispondi SOLO con JSON valido: array di 6 oggetti [{"titolo":"...","autore":"...","perche":"..."}]. Nessun altro testo.`;
    try{
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:prompt}});
+     if(error){aiUnavailable=true;}
      if(!error && data && data.answer){
        const m=data.answer.match(/\[[\s\S]*\]/);
        if(m){const arr=JSON.parse(m[0]);
          if(Array.isArray(arr)&&arr.length)recs=arr.filter(x=>x&&x.titolo).slice(0,8);
        }
      }
-   }catch(e){}
+   }catch(e){aiUnavailable=true;}
  }
  if(!recs||!recs.length){return loadAiRecsFallback();}
 
@@ -2898,7 +2907,8 @@ async function loadAiRecsFallback(){
  if(!recs.length){box.innerHTML=`<div class="srch-empty">Non riesco a trovare consigli in questo momento (forse sei offline o l'archivio libri non risponde). Riprova tra poco.</div>`;return}
  const list=recs;
  searchResults=list;
- box.innerHTML=`<div class="shelf">${list.map((s,i)=>`
+ const note=aiUnavailable?`<div class="muted" style="font-size:12px;margin-bottom:12px;padding:9px 12px;background:var(--gold-soft);border-radius:10px">ℹ️ Consigli AI non disponibili al momento: ecco suggerimenti in base ai tuoi autori e generi.</div>`:'';
+ box.innerHTML=note+`<div class="shelf">${list.map((s,i)=>`
    <div class="book">
      ${coverEl(i,s.t,s.a,'✨',s.coverUrl)}
      <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
@@ -2907,6 +2917,7 @@ async function loadAiRecsFallback(){
      </div>
    </div>`).join('')}</div>`;
 }
+let aiUnavailable=false;
 function locKey(){return 'pagina_booklocs_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
 function bookLocs(){try{return JSON.parse(localStorage.getItem(locKey())||'{}')||{}}catch(e){return{}}}
 function setBookLocs(m){try{localStorage.setItem(locKey(),JSON.stringify(m))}catch(e){}}
