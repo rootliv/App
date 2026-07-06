@@ -2226,6 +2226,21 @@ async function searchBooksPick(q,fn,clubId){q=(q||'').trim();if(!q)return;clearT
 function openChooseClubBook(clubId){openBookSearch('📖 Scegli il libro del mese','chooseClubBook',clubId)}
 function openProposeBook(clubId){openBookSearch('💡 Proponi un libro','proposeFound',clubId)}
 
+/* Quando un club sceglie un libro, lo aggiungiamo anche alla libreria personale (come "in lettura")
+   se non è già presente: così l'utente lo ritrova tra i suoi libri, col segnalibro e le note. */
+async function addClubBookToLibrary(title,author,cover){
+ if(!title)return;
+ if(books.some(b=>normKey(b.t)===normKey(title)))return; // già in libreria
+ let extra={};try{const res=await doSearch(title+' '+(author||''));const best=res&&res[0];if(best&&titlesRoughlyMatch(title,best.t))extra={g:best.g,pg:best.pg,trama:best.trama,cover:best.coverUrl||cover};}catch(e){}
+ const g=extra.g||'',pg=extra.pg||0,trama=extra.trama||'',cov=extra.cover||cover||'';
+ if(mode==='cloud'&&supa){
+   try{const {data}=await supa.from('books').insert({user_id:authUser.id,title,author:author||'',genre:g,pages:pg,status:'reading',progress:0,rating:0,cover_url:cov||null,plot:trama,note:null}).select('*').single();
+     if(data)books.push(dbToBook(data));}catch(e){}
+ }else{
+   const id=Math.max(0,...books.map(b=>b.id))+1;
+   books.push({id,t:title,a:author||'',g,pg,ch:0,status:'reading',prog:0,rate:0,trama,set:[],cur:'',quote:'',coverUrl:cov});save();
+ }
+}
 async function chooseClubBook(clubId,i){
  const s=searchResults[i];if(!s)return;
  const c=myClubs.find(x=>x.id===clubId)||{};
@@ -2235,6 +2250,7 @@ async function chooseClubBook(clubId,i){
  }
  const {error}=await supa.from('clubs').update(patch).eq('id',clubId);
  if(error){alert('Errore: '+error.message);return}
+ await addClubBookToLibrary(s.t,s.a,s.coverUrl);
  clubsLoaded=false;closeModal();go('club');
 }
 async function proposeFound(clubId,i){
@@ -2369,6 +2385,7 @@ async function closeVoting(clubId){
  await supa.from('clubs').update({current_title:win.title,current_author:win.author,current_cover:win.cover,selection_mode:null,current_chooser:null}).eq('id',clubId);
  await supa.from('proposals').delete().eq('club_id',clubId);
  await supa.from('votes').delete().eq('club_id',clubId);
+ await addClubBookToLibrary(win.title,win.author,win.cover);
  clubsLoaded=false;go('club');
 }
 function inviteLink(id){const base=location.href.split('#')[0].split('?')[0];return base+'?club='+clubCode(id)}
@@ -2609,18 +2626,20 @@ function paintDiary(c){
  if(total)setTimeout(()=>diaryDragSetup(c.current_title,total,mn),50);
 }
 
+let aiClubSel=null;
 function renderAiCloud(){
  const nm=((profile&&profile.name)||'Lettore').split(' ')[0];
  const reading=books.find(b=>b.status==='reading');
- // Libro del CLUB con una lettura in corso (è quello di cui si discute agli incontri).
- const clubBook=myClubs.find(c=>c.current_title);
+ // TUTTI i club con una lettura in corso (non solo il primo): l'utente può averne più d'uno.
+ const clubBooks=(myClubs||[]).filter(c=>c.current_title);
+ if(aiClubSel==null||!clubBooks.some(c=>c.id===aiClubSel))aiClubSel=clubBooks.length?clubBooks[0].id:null;
+ const clubBook=clubBooks.find(c=>c.id===aiClubSel)||clubBooks[0]||null;
  const clubTitle=clubBook?clubBook.current_title:'';
- // Libro personale in lettura (fallback: strumenti utili anche fuori da un club).
  const readTitle=reading?reading.t:'';
- // Su cosa lavorano gli strumenti, e come lo presentiamo (club vs lettura personale).
  const discBook=clubTitle||readTitle;
  const inClub=!!clubTitle;
- const nextMeeting=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
+ // prossimo incontro DI QUEL club (non un incontro qualsiasi)
+ const nextMeeting=clubBook?((myMeetings||[]).filter(m=>m.club_id===clubBook.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]||null):null;
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <div style="font-size:32px">🤖</div>
@@ -2632,6 +2651,7 @@ function renderAiCloud(){
 
  <div class="sec-title">🎙️ ${inClub?'Prepara il prossimo incontro':'Spunti di lettura'}</div>
  <div class="card pad" style="margin-bottom:18px">
+   ${clubBooks.length>1?`<div class="field"><label>Per quale club</label><select id="aiClubSel" onchange="aiClubSel=+this.value;renderAiCloud()">${clubBooks.map(c=>`<option value="${c.id}" ${c.id===aiClubSel?'selected':''}>${esc(c.name)} · ${esc(c.current_title)}</option>`).join('')}</select></div>`:''}
    <p style="font-size:13.5px;line-height:1.6;margin-bottom:${discBook?'14px':'4px'}">
      ${discBook
        ? (inClub
