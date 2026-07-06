@@ -891,8 +891,8 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av-cam{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:11.5px;font-family:'Inter',sans-serif;text-align:center;padding:4px 0;opacity:0;transition:.15s}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
-.scope-seg{display:inline-flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:30px;padding:4px;margin-top:12px;flex-wrap:wrap}
-.scope-seg button{border:none;background:none;font-family:inherit;font-weight:600;font-size:12.5px;padding:8px 14px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s}
+.scope-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.scope-seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);background:var(--surface2);font-family:inherit;font-weight:600;font-size:12px;padding:9px 6px;border-radius:12px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
 .scope-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap}
 .scope-in{display:flex;align-items:center;gap:8px;font-size:12.5px}
@@ -1677,7 +1677,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v51 (rimosse statistiche profilo)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v52 (fix allineamento bottoni scope diario)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
