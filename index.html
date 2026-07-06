@@ -1245,13 +1245,7 @@ renders.libreria=()=>{
    <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
  </div>`+`
  ${libTab==='ai'
-  ? (mode==='cloud'
-     ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
-     : `<div class="shelf">${aiSuggest.map(s=>`
-     <div class="book" onclick="openAi(${s.id})">
-       ${coverEl(s.ci,s.t,s.a,'✨')}
-       <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span><div class="stars" style="color:var(--sage)">● ${s.compat}% per te</div></div>
-     </div>`).join('')}</div>`)
+  ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
   : (list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad" style="text-align:center;padding:48px 20px">
         <div style="font-size:46px">📚</div>
@@ -1259,7 +1253,7 @@ renders.libreria=()=>{
         <div class="muted" style="max-width:420px;margin:0 auto 18px">${libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.'}</div>
         <button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>
       </div>`)}`;
- if(libTab==='ai'&&mode==='cloud')loadAiRecs();
+ if(libTab==='ai')loadAiRecs();
 };
 
 let clubTab=1;
@@ -1354,7 +1348,7 @@ function localAssistant(q,ctx){
  if(has('trovami','cerca','cercami','trova','consiglia','consigliami','suggerisci','suggeriscimi','consiglio','libri su','libro su','qualcosa di','vorrei leggere','voglio leggere'))
    return {kind:'search',text:q.replace(/^.*?(trovami|cerca|cercami|trova|consigliami|consiglia|suggeriscimi|suggerisci|vorrei leggere|voglio leggere)\s*/i,'').replace(/^(un|una|dei|delle|di|qualcosa di)\s+/i,'')||q};
  if(has('domande','discussione'))
-   return {html:`<b>Spunti di discussione su ${book}:</b><br>• Quale personaggio ti ha colpita di più e perché?<br>• Qual è il tema centrale e come viene sviluppato?<br>• C'è una scena che funzionerebbe diversamente se fosse ambientata oggi?<br>• Quali scelte dei personaggi condividi o contesti?<br>• Che domanda faresti all'autore/autrice?`};
+   return {html:`<b>Spunti di discussione su ${book}:</b><br>• Quale personaggio ti ha colpito di più e perché?<br>• Qual è il tema centrale e come viene sviluppato?<br>• C'è una scena che funzionerebbe diversamente se fosse ambientata oggi?<br>• Quali scelte dei personaggi condividi o contesti?<br>• Che domanda faresti all'autore/autrice?`};
  if(has('temi','dibattito','dibattere'))
    return {html:`<b>Temi di dibattito:</b><br>• Il libro "invecchia" bene rispetto a oggi?<br>• Lo stile aiuta o ostacola la storia?<br>• Il messaggio è ancora attuale?<br>• Lo consiglieresti a chi non ama il genere? Perché?`};
  if(has('citazion'))
@@ -1362,11 +1356,11 @@ function localAssistant(q,ctx){
  if(has('riferimenti storici','contesto storico'))
    return {html:`Le spiegazioni di <b>contesto storico</b> approfondite richiedono l'AI esterna (ora non attiva). In modalità base posso aiutarti su app, club, note e progresso di lettura.`};
  if(has('offuscat','blur','bloccat','spoiler','non vedo le note','perche non vedo'))
-   return {html:`Nel <b>Diario condiviso</b> le note degli altri sono <b>offuscate</b> finché non raggiungi la pagina a cui si riferiscono: così niente spoiler. Imposta "Sei a pagina" col tuo avanzamento; quando superi la pagina di una nota, comparirà e potrai cliccarla per leggerla. Le tue note le vedi sempre.`};
+   return {html:`Nel <b>Diario condiviso</b> le note degli altri restano <b>bloccate</b> finché non raggiungi la pagina a cui si riferiscono: così niente spoiler. Aggiorna "Sei a pagina" col tuo avanzamento e le note fino a quel punto si sbloccano. Le tue note le vedi sempre; quelle più avanti sono contate ("🔒 N più avanti") ma il loro testo non viene nemmeno caricato.`};
  if(has('progress','aggiornare pagina','che pagina','pagina raggiunta','avanzamento','a che punto'))
    return {html:`Per aggiornare il <b>progresso</b>: vai su <b>Diario condiviso</b> e usa il selettore <b>"Sei a pagina"</b> (− / numero / +). Decide quali note puoi vedere; è personale e non scende sotto le note che hai già scritto.`};
  if(has('nota','note','annotazion','commento'))
-   return {html:`Le <b>note</b> si gestiscono nel <b>Diario condiviso</b>: scrivi una considerazione e scegli se riferirla a una pagina, a un intervallo o "fino a qui". Puoi <b>modificare/eliminare solo le tue</b> (✏️/🗑). Le altrui restano offuscate finché non arrivi alla loro pagina.`};
+   return {html:`Le <b>note</b> si gestiscono nel <b>Diario condiviso</b>: scrivi una considerazione e scegli se riferirla a una pagina, a un intervallo o "fino a qui". Puoi <b>modificare/eliminare solo le tue</b> (✏️/🗑). Le altrui restano bloccate finché non arrivi alla loro pagina.`};
  if(has('club','invito','codice','membri','unisci'))
    return {html:`Per i <b>club</b>: <b>Club del libro</b> → "Crea o unisciti". Inviti con un <b>link</b> o un <b>codice</b> (l'altro va su "Crea o unisciti → Unisciti con un codice"). L'admin elimina il club dalle Impostazioni.`};
  if(has('sorteggio','turni','chi sceglie'))
@@ -1381,7 +1375,7 @@ function localAssistant(q,ctx){
    {const tot=books.length,rd=books.filter(b=>b.status==='read').length,rg=books.filter(b=>b.status==='reading').length;
     return {html:`Nella tua libreria: <b>${tot}</b> libri · ${rd} letti · ${rg} in lettura.${reading?(' Ora stai leggendo '+book+'.'):''}`};}
  if(has('come funziona','aiuto','help','cosa puoi fare','cosa sai fare','guida','come si usa','come usare'))
-   return {html:`Sono l'<b>Assistente base</b> di Pàgina. Posso aiutarti con: 📚 libreria e consigli di lettura, 👥 club, ✍️ note e diario (e perché alcune sono offuscate), 📖 progresso di lettura, 🗳️ sorteggio/votazione, 📅 incontri, 🌍 mappa. Esempi: <i>"consigliami un giallo"</i>, <i>"come aggiorno la pagina"</i>, <i>"perché le note sono offuscate"</i>.`};
+   return {html:`Sono l'<b>Assistente base</b> di Pàgina. Posso aiutarti con: 📚 libreria e consigli di lettura, 👥 club, ✍️ note e diario (e perché alcune sono bloccate), 📖 progresso di lettura, 🗳️ sorteggio/votazione, 📅 incontri, 🌍 mappa. Esempi: <i>"consigliami un giallo"</i>, <i>"come aggiorno la pagina"</i>, <i>"perché le note sono bloccate"</i>.`};
  return {html:`Sono in <b>modalità base</b> (senza AI esterna): rispondo su uso dell'app, club, note/diario, progresso e consigli di libri. Prova: <i>"consigliami un fantasy"</i>, <i>"come funziona il sorteggio"</i>, <i>"perché le note sono bloccate"</i>.`};
 }
 
