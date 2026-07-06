@@ -1094,47 +1094,6 @@ const seedBooks=[
   quote:"«Il tempo era fuggito senza che nessuno se ne accorgesse.»"},
 ];
 let books=JSON.parse(JSON.stringify(seedBooks));
-const aiSuggest=[
- {id:101,t:"Pachinko",a:"Min Jin Lee",g:"Saga familiare",reasons:["Ami le saghe multigenerazionali come 'La casa degli spiriti'","Ambientazione asiatica come Murakami","Temi di identità e radici"],compat:94,
-  trama:"Quattro generazioni di una famiglia coreana in Giappone, tra discriminazione, sacrificio e speranza.",ci:1,
-  set:[{c:"Corea/Giappone",lat:35.1,lng:129.0}]},
- {id:102,t:"La breve favolosa vita di Oscar Wao",a:"Junot Díaz",g:"Realismo magico",reasons:["Stile vicino a García Márquez","Storia familiare e maledizioni","Voce narrativa originale"],compat:88,
-  trama:"Un ragazzo dominicano-americano e la 'fukú', la maledizione che insegue la sua famiglia.",ci:4,
-  set:[{c:"Rep. Dominicana",lat:18.48,lng:-69.9}]},
-];
-const members=[
- {n:"Elena Marchetti",role:"Admin",col:"#6d2540",prog:62,me:true},
- {n:"Marco Rinaldi",role:"Moderatore",col:"#34678f",prog:40},
- {n:"Sofia Greco",role:"Membro",col:"#3f7d5a",prog:71},
- {n:"Luca Bianchi",role:"Membro",col:"#9a6a2f",prog:18},
- {n:"Giulia Conti",role:"Membro (turno scelta)",col:"#5b3a72",prog:55},
-];
-const clubs=[
- {id:1,name:"Le Pagine Erranti",emoji:"🌍",members:8,role:"Admin",book:1,chooser:"Giulia Conti",next:"12 lug",ci:0,desc:"Letteratura che ci porta in giro per il mondo."},
- {id:2,name:"Caffè Letterario",emoji:"☕",members:12,role:"Moderatore",book:6,chooser:"Marco Rinaldi",next:"5 lug",ci:1,desc:"Classici e contemporanei, un libro al mese."},
- {id:3,name:"Notturni di Lettura",emoji:"🌙",members:5,role:"Membro",book:3,chooser:"Tu",next:"20 lug",ci:4,desc:"Gialli, thriller e atmosfere notturne."},
- {id:4,name:"Sorelle di Carta",emoji:"📖",members:6,role:"Membro",book:4,chooser:"Sofia Greco",next:"28 lug",ci:2,desc:"Voci femminili nella narrativa."},
-];
-const votes=[{t:"L'amica geniale",a:"Elena Ferrante",v:5,ci:4},{t:"Il nome della rosa",a:"Umberto Eco",v:3,ci:3},{t:"Pachinko",a:"Min Jin Lee",v:2,ci:1}];
-const notes=[
- {who:"Sofia Greco",col:"#3f7d5a",pos:9,posTxt:"Cap. 9",time:"2 giorni fa",txt:"Il modo in cui Clara comunica con gli spiriti mi ha ricordato mia nonna. Splendido.",shared:true},
- {who:"Marco Rinaldi",col:"#34678f",pos:6,posTxt:"Cap. 6",time:"3 giorni fa",txt:"Domanda: il realismo magico qui è evasione o un modo per dire l'indicibile della Storia?",shared:true},
- {who:"Giulia Conti",col:"#5b3a72",pos:12,posTxt:"Cap. 12",time:"1 giorno fa",txt:"⚠️ Quello che succede a Esteban cambia tutto… non dico altro!",shared:true},
- {who:"Luca Bianchi",col:"#9a6a2f",pos:5,posTxt:"Cap. 5",time:"oggi",txt:"Sto andando piano ma mi sto innamorando della scrittura.",shared:true},
-];
-const meetings=[
- {d:12,m:"LUG",ci:0,title:"Incontro finale · Le Pagine Erranti",book:"La casa degli spiriti",where:"Online · Google Meet",link:true,who:6},
- {d:5,m:"LUG",ci:1,title:"Incontro intermedio · Caffè Letterario",book:"Il deserto dei Tartari",where:"Libreria Tomo, Roma",link:false,who:9},
- {d:20,m:"LUG",ci:4,title:"Apertura libro · Notturni di Lettura",book:"Norwegian Wood",where:"Online · Zoom",link:true,who:4},
-];
-const notifs=[
- {ic:"🗳️",bg:"#f3e6c4",t:"Votazione aperta",p:"'Sorelle di Carta' sta scegliendo il prossimo libro. Hai 3 giorni per votare.",time:"10 min fa"},
- {ic:"📅",bg:"#e1edf6",t:"Incontro imminente",p:"Le Pagine Erranti si vede il 12 luglio per 'La casa degli spiriti'.",time:"1 ora fa"},
- {ic:"📝",bg:"#dcebe0",t:"Nuova nota disponibile",p:"Sofia ha condiviso una riflessione sul Cap. 9 (sblocca leggendo fin lì).",time:"2 ore fa"},
- {ic:"✨",bg:"#f6d9c7",t:"Curiosità del giorno",p:"Sapevi che Isabel Allende scrive sempre un nuovo libro l'8 gennaio?",time:"oggi"},
- {ic:"📖",bg:"#f3e6c4",t:"Promemoria lettura",p:"Oggi tocca a te: 22 pagine per restare in linea con il club.",time:"oggi"},
- {ic:"💛",bg:"#dcebe0",t:"Un membro è indietro",p:"Luca è un po' rimasto indietro: un messaggio di incoraggiamento aiuterebbe!",time:"ieri"},
-];
 
 /* ============ HELPERS ============ */
 const $=s=>document.querySelector(s);
@@ -1691,33 +1650,12 @@ function bmDragSetup(id,total){
  track.ontouchend=e=>{end((e.changedTouches[0]||{}).clientX||0);};
 }
 let _bmMove=null,_bmUp=null;
-function openAi(id){
- const s=aiSuggest.find(x=>x.id===id);
- $('#modal').innerHTML=`
-  <div class="modal-top"><b>✨ Consiglio AI</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
-  <div class="book-head">
-    <div style="width:150px;flex:none">${coverEl(s.ci,s.t,s.a,'✨')}</div>
-    <div style="flex:1">
-      <h2>${esc(s.t)}</h2><div class="book-author">${esc(s.a)} · ${esc(s.g)}</div>
-      <div class="compat"><span class="match" style="font-size:18px">${s.compat}% per te</span></div>
-      <div class="bar" style="margin:6px 0 14px"><i style="width:${s.compat}%"></i></div>
-      ${buyLinks(s.t,s.a)}
-    </div>
-  </div>
-  <div class="modal-body">
-    <p class="kv" style="margin-bottom:14px"><b>Trama.</b> ${s.trama}</p>
-    <div class="muted" style="font-weight:700;font-size:13px;margin-bottom:6px">✨ Perché l'AI te lo consiglia</div>
-    <ul style="font-size:14px;padding-left:18px;line-height:1.8;color:var(--ink-soft)">${s.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <button class="btn" style="margin-top:18px">🔖 Aggiungi a "Da leggere"</button>
-  </div>`;
- openOverlay();
-}
 /* ===== RICERCA LIBRI (API reale) ===== */
 let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v45 (piano riepilogo pulito, recensione a fine libro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v46 (segnalibro diario, pulizia demo)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
