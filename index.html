@@ -285,7 +285,7 @@ input[type=range]{accent-color:var(--coral)}
 .book-head .cover{width:150px;height:225px;flex:none}
 .book-head h2{font-size:26px;line-height:1.08}
 .book-head .book-author{color:var(--ink-soft);margin:4px 0 14px;font-size:14.5px}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
 .buy{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .buy a{font-size:12.5px;font-weight:600;text-decoration:none;border:1.5px solid var(--line);padding:9px 14px;border-radius:11px;color:var(--plum);background:var(--surface);transition:.15s;box-shadow:var(--shadow-sm)}
 .buy a:hover{border-color:var(--coral);background:var(--hover);transform:translateY(-2px)}
@@ -1677,7 +1677,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v47 (statistiche, condivisione, promemoria incontri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v48 (libro club in libreria, assistente multi-club, allineamenti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2995,12 +2995,12 @@ function renderProfiloCloud(){
    <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${safeImgUrl(d.avatar)?`<img src="${esc(safeImgUrl(d.avatar))}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
    <div style="flex:1;min-width:200px">
      ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
-       ? `<h2 style="font-size:26px">${esc(p.name)}</h2><div class="muted">Iscrizione dal ${yr}</div>`
-       : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
-     <div class="chips" style="margin-top:10px">
+       ? `<h2 style="font-size:26px">${esc(p.name)}</h2><div class="muted" style="font-size:13px">Iscrizione dal ${yr}</div>`
+       : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted" style="font-size:13px">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
+     <div class="chips" style="margin:12px 0 0">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
-       ${goal?`<span class="pill green">🎯 Obiettivo ${goal} libri</span>`:''}
-       <span class="pill sky">👥 ${myClubs.length} club</span>
+       ${goal?`<span class="pill green">🎯 ${goal} libri/anno</span>`:''}
+       <span class="pill sky">👥 ${myClubs.length} ${myClubs.length===1?'club':'club'}</span>
      </div>
    </div>
    <button class="btn ghost" onclick="openEditProfile()">✏️ Modifica profilo</button>
