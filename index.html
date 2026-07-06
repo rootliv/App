@@ -1389,12 +1389,10 @@ function planItems(){
  (myClubs||[]).forEach(c=>{
    if(!c.current_title)return;
    const b=books.find(x=>normKey(x.t)===normKey(c.current_title));
-   if(!b||b.status==='read')return;
+   if(b&&b.status==='read')return;
    const ms=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-   if(!ms.length)return;
-   out.push({club:c,book:b,meet:ms[0]});
+   ms.forEach(meet=>out.push({club:c,book:b||{t:c.current_title,a:c.current_author,pg:0,prog:0,coverUrl:c.current_cover},meet}));
  });
- // ordina per incontro più imminente
  return out.sort((a,b)=>String(a.meet.date).localeCompare(String(b.meet.date)));
 }
 function genPlan(){
@@ -1624,7 +1622,7 @@ async function enrichBook(b){
  if(changed)persistBook(b.id,{title:b.t,plot:b.trama,cover_url:b.coverUrl||null,pages:b.pg||null});
  return changed;
 }
-function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&!b.prog)b.prog=0;persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
+function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;if(st==='read')b.prog=100;if(st==='reading'&&(b.prog>=100||!b.prog))b.prog=(b.prog>=100?95:0);persistBook(id,{status:st,progress:b.prog});closeModal();go(current);}
 /* Segnalibro virtuale a numero di pagina. Internamente il progresso resta in % (b.prog) per
    compatibilità, ma l'utente ragiona in pagine: "sono a pagina 130 di 302". */
 function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(total)||0;
@@ -1634,6 +1632,9 @@ function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(to
 function setPage(id,total,page){const b=book(id);if(!b)return;
  total=parseInt(total)||b.pg||0;page=Math.max(0,Math.min(total,parseInt(page)||0));
  const pct=total?Math.round((page/total)*100):0;
+ // sincronizza la posizione condivisa (diario) di questo titolo
+ try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[b.t]=Math.max(1,page);localStorage.setItem(posKey(),JSON.stringify(m));}catch(e){}
+ const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(b.t));if(club){curDiaryClub=curDiaryClub||club.id;syncReadingPos(b.t,Math.max(1,page));}
  if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉 Lascia una recensione');openBook(id);return;}
  b.prog=pct;persistBook(id,{progress:pct});
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
@@ -1677,7 +1678,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v48 (libro club in libreria, assistente multi-club, allineamenti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v49 (fix stato lettura, calendario multi-incontro, sync diario-libreria)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2425,7 +2426,14 @@ async function handlePendingJoin(){
 let curDiaryTitle='',curDiaryClub=null,editNoteId=null;
 function posKey(){return 'pagina_bookpos_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')} // posizione PER UTENTE
 function bookPos(title){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}}
-function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=Math.max(1,p|0);localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}} // mai sotto 1
+function setBookPos(title,p){
+ p=Math.max(1,p|0);
+ try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=p;localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}
+ // Sincronizza col libro in libreria: se esiste e conosco le pagine, aggiorno il progresso %.
+ const b=books.find(x=>normKey(x.t)===normKey(title));
+ if(b&&b.pg){const pct=Math.min(100,Math.round(p/b.pg*100));
+   if(pct!==b.prog){b.prog=pct;if(b.status==='toread')b.status='reading';if(pct>=100)b.status='read';persistBook(b.id,{progress:b.prog,status:b.status});}}
+}
 function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
 function stepPos(title,d){const mn=diaryMinPos();const np=Math.max(mn,bookPos(title)+d);setBookPos(title,np);syncReadingPos(title,np);if(curDiaryClub)paintDiary(curDiaryClub);}
 /* Segnalibro del diario: click e trascinamento, coerente col dettaglio libro. Aggiorna la
@@ -2645,7 +2653,7 @@ function renderAiCloud(){
    <div style="font-size:32px">🤖</div>
    <div style="flex:1">
      <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler. ${inClub?('Il club sta leggendo <b>'+esc(clubTitle)+'</b>.'):(readTitle?('Stai leggendo <b>'+esc(readTitle)+'</b>.'):'Scegli un libro nel club o mettine uno in lettura per iniziare.')}</p>
+     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler.</p>
    </div>
  </div>
 
