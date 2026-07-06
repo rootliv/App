@@ -1677,7 +1677,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v50 (calendario ritmo profilo, footer username)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v51 (rimosse statistiche profilo)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3025,10 +3025,6 @@ function renderProfiloCloud(){
      <h3 style="font-size:16px;margin:18px 0 12px">🚫 Non fanno per me</h3>
      <div class="chips">${chips(d.disliked,'Niente da segnalare.')}</div>
    </div>
- </div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:14px">📊 Le tue letture</h3>
-   ${readStatsHTML()}
  </div>
  <div class="card pad" style="margin-top:18px">
    <h3 style="font-size:16px;margin-bottom:12px">🎯 Obiettivo di lettura ${new Date().getFullYear()}</h3>
