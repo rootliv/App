@@ -1376,9 +1376,8 @@ renders.calendario=()=>{
  view.innerHTML=`
  <div class="card pad" style="margin-bottom:16px">
    <h3 style="font-size:16px;margin-bottom:6px">🗓️ Prepara la lettura per l'incontro</h3>
-   <div class="muted" style="font-size:12.5px;margin-bottom:16px">Ti dico quanto leggere al giorno per finire in tempo — oppure imposti tu il ritmo e ti dico quando finisci.</div>
+   <div class="muted" style="font-size:12.5px;margin-bottom:16px">${(profile&&profile.data&&profile.data.pace)?('In base alle <b>'+(+profile.data.pace)+' pagine al giorno</b> del tuo profilo, ti dico se arrivi in tempo.'):'Ti dico quante pagine leggere al giorno per finire in tempo.'}</div>
    <div class="field"><label>Incontro</label><select id="cItem" onchange="genPlan()">${items.map((it,i)=>`<option value="${i}">${esc(it.book.t)} · ${esc(it.club.name)} · ${fmtNoteDate(it.meet.date)}</option>`).join('')}</select></div>
-   <div class="field"><label>Pagine al giorno <span class="muted" style="font-weight:400">(vuoto = lo calcolo io)</span></label><input id="cAmt" type="number" min="1" placeholder="calcolo automatico" oninput="genPlan()" value=""></div>
  </div>
  <div id="planOut"></div>`;
  genPlan();
@@ -1413,9 +1412,9 @@ function genPlan(){
    out.innerHTML=`<div class="card pad" style="text-align:center;padding:34px 16px"><div style="font-size:40px">🎉</div><div style="margin-top:10px"><b>Hai già finito "${esc(b.t)}"</b></div><div class="muted" style="font-size:13px;margin-top:6px">Sei in pari con la lettura del ${fmtNoteDate(meet.date)}.</div></div>`;return;
  }
  const needed=Math.ceil(remainingPg/days);
- const amtInput=(($('#cAmt')||{}).value||'').trim();
- const perDay=amtInput?Math.max(1,parseInt(amtInput)):needed;
- const autocalc=!amtInput;
+ const pace=+(profile&&profile.data&&profile.data.pace)||0;
+ const perDay=pace?Math.max(1,pace):needed;
+ const autocalc=!pace;
  const daysToFinish=Math.ceil(remainingPg/perDay);
  const onTrack=perDay>=needed;
  const dayNames=['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
@@ -1678,7 +1677,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v49 (fix stato lettura, calendario multi-incontro, sync diario-libreria)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v50 (calendario ritmo profilo, footer username)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3162,7 +3161,7 @@ async function saveProfile(){
  profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d});
  try{await supa.from('profiles').update(upd).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
- const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account cloud ☁️');
+ const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account');
  closeModal();renderProfiloCloud();
 }
 
@@ -3869,7 +3868,7 @@ function startApp(target){
  const same=username&&name&&name.toLowerCase()===username.toLowerCase();
  $('#meName').textContent=name;
  $('#meAv').innerHTML=avFill(name,myAvatar());
- $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(same?'Account cloud ☁️':(username?'@'+username:'Account cloud ☁️'));
+ $('#meSub').textContent=mode==='demo'?'Modalità dimostrativa':(username?'@'+username:'Account');
  buildNav();go(target||'home');
  enrichCovers();
  maybeShowOnboarding();
