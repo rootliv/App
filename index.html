@@ -1682,7 +1682,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v55 (AI non disponibile, modale descrizione club, placeholder neutro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v56 (fix eliminazione account: logout e ritorno registrazione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3228,9 +3228,11 @@ async function deleteAccount(){
      if(btn){btn.disabled=false;btn.textContent='🗑️ Elimina definitivamente il mio account'}
      return;
    }
+   try{await supa.auth.signOut()}catch(err){}
    try{localStorage.removeItem('pagina_session')}catch(err){}
+   try{Object.keys(localStorage).filter(k=>k.startsWith('sb-')||k.startsWith('pagina_')).forEach(k=>localStorage.removeItem(k))}catch(err){}
    alert('Il tuo account è stato eliminato. Grazie per aver usato Pàgina.');
-   location.reload();
+   location.href=location.pathname;
  }catch(err){
    daShowErr('Errore di rete: riprova.');
    if(btn){btn.disabled=false;btn.textContent='🗑️ Elimina definitivamente il mio account'}
@@ -3856,7 +3858,9 @@ async function login(){
 }
 async function loadProfile(){
  try{const {data}=await supa.from('profiles').select('name,username,data,created_at').eq('id',authUser.id).maybeSingle();
-   if(data)profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at}}catch(e){}
+   if(data){profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at};return true}
+   return false; // nessun profilo: account eliminato o non ancora creato
+ }catch(e){return true}
 }
 
 async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localStorage.removeItem('pagina_session');location.reload()}
@@ -3956,7 +3960,11 @@ function obGo(what){
  if(supa){
    try{const {data}=await supa.auth.getSession();
      if(passwordRecoveryActive)return; // resta sulla schermata "imposta nuova password"
-     if(data&&data.session){authUser=data.session.user;mode='cloud';await loadProfile();try{await cloudLoadBooks()}catch(e){}const j=await handlePendingJoin();startApp(j?'club':undefined);return}
+     if(data&&data.session){authUser=data.session.user;mode='cloud';
+       const ok=await loadProfile();
+       if(!ok){try{await supa.auth.signOut()}catch(e){}try{Object.keys(localStorage).filter(k=>k.startsWith('sb-')||k.startsWith('pagina_')).forEach(k=>localStorage.removeItem(k))}catch(e){}}
+       else{try{await cloudLoadBooks()}catch(e){}const j=await handlePendingJoin();startApp(j?'club':undefined);return}
+     }
    }catch(e){}
  }
  if(passwordRecoveryActive)return;
