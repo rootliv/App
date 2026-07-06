@@ -186,7 +186,8 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .sec-title::before{content:"";width:5px;height:22px;border-radius:4px;background:var(--brand-grad);flex:none}
 .sec-title:first-child{margin-top:6px}
 hr{border:none;border-top:1px solid var(--line);margin:20px 0}
-.tabs{display:flex;gap:5px;background:var(--bg2);padding:5px;border-radius:30px;width:fit-content;flex-wrap:wrap;border:1px solid var(--line)}
+.tabs{display:flex;gap:5px;background:var(--bg2);padding:5px;border-radius:30px;border:1px solid var(--line);overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%}
+.tabs button{white-space:nowrap;flex:none}
 .tabs button{border:none;background:none;font-family:inherit;font-weight:600;font-size:13px;padding:9px 17px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .tabs button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
 input[type=range]{accent-color:var(--coral)}
@@ -891,6 +892,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av-cam{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);color:#fff;font-size:11.5px;font-family:'Inter',sans-serif;text-align:center;padding:4px 0;opacity:0;transition:.15s}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
+.stat-pills{display:flex;gap:8px;flex-wrap:wrap}
 .scope-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .scope-seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);background:var(--surface2);font-family:inherit;font-weight:600;font-size:12px;padding:9px 6px;border-radius:12px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
@@ -1677,7 +1679,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v52 (fix allineamento bottoni scope diario)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v53 (allineamenti profilo, libreria, mappa, curiosita)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2933,12 +2935,13 @@ function renderMappaCloud(){
  const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
  const todo=books.filter(b=>!bookLocs()[normKey(b.t)]).length;  // non ancora rilevati
  view.innerHTML=`
- <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
-   <div><h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div></div>
-   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+ <div style="margin-bottom:16px">
+   <h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3>
+   <div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div>
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">
      <span class="pill sky">🌍 ${countries.length} paesi · ${locs.length} libri</span>
+     ${(todo||(books.length&&!all.length))?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:''}
      ${all.length?`<button class="btn ghost sm" onclick="clearMapLocs()">🗑 Svuota</button>`:''}
-     ${todo?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:(books.length&&!all.length?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:'')}
    </div>
  </div>
  <div id="map"></div>
@@ -3004,10 +3007,10 @@ function renderProfiloCloud(){
      ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
        ? `<h2 style="font-size:26px">${esc(p.name)}</h2><div class="muted" style="font-size:13px">Iscrizione dal ${yr}</div>`
        : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted" style="font-size:13px">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
-     <div class="chips" style="margin:12px 0 0">
+     <div class="stat-pills" style="margin:12px 0 0">
        ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
        ${goal?`<span class="pill green">🎯 ${goal} libri/anno</span>`:''}
-       <span class="pill sky">👥 ${myClubs.length} ${myClubs.length===1?'club':'club'}</span>
+       <span class="pill sky">👥 ${myClubs.length} club</span>
      </div>
    </div>
    <button class="btn ghost" onclick="openEditProfile()">✏️ Modifica profilo</button>
@@ -3404,8 +3407,8 @@ function paintCuriosity(box,p,st){
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
    +'<button class="btn sm" onclick="openBook('+p.bookId+')">📖 Apri libro</button>'
    +'<button class="btn ghost sm" onclick="curioAnother()">🔄 Un\'altra</button>'
-   +notifBtn
   +'</div>'
+  +'<div style="margin-top:8px">'+notifBtn+'</div>'
   +'<div class="muted" style="font-size:11px;margin-top:10px">Fonte: '+esc(p.source)+' · senza spoiler</div>'
  +'</div>';
  if(isNew&&!curioOverride){const s=loadCurioState();s.seen=true;saveCurioState(s);}
