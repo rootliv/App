@@ -2451,6 +2451,30 @@ function bookPos(title){try{const m=JSON.parse(localStorage.getItem(posKey())||'
 function setBookPos(title,p){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=Math.max(1,p|0);localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}} // mai sotto 1
 function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
 function stepPos(title,d){const mn=diaryMinPos();const np=Math.max(mn,bookPos(title)+d);setBookPos(title,np);syncReadingPos(title,np);if(curDiaryClub)paintDiary(curDiaryClub);}
+/* Segnalibro del diario: click e trascinamento, coerente col dettaglio libro. Aggiorna la
+   posizione di lettura (che controlla anche quali note anti-spoiler sono visibili). */
+function diaryTrackClick(ev,title,total,mn){
+ const track=$('#diaryTrack');if(!track)return;
+ const r=track.getBoundingClientRect();
+ const frac=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));
+ const page=Math.max(mn,Math.round(total*frac));
+ setBookPos(title,page);syncReadingPos(title,page);paintDiary(curDiaryClub);
+}
+let _diaryDrag=null,_diaryMove=null,_diaryUp=null;
+function diaryDragSetup(title,total,mn){
+ const track=$('#diaryTrack');if(!track)return;
+ const posFromX=cx=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(cx-r.left)/r.width));};
+ const live=(frac)=>{const pct=Math.round(frac*100);const fill=$('#diaryFill'),tag=$('#diaryTag');
+   if(fill){fill.style.transition='none';fill.style.width=pct+'%';}if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}};
+ const commit=(frac)=>{const page=Math.max(mn,Math.round(total*frac));setBookPos(title,page);syncReadingPos(title,page);paintDiary(curDiaryClub);};
+ track.onmousedown=e=>{e.preventDefault();_diaryDrag=1;live(posFromX(e.clientX));};
+ _diaryMove=e=>{if(_diaryDrag)live(posFromX(e.clientX));};
+ _diaryUp=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX(e.clientX));}};
+ window.addEventListener('mousemove',_diaryMove);window.addEventListener('mouseup',_diaryUp);
+ track.ontouchstart=e=>{_diaryDrag=1;live(posFromX(e.touches[0].clientX));};
+ track.ontouchmove=e=>{if(_diaryDrag){live(posFromX(e.touches[0].clientX));e.preventDefault();}};
+ track.ontouchend=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX((e.changedTouches[0]||{}).clientX||0));}};
+}
 /* Scrive la pagina di lettura nel DB: è ciò che la RLS anti-spoiler usa per decidere quali
    note altrui l'utente può leggere. Dopo l'avanzamento ricarichiamo le note dal server, così
    quelle appena sbloccate arrivano davvero (prima non erano nemmeno state scaricate). */
@@ -2588,16 +2612,20 @@ function paintDiary(c){
       <h2 class="serif">${esc(c.current_title)}</h2>
       <div class="muted" style="font-size:13px">${esc(c.current_author||'')}</div></div>
     <div class="dh-prog">
-      <div class="muted dh-lab">Sei a pagina</div>
-      <div class="page-stepper">
-        <button onclick="stepPos('${titEsc}',-1)" aria-label="indietro">−</button>
-        <div class="pageval"><input type="number" min="${mn}" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(${mn},parseInt(this.value)||${mn}));paintDiary(curDiaryClub)"><small>${total?'/ '+total:''}</small></div>
-        <button onclick="stepPos('${titEsc}',1)" aria-label="avanti">+</button>
+      <div class="muted dh-lab">A che punto sei</div>
+      ${total?`<div class="bookmark-track" id="diaryTrack" onclick="diaryTrackClick(event,'${titEsc}',${total},${mn})">
+        <div class="bookmark-fill" id="diaryFill" style="width:${Math.min(100,Math.round(pos/total*100))}%"></div>
+        <div class="bookmark-tag" id="diaryTag" style="left:${Math.min(100,Math.round(pos/total*100))}%">🔖</div>
+      </div>`:''}
+      <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px">
+        <span class="muted" style="font-size:12.5px">pag.</span>
+        <input class="bm-page-input" type="number" min="${mn}" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(${mn},parseInt(this.value)||${mn}));syncReadingPos('${titEsc}',bookPos('${titEsc}'));paintDiary(curDiaryClub)">
+        ${total?`<span class="muted" style="font-size:12.5px">di ${total}</span>`:''}
       </div>
-      ${total?`<div class="bar" style="margin-top:10px"><i style="width:${Math.min(100,Math.round(pos/total*100))}%"></i></div>`:''}
-      ${mn>1?`<div class="muted" style="font-size:11px;margin-top:6px">Min ${mn} (hai già scritto fin lì)</div>`:''}
+      ${mn>1?`<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">Min ${mn} (hai già scritto fin lì)</div>`:''}
     </div>
-  </div>
+  </div>`;
+ view.innerHTML+=`
 
   <div class="card pad diary-compose">
    <label class="cmp-label">✍️ Scrivi una considerazione</label>
@@ -2618,6 +2646,7 @@ function paintDiary(c){
   <div class="diary-notes-head"><h3 class="serif">📝 Considerazioni del club</h3>${others.length?`<span class="pill">🔓 ${readable} · 🔒 ${others.length-readable}</span>`:''}</div>
   <div id="notesList"></div>`;
  renderNotesList();
+ if(total)setTimeout(()=>diaryDragSetup(c.current_title,total,mn),50);
 }
 
 function renderAiCloud(){
