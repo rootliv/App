@@ -898,6 +898,15 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
+.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.goal-card{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface2)}
+.goal-card .goal-ic{font-size:24px;flex:none}
+.goal-card .goal-lab{display:block;font-size:12px;color:var(--ink-soft);font-weight:600;margin-bottom:6px}
+.goal-in{display:flex;align-items:baseline;gap:6px}
+.goal-in input{width:100%;min-width:0;border:none;background:none;font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--plum);padding:0;outline:none}
+.goal-in input::-webkit-outer-spin-button,.goal-in input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.goal-in .goal-unit{font-size:11px;color:var(--ink-faint);white-space:nowrap}
+@media(max-width:440px){.goal-grid{grid-template-columns:1fr}}
 .scope-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .scope-seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);background:var(--surface2);font-family:inherit;font-weight:600;font-size:12px;padding:9px 6px;border-radius:12px;cursor:pointer;color:var(--ink-soft);transition:.15s}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
@@ -1682,7 +1691,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v57 (rimosse libri del cuore e generi da evitare)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v58 (ritmo e obiettivo ridisegnati)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3134,11 +3143,21 @@ function openEditProfile(){
     <div class="field"><label>Username</label><input id="epUser" value="${esc((profile&&profile.username)||'')}" autocapitalize="off" autocomplete="off" placeholder="es. alice_libri" oninput="checkUsername()"><small id="epUserHint" style="display:block;margin-top:5px;font-size:12px" class="muted">3-20 caratteri: lettere, numeri o _</small></div>
     <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
     ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
-    <div class="row" style="gap:12px">
-      <div class="field" style="flex:1;min-width:120px"><label>Ritmo (pag/giorno)</label><input id="epPace" type="number" min="0" value="${d.pace||''}"></div>
-      <div class="field" style="flex:1;min-width:120px"><label>Obiettivo annuale (libri)</label><input id="epGoal" type="number" min="0" value="${d.goal||''}"></div>
+    <div class="goal-grid">
+      <div class="goal-card">
+        <div class="goal-ic">🔥</div>
+        <div style="flex:1"><label class="goal-lab">Ritmo di lettura</label>
+          <div class="goal-in"><input id="epPace" type="number" min="0" placeholder="0" value="${d.pace||''}"><span class="goal-unit">pag/giorno</span></div>
+        </div>
+      </div>
+      <div class="goal-card">
+        <div class="goal-ic">🎯</div>
+        <div style="flex:1"><label class="goal-lab">Obiettivo annuale</label>
+          <div class="goal-in"><input id="epGoal" type="number" min="0" placeholder="0" value="${d.goal||''}"><span class="goal-unit">libri</span></div>
+        </div>
+      </div>
     </div>
-    <button class="btn" onclick="saveProfile()">💾 Salva</button>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:18px" onclick="saveProfile()">💾 Salva profilo</button>
   </div>`;
  openOverlay();
  ['genres','authors','loved','disliked'].forEach(renderChips);
