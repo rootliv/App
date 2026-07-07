@@ -898,6 +898,8 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
+.switch-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;cursor:pointer}
+.switch-row input{width:18px;height:18px;accent-color:var(--brand-solid)}
 .goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
 .goal-card{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface2)}
 .goal-card .goal-ic{font-size:24px;flex:none}
@@ -3166,6 +3168,11 @@ function openEditProfile(){
         </div>
       </div>
     </div>
+    <div class="pref-group" style="border-left-color:var(--sky)">
+      <h4>🔒 Privacy della libreria</h4>
+      <span class="pref-hint">Se pubblica, chi ti segue può vedere i tuoi libri, voti e note.</span>
+      <label class="switch-row"><input type="checkbox" id="epPublic" ${(profile&&profile.public_library)?'checked':''}><span>Rendi la mia libreria pubblica</span></label>
+    </div>
     <button class="btn" style="width:100%;justify-content:center;margin-top:18px" onclick="saveProfile()">💾 Salva profilo</button>
   </div>`;
  openOverlay();
@@ -3211,8 +3218,10 @@ async function saveProfile(){
    pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
  });
  const upd={name,data:d};
+ const pub=!!($('#epPublic')&&$('#epPublic').checked);
+ upd.public_library=pub;
  if(uname!==currentU)upd.username=uname||null;
- profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d});
+ profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d,public_library:pub});
  try{await supa.from('profiles').update(upd).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
  const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account');
@@ -3877,9 +3886,9 @@ async function login(){
  const j=await handlePendingJoin();startApp(j?'club':undefined);
 }
 async function loadProfile(){
- try{const {data}=await supa.from('profiles').select('name,username,data,created_at').eq('id',authUser.id).maybeSingle();
-   if(data){profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at};return true}
-   return false; // nessun profilo: account eliminato o non ancora creato
+ try{const {data}=await supa.from('profiles').select('name,username,data,created_at,public_library').eq('id',authUser.id).maybeSingle();
+   if(data){profile={name:data.name,username:data.username,data:data.data||{},created_at:data.created_at,public_library:!!data.public_library};return true}
+   return false;
  }catch(e){return true}
 }
 
