@@ -159,7 +159,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink)}
 .bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;font-size:18px;display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
 .bell:hover{transform:translateY(-2px);border-color:var(--coral-soft)}
-.bell .dot{position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
+.bell .dot{display:none;position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
 .view{padding:14px 38px 110px;max-width:1200px}
 
 /* ===== GENERIC ===== */
@@ -898,6 +898,10 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
+.lib-priv{font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;cursor:pointer;
+  background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap}
+.lib-priv:hover{border-color:var(--ink-faint)}
+.lib-priv.pub{background:var(--sage-soft,#e7efe9);color:var(--brand-solid);border-color:var(--brand-solid)}
 /* ===== HOME "Oggi" ===== */
 .me-hero{position:relative;border-radius:22px;padding:16px 18px;margin-bottom:14px;
   background:linear-gradient(150deg,#265c4a,#103c2e);color:#fff;box-shadow:0 6px 18px rgba(20,50,40,.16);
@@ -1192,7 +1196,7 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
 
 /* ============ NAV ============ */
 const pages=[
- {id:'home',ic:'🏠',label:'Oggi',title:'Oggi',sub:'Il tuo spazio di lettura',grp:'Tu'},
+ {id:'home',ic:'🏠',label:'Spazio lettura',title:'Spazio lettura',sub:'Il tuo spazio di lettura',grp:'Tu'},
  {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
  {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
  {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
@@ -1255,6 +1259,7 @@ function go(id){
  document.getElementById('sidebar').classList.remove('show');
  document.body.classList.remove('sidebar-open');
  window.scrollTo(0,0);
+ try{updateBellDot()}catch(e){}
 }
 
 /* ============ RENDERERS ============ */
@@ -1274,7 +1279,10 @@ renders.libreria=()=>{
  view.innerHTML=`
  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:2px 0 24px">
    <div class="tabs">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}${t[2]!=null?` <i class="tabn">${t[2]}</i>`:''}</button>`).join('')}</div>
-   <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
+   <div style="display:flex;gap:8px;align-items:center">
+     ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria pubblica — chi ti segue la vede':'Libreria privata — solo tu la vedi'}">${profile&&profile.public_library?'🌐 Pubblica':'🔒 Privata'}</button>`:''}
+     <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
+   </div>
  </div>`+`
  ${libTab==='ai'
   ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
@@ -1738,7 +1746,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v62 (Oggi ridisegnata: hero pulito, pannello ritmo-obiettivo-stat)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v63 (Spazio lettura, campanella non letto, privacy in libreria)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3087,6 +3095,16 @@ function readStatsHTML(){
  </div>`:''}`;
 }
 /* ===== SOCIAL: ricerca utenti, follow, libreria altrui, inviti ai club ===== */
+async function toggleLibraryPrivacy(btn){
+ const now=!!(profile&&profile.public_library);
+ const next=!now;
+ if(next&&!confirm('Rendere PUBBLICA la libreria? Chi ti segue potrà vedere i tuoi libri, voti e note.'))return;
+ profile=Object.assign({},profile,{public_library:next});
+ try{const {error}=await supa.from('profiles').update({public_library:next}).eq('id',authUser.id);
+   if(error){alert('Errore: '+error.message);profile.public_library=now;return;}}
+ catch(e){alert('Errore: '+e.message);profile.public_library=now;return;}
+ renders.libreria();
+}
 let myFollowing=[]; // id degli utenti che seguo
 async function loadFollowing(){
  try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
@@ -3313,11 +3331,6 @@ function openEditProfile(){
         </div>
       </div>
     </div>
-    <div class="pref-group" style="border-left-color:var(--sky)">
-      <h4>🔒 Privacy della libreria</h4>
-      <span class="pref-hint">Se pubblica, chi ti segue può vedere i tuoi libri, voti e note.</span>
-      <label class="switch-row"><input type="checkbox" id="epPublic" ${(profile&&profile.public_library)?'checked':''}><span>Rendi la mia libreria pubblica</span></label>
-    </div>
     <button class="btn" style="width:100%;justify-content:center;margin-top:18px" onclick="saveProfile()">💾 Salva profilo</button>
   </div>`;
  openOverlay();
@@ -3363,10 +3376,8 @@ async function saveProfile(){
    pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
  });
  const upd={name,data:d};
- const pub=!!($('#epPublic')&&$('#epPublic').checked);
- upd.public_library=pub;
  if(uname!==currentU)upd.username=uname||null;
- profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d,public_library:pub});
+ profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d});
  try{await supa.from('profiles').update(upd).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
  $('#meName').textContent=name;applyMyAvatar();
  const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account');
@@ -3709,12 +3720,6 @@ function renderHomeCloud(){
      <div class="muted" style="font-size:11px;margin-top:4px">${b.pg?('pag. '+Math.round(b.pg*(b.prog||0)/100)+' di '+b.pg):((b.prog||0)+'%')}</div>
    </div></div>`).join('')}</div>`:''}
 
- <!-- TI ASPETTANO -->
- <div class="sec-title">🔔 Ti aspettano</div>
- <div class="card pad">
-   ${items.length?items.map(it=>`<div class="set-row"><div>${it.ic} <b>${it.t}</b> · ${it.p}</div><button class="btn ghost sm" onclick="${it.cid?'clubSel='+it.cid+';':''}go('${it.go}')">Apri</button></div>`).join(''):'<div class="muted" style="font-size:13.5px;padding:6px 0">Tutto in ordine. Buona lettura! ☕</div>'}
- </div>
-
  <!-- CURIOSITÀ -->
  <div class="sec-title">📚 Curiosità della settimana</div>
  <div id="curioCard"></div>
@@ -3904,6 +3909,7 @@ async function deleteMeeting(id){
 function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
  const items=pendingItems();
+ markNotifsSeen(items); // aprendo la pagina, le novità diventano "lette"
  const opts=['📖 Promemoria di lettura','📅 Incontro imminente','📚 Nuovo libro scelto','📝 Nuova nota disponibile','🗳️ Votazione aperta','✨ Curiosità giornaliera'];
  view.innerHTML=`
  <div class="row">
@@ -3916,6 +3922,19 @@ function renderNotifCloud(){
      ${opts.map(o=>`<div class="set-row"><div>${o}</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>`).join('')}
    </div>
  </div>`;
+}
+/* Puntino campanella: acceso finché ci sono novità non ancora "viste" (aperte). */
+function notifSig(items){return (items||[]).map(it=>it.t+'|'+it.p).sort().join('§');}
+function updateBellDot(){
+ try{
+   const items=(typeof pendingItems==='function')?pendingItems():[];
+   const seen=localStorage.getItem('pagina_notif_seen')||'';
+   const has=items.length>0 && notifSig(items)!==seen;
+   const dot=document.querySelector('.bell .dot');if(dot)dot.style.display=has?'block':'none';
+ }catch(e){}
+}
+function markNotifsSeen(items){
+ try{localStorage.setItem('pagina_notif_seen',notifSig(items));updateBellDot();}catch(e){}
 }
 function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
 function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}}
