@@ -899,6 +899,9 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
 .switch-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;cursor:pointer}
+.user-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.user-row:last-child{border-bottom:none}
+.user-av{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--plum);flex:none}
 .switch-row input{width:18px;height:18px;accent-color:var(--brand-solid)}
 .goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
 .goal-card{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface2)}
@@ -1702,7 +1705,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v59 (segna letto porta alle stelle, reading azzera segnalibro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v60 (social: cerca utenti, segui, inviti club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2204,9 +2207,10 @@ function renderClubCloud(){
    </div>
    <div class="panel">
      <div class="panel-title">✉️ Invita al club</div>
-     <button class="btn gold sm" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
+     <button class="btn sm" onclick="inviteToClub(${c.id})">🔎 Invita per username</button>
+     <button class="btn gold sm" style="margin-top:8px" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
      <div class="code-row"><span class="muted" style="font-size:12px">oppure codice</span><code class="codechip" onclick="copyCode('${clubCode(c.id)}',this)" title="Tocca per copiare">${clubCode(c.id)}</code></div>
-     <div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.55">Con il <b>link</b> si entra subito. Con il <b>codice</b>: l'altra persona va su <b>"Crea o unisciti" → "Unisciti con un codice"</b> e lo incolla.</div>
+     <div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.55">Cerca un utente per <b>username</b> e mandagli un invito da accettare, oppure condividi <b>link</b> o <b>codice</b>.</div>
    </div>
   </div>
 
@@ -3049,6 +3053,86 @@ function readStatsHTML(){
    ${topAuthor?`<div class="muted" style="font-size:13px">✍️ Autore più presente: <b style="color:var(--ink)">${esc(topAuthor)}</b></div>`:''}
  </div>`:''}`;
 }
+/* ===== SOCIAL: ricerca utenti, follow, libreria altrui, inviti ai club ===== */
+let myFollowing=[]; // id degli utenti che seguo
+async function loadFollowing(){
+ try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
+   myFollowing=(data||[]).map(r=>r.followed_id);}catch(e){myFollowing=[];}
+}
+async function searchUsers(q){
+ q=(q||'').trim().replace(/^@/,'');
+ const box=$('#userResults');if(!box)return;
+ if(q.length<2){box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Scrivi almeno 2 caratteri…</div>';return}
+ box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Cerco…</div>';
+ try{
+   const {data}=await supa.from('profiles').select('id,name,username,public_library').ilike('username','%'+q+'%').neq('id',authUser.id).limit(15);
+   if(!data||!data.length){box.innerHTML='<div class="srch-empty">Nessun utente trovato per "'+esc(q)+'".</div>';return}
+   box.innerHTML=data.map(u=>{
+     const following=myFollowing.includes(u.id);
+     return `<div class="user-row">
+       <div class="user-av">${ini2(u.name||u.username||'?')}</div>
+       <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 libreria pubblica':'· 🔒 privata'}</div></div>
+       <button class="btn ${following?'ghost':''} sm" onclick="toggleFollow('${u.id}',this)">${following?'✓ Segui già':'+ Segui'}</button>
+     </div>`;
+   }).join('');
+ }catch(e){box.innerHTML='<div class="srch-empty">Errore nella ricerca.</div>';}
+}
+async function toggleFollow(uid,btn){
+ const following=myFollowing.includes(uid);
+ try{
+   if(following){await supa.from('follows').delete().eq('follower_id',authUser.id).eq('followed_id',uid);myFollowing=myFollowing.filter(x=>x!==uid);if(btn){btn.textContent='+ Segui';btn.classList.remove('ghost');}}
+   else{await supa.from('follows').insert({follower_id:authUser.id,followed_id:uid});myFollowing.push(uid);if(btn){btn.textContent='✓ Segui già';btn.classList.add('ghost');}}
+ }catch(e){alert('Errore: '+e.message);}
+}
+async function viewUserLibrary(uid,name){
+ $('#modal').innerHTML=`<div class="modal-top"><b>📚 Libreria di ${esc(name)}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div><div class="modal-body"><div class="srch-empty">Carico…</div></div>`;openOverlay();
+ try{
+   const {data}=await supa.from('books').select('*').eq('user_id',uid);
+   const body=$('#modal .modal-body');
+   if(!data||!data.length){body.innerHTML='<div class="srch-empty">Questa libreria è vuota o privata.</div>';return}
+   const bk=data.map(dbToBook);
+   body.innerHTML=`<div class="shelf case">${bk.map(b=>`<div class="book"><div style="width:100%">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div><div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}</div></div>`).join('')}</div>`;
+ }catch(e){$('#modal .modal-body').innerHTML='<div class="srch-empty">Non puoi vedere questa libreria (privata o non la segui).</div>';}
+}
+/* Inviti ai club */
+async function loadMyInvites(){
+ try{const {data}=await supa.from('club_invites').select('*').eq('invitee_id',authUser.id).eq('status','pending');return data||[];}catch(e){return[];}
+}
+async function inviteToClub(clubId){
+ $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita al club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="field"><label>Cerca per username</label><input id="inviteSearch" placeholder="es. alice_libri" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
+    <div id="inviteResults"></div>
+  </div>`;openOverlay();setTimeout(()=>{const el=$('#inviteSearch');if(el)el.focus()},80);
+}
+async function searchInvitees(clubId,q){
+ q=(q||'').trim().replace(/^@/,'');
+ const box=$('#inviteResults');if(!box)return;
+ if(q.length<2){box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Scrivi almeno 2 caratteri…</div>';return}
+ box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Cerco…</div>';
+ try{
+   const {data}=await supa.from('profiles').select('id,name,username').ilike('username','%'+q+'%').neq('id',authUser.id).limit(15);
+   if(!data||!data.length){box.innerHTML='<div class="srch-empty">Nessun utente trovato.</div>';return}
+   box.innerHTML=data.map(u=>`<div class="user-row">
+     <div class="user-av">${ini2(u.name||u.username||'?')}</div>
+     <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')}</div></div>
+     <button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">✉️ Invita</button>
+   </div>`).join('');
+ }catch(e){box.innerHTML='<div class="srch-empty">Errore.</div>';}
+}
+async function sendClubInvite(clubId,uid,btn){
+ try{const {error}=await supa.from('club_invites').insert({club_id:clubId,inviter_id:authUser.id,invitee_id:uid,status:'pending'});
+   if(error){if(error.code==='23505'){alert('Hai già invitato questa persona.');}else{alert('Errore: '+error.message);}return;}
+   if(btn){btn.textContent='✓ Invitato';btn.disabled=true;btn.classList.add('ghost');}
+ }catch(e){alert('Errore: '+e.message);}
+}
+async function respondInvite(inviteId,clubId,accept){
+ try{
+   await supa.from('club_invites').update({status:accept?'accepted':'declined'}).eq('id',inviteId);
+   if(accept){await supa.from('club_members').insert({club_id:clubId,user_id:authUser.id,role:'membro'});clubsLoaded=false;}
+   renderProfiloCloud();
+ }catch(e){alert('Errore: '+e.message);}
+}
 function renderProfiloCloud(){
  const p=profile||{};const d=p.data||{};
  const read=books.filter(b=>b.status==='read').length;
@@ -3070,6 +3154,13 @@ function renderProfiloCloud(){
    </div>
    <button class="btn ghost" onclick="openEditProfile()">✏️ Modifica profilo</button>
  </div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:6px">🔎 Trova lettori</h3>
+   <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username e segui altri lettori. Se hai la libreria pubblica, chi ti segue vede i tuoi libri.</div>
+   <input id="userSearch" placeholder="Cerca uno username… (es. alice_libri)" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
+   <div id="userResults" style="margin-top:12px"></div>
+ </div>
+ <div id="invitesBox"></div>
  <div class="row" style="margin-top:18px">
    <div class="card pad" style="flex:1;min-width:260px">
      <h3 style="font-size:16px;margin-bottom:12px">📗 Generi preferiti</h3>
@@ -3093,6 +3184,27 @@ function renderProfiloCloud(){
    <h3 style="font-size:16px;margin-bottom:12px">🔒 Sicurezza</h3>
    ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Eliminare l'account è permanente: rimuove il profilo, la libreria personale, le note e l'iscrizione ai club. Non si può annullare.</div>
    <button class="btn danger sm" onclick="openDeleteAccount()">🗑️ Elimina account</button>`:`<div class="muted" style="font-size:13px">Sei in modalità dimostrativa: crea un account cloud per gestire la sicurezza del tuo profilo.</div>`}
+ </div>`;
+ if(mode==='cloud'){loadFollowing();renderMyInvites();}
+}
+async function renderMyInvites(){
+ const box=$('#invitesBox');if(!box)return;
+ const invites=await loadMyInvites();
+ if(!invites.length){box.innerHTML='';return}
+ // recupera nomi club e invitanti
+ let clubNames={},inviterNames={};
+ try{const cids=[...new Set(invites.map(i=>i.club_id))];
+   const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>clubNames[c.id]=c.name);
+   const iids=[...new Set(invites.map(i=>i.inviter_id))];
+   const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.name||p.username);
+ }catch(e){}
+ box.innerHTML=`<div class="card pad" style="margin-top:18px;border-left:4px solid var(--gold)">
+   <h3 style="font-size:16px;margin-bottom:12px">✉️ Inviti ai club</h3>
+   ${invites.map(i=>`<div class="user-row">
+     <div style="flex:1;min-width:0"><b>${esc(clubNames[i.club_id]||'Club')}</b><div class="muted" style="font-size:12px">Invito da ${esc(inviterNames[i.inviter_id]||'un membro')}</div></div>
+     <button class="btn sm" onclick="respondInvite('${i.id}',${i.club_id},true)">✓ Accetta</button>
+     <button class="btn ghost sm" onclick="respondInvite('${i.id}',${i.club_id},false)">✕</button>
+   </div>`).join('')}
  </div>`;
 }
 const PROFILE_SUGGEST={
