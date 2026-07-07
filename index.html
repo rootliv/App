@@ -898,6 +898,13 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
+.usearch{position:relative;display:flex;align-items:center}
+.usearch-ic{position:absolute;left:14px;font-size:15px;opacity:.5;pointer-events:none}
+.usearch input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font-size:14px;outline:none;transition:.15s}
+.usearch input:focus{border-color:var(--brand-solid);box-shadow:0 0 0 4px var(--glow1)}
+.uresults{margin-top:10px}
+.uhint{font-size:13px;color:var(--ink-soft);padding:10px 2px}
+.linklike-danger{background:none;border:none;color:var(--danger,#c0524a);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
 .lib-priv{font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;cursor:pointer;
   background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap}
 .lib-priv:hover{border-color:var(--ink-faint)}
@@ -1746,7 +1753,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v63 (Spazio lettura, campanella non letto, privacy in libreria)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v64 (elimina account in modifica profilo, ricerca lettori bella + email)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3110,23 +3117,35 @@ async function loadFollowing(){
  try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
    myFollowing=(data||[]).map(r=>r.followed_id);}catch(e){myFollowing=[];}
 }
+let _usearchT=null;
 async function searchUsers(q){
  q=(q||'').trim().replace(/^@/,'');
  const box=$('#userResults');if(!box)return;
- if(q.length<2){box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Scrivi almeno 2 caratteri…</div>';return}
- box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Cerco…</div>';
+ clearTimeout(_usearchT);
+ if(q.length<1){box.innerHTML='';return}
+ _usearchT=setTimeout(()=>doSearchUsers(q),200);
+}
+async function doSearchUsers(q){
+ const box=$('#userResults');if(!box)return;
+ box.innerHTML='<div class="uhint">Cerco…</div>';
  try{
-   const {data}=await supa.from('profiles').select('id,name,username,public_library').ilike('username','%'+q+'%').neq('id',authUser.id).limit(15);
-   if(!data||!data.length){box.innerHTML='<div class="srch-empty">Nessun utente trovato per "'+esc(q)+'".</div>';return}
+   const isEmail=q.includes('@');
+   let query=supa.from('profiles').select('id,name,username,email,public_library').neq('id',authUser.id).limit(12);
+   query = isEmail ? query.ilike('email','%'+q+'%') : query.or('username.ilike.%'+q+'%,name.ilike.%'+q+'%');
+   const {data}=await query;
+   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
    box.innerHTML=data.map(u=>{
      const following=myFollowing.includes(u.id);
      return `<div class="user-row">
        <div class="user-av">${ini2(u.name||u.username||'?')}</div>
-       <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 libreria pubblica':'· 🔒 privata'}</div></div>
+       <div style="flex:1;min-width:0" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
+         <b>${esc(u.name||u.username)}</b>
+         <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 pubblica':'· 🔒 privata'}</div>
+       </div>
        <button class="btn ${following?'ghost':''} sm" onclick="toggleFollow('${u.id}',this)">${following?'✓ Segui già':'+ Segui'}</button>
      </div>`;
    }).join('');
- }catch(e){box.innerHTML='<div class="srch-empty">Errore nella ricerca.</div>';}
+ }catch(e){box.innerHTML='<div class="uhint">Errore nella ricerca.</div>';}
 }
 async function toggleFollow(uid,btn){
  const following=myFollowing.includes(uid);
@@ -3152,24 +3171,34 @@ async function loadMyInvites(){
 async function inviteToClub(clubId){
  $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita al club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <div class="field"><label>Cerca per username</label><input id="inviteSearch" placeholder="es. alice_libri" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
-    <div id="inviteResults"></div>
+    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email. La persona riceverà un invito da accettare.</div>
+    <div class="usearch"><span class="usearch-ic">🔎</span><input id="inviteSearch" placeholder="Username o email…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
+    <div id="inviteResults" class="uresults"></div>
   </div>`;openOverlay();setTimeout(()=>{const el=$('#inviteSearch');if(el)el.focus()},80);
 }
+let _inviteT=null;
 async function searchInvitees(clubId,q){
  q=(q||'').trim().replace(/^@/,'');
  const box=$('#inviteResults');if(!box)return;
- if(q.length<2){box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Scrivi almeno 2 caratteri…</div>';return}
- box.innerHTML='<div class="muted" style="font-size:13px;padding:8px 0">Cerco…</div>';
+ clearTimeout(_inviteT);
+ if(q.length<1){box.innerHTML='';return}
+ _inviteT=setTimeout(()=>doSearchInvitees(clubId,q),200);
+}
+async function doSearchInvitees(clubId,q){
+ const box=$('#inviteResults');if(!box)return;
+ box.innerHTML='<div class="uhint">Cerco…</div>';
  try{
-   const {data}=await supa.from('profiles').select('id,name,username').ilike('username','%'+q+'%').neq('id',authUser.id).limit(15);
-   if(!data||!data.length){box.innerHTML='<div class="srch-empty">Nessun utente trovato.</div>';return}
+   const isEmail=q.includes('@');
+   let query=supa.from('profiles').select('id,name,username,email').neq('id',authUser.id).limit(12);
+   query = isEmail ? query.ilike('email','%'+q+'%') : query.or('username.ilike.%'+q+'%,name.ilike.%'+q+'%');
+   const {data}=await query;
+   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
    box.innerHTML=data.map(u=>`<div class="user-row">
      <div class="user-av">${ini2(u.name||u.username||'?')}</div>
      <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')}</div></div>
      <button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">✉️ Invita</button>
    </div>`).join('');
- }catch(e){box.innerHTML='<div class="srch-empty">Errore.</div>';}
+ }catch(e){box.innerHTML='<div class="uhint">Errore.</div>';}
 }
 async function sendClubInvite(clubId,uid,btn){
  try{const {error}=await supa.from('club_invites').insert({club_id:clubId,inviter_id:authUser.id,invitee_id:uid,status:'pending'});
@@ -3332,6 +3361,10 @@ function openEditProfile(){
       </div>
     </div>
     <button class="btn" style="width:100%;justify-content:center;margin-top:18px" onclick="saveProfile()">💾 Salva profilo</button>
+    ${mode==='cloud'?`<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+      <div class="muted" style="font-size:12px;margin-bottom:10px">Eliminare l'account è permanente: rimuove profilo, libreria, note e iscrizioni ai club.</div>
+      <button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button>
+    </div>`:''}
   </div>`;
  openOverlay();
  ['genres','authors','loved','disliked'].forEach(renderChips);
@@ -3729,13 +3762,16 @@ function renderHomeCloud(){
 
  <!-- TROVA LETTORI (collassabile) -->
  <div class="card me-collapse" style="margin-top:18px">
-   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open')">
+   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open');setTimeout(()=>{const i=document.getElementById('userSearch');if(i&&this.parentElement.classList.contains('open'))i.focus()},260)">
      <span>🔎 Trova lettori</span><span class="me-chev">⌄</span>
    </button>
    <div class="me-collapse-body">
-     <div class="muted" style="font-size:12.5px;margin-bottom:10px">Cerca per username e segui altri lettori. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
-     <input id="userSearch" placeholder="Cerca uno username…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
-     <div id="userResults" style="margin-top:12px"></div>
+     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email e segui altri lettori. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
+     <div class="usearch">
+       <span class="usearch-ic">🔎</span>
+       <input id="userSearch" placeholder="Username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
+     </div>
+     <div id="userResults" class="uresults"></div>
    </div>
  </div>
 
@@ -3749,17 +3785,6 @@ function renderHomeCloud(){
      <div class="chips">${(d.genres&&d.genres.length)?d.genres.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid)">Aggiungi →</a></span>'}</div>
      <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori</h4>
      <div class="chips">${(d.authors&&d.authors.length)?d.authors.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato.</span>'}</div>
-   </div>
- </div>
-
- <!-- SICUREZZA (collassabile) -->
- <div class="card me-collapse" style="margin-top:14px">
-   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open')">
-     <span>⚙️ Account e sicurezza</span><span class="me-chev">⌄</span>
-   </button>
-   <div class="me-collapse-body">
-     <div class="muted" style="font-size:12.5px;margin-bottom:10px">Eliminare l'account è permanente: rimuove profilo, libreria, note e iscrizioni ai club.</div>
-     <button class="btn danger sm" onclick="openDeleteAccount()">🗑️ Elimina account</button>
    </div>
  </div>`;
  curioOverride=0;renderCuriosity();
