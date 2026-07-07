@@ -47,7 +47,7 @@ create policy books_read_public on public.books
 -- 4) Inviti ai club per username (da accettare)
 create table if not exists public.club_invites (
   id uuid primary key default gen_random_uuid(),
-  club_id uuid not null references public.clubs(id) on delete cascade,
+  club_id bigint not null references public.clubs(id) on delete cascade,
   inviter_id uuid not null references auth.users(id) on delete cascade,
   invitee_id uuid not null references auth.users(id) on delete cascade,
   status text not null default 'pending', -- pending | accepted | declined
