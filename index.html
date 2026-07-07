@@ -898,24 +898,32 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
-/* ===== HOME "Oggi" — hero identità ===== */
-.me-hero{position:relative;overflow:hidden;border-radius:24px;padding:22px 20px 16px;margin-bottom:16px;
-  background:linear-gradient(155deg,#245c4a,#123c2e);color:#fff;box-shadow:0 6px 20px rgba(20,50,40,.18);
-  display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"av id edit" "stats stats stats";gap:14px 16px;align-items:center}
-.me-arc{position:absolute;right:-40px;top:-50px;width:170px;height:170px;border-radius:50%;border:3px solid rgba(212,176,90,.5);pointer-events:none}
-.me-av{grid-area:av;width:70px;height:70px;border-radius:50%;background:#eae2d2;border:2px solid #d4b05a;display:grid;place-items:center;overflow:hidden;cursor:pointer;position:relative;z-index:1}
+/* ===== HOME "Oggi" ===== */
+.me-hero{position:relative;border-radius:22px;padding:16px 18px;margin-bottom:14px;
+  background:linear-gradient(150deg,#265c4a,#103c2e);color:#fff;box-shadow:0 6px 18px rgba(20,50,40,.16);
+  display:flex;align-items:center;gap:14px}
+.me-av{width:60px;height:60px;border-radius:50%;background:#eae2d2;border:2px solid #d4b05a;display:grid;place-items:center;overflow:hidden;cursor:pointer;flex:none}
 .me-av img{width:100%;height:100%;object-fit:cover}
-.me-av span{font-family:'Fraunces',serif;font-size:28px;font-weight:600;color:#1f6b57}
-.me-id{grid-area:id;min-width:0;position:relative;z-index:1}
-.me-name{font-family:'Fraunces',serif;font-size:24px;font-weight:600;line-height:1.1}
-.me-sub{font-size:12px;opacity:.85;margin-top:3px}
-.me-edit{grid-area:edit;align-self:start;background:#fff;color:#1f6b57;border:none;border-radius:16px;padding:8px 14px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;position:relative;z-index:1;white-space:nowrap}
-.me-stats{grid-area:stats;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;position:relative;z-index:1;margin-top:4px}
-.me-stat{background:rgba(255,255,255,.12);border-radius:14px;padding:10px 4px;text-align:center;cursor:pointer;transition:.15s}
-.me-stat:active{transform:scale(.95)}
-.me-stat .ms-n{font-family:'Fraunces',serif;font-size:20px;font-weight:600;line-height:1}
-.me-stat .ms-l{font-size:10px;opacity:.85;margin-top:3px}
-.me-goal{margin-bottom:18px}
+.me-av span{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:#1f6b57}
+.me-id{flex:1;min-width:0}
+.me-name{font-family:'Fraunces',serif;font-size:23px;font-weight:600;line-height:1.1}
+.me-sub{font-size:12px;opacity:.85;margin-top:2px}
+.me-edit{background:#fff;color:#1f6b57;border:none;border-radius:16px;padding:8px 14px;font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;flex:none}
+.me-panel{padding:16px 18px;margin-bottom:18px}
+.me-panel-top{display:flex;align-items:stretch;gap:16px}
+.me-metric{flex:1;min-width:0}
+.me-metric-lab{font-size:9.5px;letter-spacing:1.4px;font-weight:700;color:var(--ink-faint);margin-bottom:6px}
+.me-metric-n{font-family:'Fraunces',serif;font-size:30px;font-weight:600;color:var(--brand-solid);line-height:1}
+.me-metric-n.gold{color:var(--gold)}
+.me-metric-u{font-size:11px;color:var(--ink-soft)}
+.me-metric-set{font-size:13px;color:var(--brand-solid);font-weight:600;text-decoration:none}
+.me-panel-div{width:1px;background:var(--line);flex:none}
+.me-panel-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.me-stat{text-align:center;cursor:pointer;padding:4px 2px;border-radius:12px;transition:.15s}
+.me-stat:active{transform:scale(.94);background:var(--surface2)}
+.me-stat .ms-ic{font-size:15px}
+.me-stat .ms-n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--plum);line-height:1.1}
+.me-stat .ms-l{font-size:9.5px;color:var(--ink-soft)}
 .me-reading{display:flex;flex-direction:column;gap:10px}
 .me-book{display:flex;gap:14px;align-items:center;cursor:pointer}
 .me-collapse{overflow:hidden}
@@ -923,8 +931,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .me-chev{transition:transform .25s;color:var(--ink-faint);font-size:18px}
 .me-collapse.open .me-chev{transform:rotate(180deg)}
 .me-collapse-body{max-height:0;overflow:hidden;transition:max-height .3s ease;padding:0 18px}
-.me-collapse.open .me-collapse-body{max-height:600px;padding-bottom:18px}
-@media(min-width:560px){.me-hero{grid-template-columns:auto 1fr auto;grid-template-areas:"av id edit" "av stats stats"}}
+.me-collapse.open .me-collapse-body{max-height:640px;padding-bottom:18px}
 .switch-row{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:13.5px;cursor:pointer}
 .user-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .user-row:last-child{border-bottom:none}
@@ -1731,7 +1738,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v61 (Home e Profilo unite in Oggi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v62 (Oggi ridisegnata: hero pulito, pannello ritmo-obiettivo-stat)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3659,32 +3666,38 @@ function renderHomeCloud(){
  const av=safeImgUrl(d.avatar);
  const goalPct=goal?Math.min(100,Math.round(read/goal*100)):0;
  view.innerHTML=`
- <!-- HERO IDENTITÀ -->
+ <!-- HERO IDENTITÀ (pulito) -->
  <div class="me-hero">
-   <div class="me-arc"></div>
    <div class="me-av" onclick="openAvatarMenu()" title="Foto profilo">${av?`<img src="${esc(av)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}</div>
    <div class="me-id">
      <div class="me-name">${esc(p.name)||'Lettore'}</div>
      <div class="me-sub">${p.username?'@'+esc(p.username)+' · ':''}Lettore dal ${yr}</div>
    </div>
    <button class="me-edit" onclick="openEditProfile()">✏️ Modifica</button>
-   <div class="me-stats">
-     <div class="me-stat" onclick="libTab='read';go('libreria')"><div class="ms-n">${read}</div><div class="ms-l">letti</div></div>
-     <div class="me-stat" onclick="libTab='reading';go('libreria')"><div class="ms-n">${reading.length}</div><div class="ms-l">in lettura</div></div>
-     <div class="me-stat" onclick="libTab='toread';go('libreria')"><div class="ms-n">${toread}</div><div class="ms-l">da leggere</div></div>
-     <div class="me-stat" onclick="go('club')"><div class="ms-n">${myClubs.length}</div><div class="ms-l">club</div></div>
-   </div>
  </div>
 
- <!-- OBIETTIVO -->
- <div class="card pad me-goal">
-   <div style="display:flex;justify-content:space-between;align-items:baseline">
-     <h3 style="font-size:15px">🎯 Obiettivo ${new Date().getFullYear()}</h3>
-     ${goal?`<div><span style="font-family:'Fraunces';font-size:20px;color:var(--brand-solid);font-weight:600">${read}</span><span class="muted" style="font-size:12px"> / ${goal} libri</span></div>`:''}
+ <!-- RITMO + OBIETTIVO + STATISTICHE (in un colpo d'occhio) -->
+ <div class="card me-panel">
+   <div class="me-panel-top">
+     <div class="me-metric">
+       <div class="me-metric-lab">IL TUO RITMO</div>
+       ${d.pace?`<div><span class="me-metric-n">${+d.pace}</span> <span class="me-metric-u">pag/giorno</span></div>`
+         :`<a href="#" onclick="openEditProfile();return false" class="me-metric-set">imposta →</a>`}
+     </div>
+     <div class="me-panel-div"></div>
+     <div class="me-metric">
+       <div class="me-metric-lab">OBIETTIVO ${new Date().getFullYear()}</div>
+       ${goal?`<div><span class="me-metric-n gold">${read}</span> <span class="me-metric-u">/ ${goal} libri</span></div>
+         <div class="bar" style="height:6px;margin-top:7px"><i style="width:${goalPct}%"></i></div>`
+         :`<a href="#" onclick="openEditProfile();return false" class="me-metric-set">imposta →</a>`}
+     </div>
    </div>
-   ${goal?`<div class="bar" style="margin:10px 0 6px;height:9px"><i style="width:${goalPct}%"></i></div>
-     <div class="muted" style="font-size:12px">${read>=goal?'Obiettivo raggiunto! 🎉':(read+' di '+goal+' completati · continua così')}</div>`
-   :`<div class="muted" style="font-size:13px;margin-top:6px">Nessun obiettivo. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid);font-weight:600">Impostane uno →</a></div>`}
+   <div class="me-panel-stats">
+     <div class="me-stat" onclick="libTab='read';go('libreria')"><div class="ms-ic">📚</div><div class="ms-n">${read}</div><div class="ms-l">letti</div></div>
+     <div class="me-stat" onclick="libTab='reading';go('libreria')"><div class="ms-ic">📖</div><div class="ms-n">${reading.length}</div><div class="ms-l">in lettura</div></div>
+     <div class="me-stat" onclick="libTab='toread';go('libreria')"><div class="ms-ic">🔖</div><div class="ms-n">${toread}</div><div class="ms-l">da leggere</div></div>
+     <div class="me-stat" onclick="go('club')"><div class="ms-ic">👥</div><div class="ms-n">${myClubs.length}</div><div class="ms-l">club</div></div>
+   </div>
  </div>
 
  <!-- CONTINUA A LEGGERE -->
