@@ -67,7 +67,7 @@
   --glow1:#eeeefb; --glow2:#f3f0ea;
   --hover:#f2f1ec; --glass:rgba(255,255,255,.82);
   --brand-solid:#4338ca;
-  --brand-grad:linear-gradient(120deg,#4338ca,#6366f1);
+  --brand-grad:linear-gradient(145deg,#2a7a63,#14503d);
   --gold-grad:linear-gradient(120deg,#bf9b3f,#d2ab4e);
   --quote-bg:#f6f5f0;
   --ai-bg:#f5f5fd;
@@ -91,7 +91,7 @@
   --glow1:#22262b; --glow2:#1f2227;
   --hover:#33373d; --glass:rgba(38,41,46,.82);
   --brand-solid:#5f9b6e;
-  --brand-grad:linear-gradient(120deg,#4f8560,#68a577);
+  --brand-grad:linear-gradient(145deg,#2f8168,#153f31);
   --gold-grad:linear-gradient(120deg,#b98f3f,#d9b866);
   --quote-bg:#2b2e34;
   --ai-bg:#282d2b;
@@ -771,7 +771,7 @@ input[type=range]{accent-color:var(--coral)}
   --sage:#1f6b57; --sage-soft:#e2efe8; --sky:#3b6f8c;
   --glow1:#e7efe9; --glow2:#f1e9da; --hover:#efe8da; --glass:rgba(255,253,248,.78);
   --brand-solid:#1f6b57;
-  --brand-grad:linear-gradient(135deg,#1f6b57,#2f8c72);
+  --brand-grad:linear-gradient(145deg,#2a7a63,#14503d);
   --gold-grad:linear-gradient(135deg,#b07d35,#caa15c);
   --quote-bg:#f3eddf; --ai-bg:#eef3ef;
   --shadow-sm:0 1px 2px rgba(40,32,20,.06);
@@ -791,7 +791,7 @@ input[type=range]{accent-color:var(--coral)}
   --sage:#a6cfb0; --sage-soft:#243026; --sky:#8db9dd;
   --glow1:#22262b; --glow2:#1f2227; --hover:#33373d; --glass:rgba(38,41,46,.82);
   --brand-solid:#5f9b6e;
-  --brand-grad:linear-gradient(135deg,#4f8560,#68a577);
+  --brand-grad:linear-gradient(145deg,#2f8168,#153f31);
   --gold-grad:linear-gradient(135deg,#b98f3f,#d9b866);
   --quote-bg:#2b2e34; --ai-bg:#282d2b;
   --shadow-sm:0 1px 2px rgba(0,0,0,.35);
@@ -934,7 +934,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .lib-priv.pub{background:var(--sage-soft,#e7efe9);color:var(--brand-solid);border-color:var(--brand-solid)}
 /* ===== HOME "Oggi" ===== */
 .me-hero{position:relative;border-radius:22px;padding:16px 18px;margin-bottom:14px;
-  background:linear-gradient(150deg,#265c4a,#103c2e);color:#fff;box-shadow:0 6px 18px rgba(20,50,40,.16);
+  background:var(--brand-grad);color:#fff;box-shadow:0 6px 18px rgba(20,50,40,.16);
   display:flex;align-items:center;gap:14px}
 .me-av{width:60px;height:60px;border-radius:50%;background:#eae2d2;border:2px solid #d4b05a;display:grid;place-items:center;overflow:hidden;cursor:pointer;flex:none}
 .me-av img{width:100%;height:100%;object-fit:cover}
@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v80 (toggle curiosita senza alert bloccante)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v81 (verde uniforme ed elegante home e club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
