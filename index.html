@@ -1776,7 +1776,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v75 (scalabilita: note paginabili, liste con scroll)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v76 (FIX libreria mostrava libri altrui)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4319,7 +4319,7 @@ function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
- const {data,error}=await supa.from('books').select('*').order('id');
+ const {data,error}=await supa.from('books').select('*').eq('user_id',authUser.id).order('id');
  if(error)throw error;
  books=(data||[]).map(dbToBook);
 }
