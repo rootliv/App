@@ -1231,6 +1231,7 @@ const pages=[
  {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
  {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
  {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
+ {id:'lettori',ic:'👥',label:'Lettori',title:'Lettori',sub:'Chi segui e nuovi lettori',grp:'Insieme'},
  {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
  {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Strumenti'},
  {id:'mappa',ic:'🗺️',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Strumenti'},
@@ -1564,6 +1565,7 @@ function initMap(){
 }
 
 renders.incontri=()=>renderIncontriCloud();
+renders.lettori=()=>renderLettoriCloud();
 
 renders.notifiche=()=>renderNotifCloud();
 
@@ -1776,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v76 (FIX libreria mostrava libri altrui)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v77 (sezione Lettori nel menu, preferenze visibili prima della curiosita)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3214,6 +3216,24 @@ async function toggleLibraryPrivacy(btn){
  renders.libreria();
 }
 let myFollowing=[]; // id degli utenti che seguo
+async function renderLettoriCloud(){
+ if(mode!=='cloud'){view.innerHTML='<div class="card pad"><div class="srch-empty">Questa sezione è disponibile con un account cloud.</div></div>';return;}
+ view.innerHTML=`
+ <div class="card pad">
+   <h3 style="font-size:16px;margin-bottom:6px">👥 Lettori che segui</h3>
+   <div class="muted" style="font-size:12.5px;margin-bottom:14px">Tocca un lettore per vedere la sua libreria (se pubblica).</div>
+   <div id="followingList"><div class="uhint">Carico…</div></div>
+ </div>
+ <div id="invitesBox"></div>
+ <div class="card pad" style="margin-top:18px">
+   <h3 style="font-size:16px;margin-bottom:6px">🔎 Trova nuovi lettori</h3>
+   <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email e inizia a seguire. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
+   <div class="usearch"><span class="usearch-ic">🔎</span><input id="userSearch" placeholder="Cerca per username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)"></div>
+   <div id="userResults" class="uresults"></div>
+ </div>`;
+ loadFollowing();renderFollowingList();renderMyInvites();
+}
+async function renderLettoriCloudPlaceholder(){}
 async function loadFollowing(){
  try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
    myFollowing=(data||[]).map(r=>r.followed_id);}catch(e){myFollowing=[];}
@@ -3884,41 +3904,21 @@ function renderHomeCloud(){
      <div class="muted" style="font-size:11px;margin-top:4px">${b.pg?('pag. '+Math.round(b.pg*(b.prog||0)/100)+' di '+b.pg):((b.prog||0)+'%')}</div>
    </div></div>`).join('')}</div>`:''}
 
+ <!-- GENERI E AUTORI (sempre visibili, prima della curiosità) -->
+ <div class="sec-title">📗 Generi e autori preferiti</div>
+ <div class="card pad">
+   <h4 style="font-size:13px;margin:0 0 8px;color:var(--ink-soft)">Generi</h4>
+   <div class="chips">${(d.genres&&d.genres.length)?d.genres.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid)">Aggiungi →</a></span>'}</div>
+   <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori</h4>
+   <div class="chips">${(d.authors&&d.authors.length)?d.authors.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato.</span>'}</div>
+ </div>
+
  <!-- CURIOSITÀ -->
  <div class="sec-title">📚 Curiosità della settimana</div>
  <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->
- <div id="invitesBox"></div>
-
- <!-- LETTORI (collassabile): chi seguo + ricerca -->
- <div class="card me-collapse" style="margin-top:18px">
-   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open');if(this.parentElement.classList.contains('open'))renderFollowingList()">
-     <span>👥 Lettori che segui</span><span class="me-chev">⌄</span>
-   </button>
-   <div class="me-collapse-body">
-     <div id="followingList"></div>
-     <div class="follow-sep">Trova nuovi lettori</div>
-     <div class="usearch">
-       <span class="usearch-ic">🔎</span>
-       <input id="userSearch" placeholder="Cerca per username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
-     </div>
-     <div id="userResults" class="uresults"></div>
-   </div>
- </div>
-
- <!-- PREFERENZE (collassabili) -->
- <div class="card me-collapse" style="margin-top:14px">
-   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open')">
-     <span>📗 Generi e autori preferiti</span><span class="me-chev">⌄</span>
-   </button>
-   <div class="me-collapse-body">
-     <h4 style="font-size:13px;margin:0 0 8px;color:var(--ink-soft)">Generi</h4>
-     <div class="chips">${(d.genres&&d.genres.length)?d.genres.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid)">Aggiungi →</a></span>'}</div>
-     <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori</h4>
-     <div class="chips">${(d.authors&&d.authors.length)?d.authors.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato.</span>'}</div>
-   </div>
- </div>`;
+ <div id="invitesBox"></div>`;
  curioOverride=0;renderCuriosity();
  if(mode==='cloud'){loadFollowing();renderMyInvites();}
 }
