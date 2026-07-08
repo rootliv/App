@@ -917,6 +917,10 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit{flex:none;width:30px;height:30px;background:rgba(255,255,255,.15);border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;display:grid;place-items:center;padding:0}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
+.follow-sep{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin:16px 0 10px}
+.inv-state{font-size:12px;font-weight:600;padding:6px 10px;border-radius:12px;white-space:nowrap}
+.inv-state.wait{background:var(--gold-soft);color:var(--gold)}
+.inv-state.ok{background:#e3f1e8;color:var(--brand-solid)}
 .usearch-ic{position:absolute;left:14px;font-size:15px;opacity:.5;pointer-events:none}
 .usearch input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font-size:14px;outline:none;transition:.15s}
 .usearch input:focus{border-color:var(--brand-solid);box-shadow:0 0 0 4px var(--glow1)}
@@ -1771,7 +1775,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v73 (descrizione club max 60 caratteri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v74 (chi seguo, stato in attesa inviti, notifiche social)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2078,6 +2082,8 @@ function upcomingMeetings(){const t=todayStr();return (myMeetings||[]).filter(m=
 function clubName(id){const c=myClubs.find(x=>x.id===id);return c?(c.emoji||'📖')+' '+c.name:'Club'}
 function pendingItems(){
  const items=[];
+ // Notifiche social già caricate (inviti accettati, nuovi follower)
+ (socialNotifs||[]).forEach(n=>items.push(n));
  myClubs.forEach(c=>{
    if(c.selection_mode==='voting')items.push({ic:'🗳️',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id});
    if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' è il tuo turno: scegli il libro.',go:'club',cid:c.id});
@@ -2085,6 +2091,34 @@ function pendingItems(){
  upcomingMeetings().slice(0,2).forEach(m=>{const dd=daysTo(m.date);items.push({ic:'📅',bg:'#e1edf6',t:'Incontro '+(dd===0?'oggi':'tra '+dd+'g'),p:esc(m.title||'Incontro')+' · '+esc(clubName(m.club_id)),go:'incontri'})});
  myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'✍️',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario'}));
  return items;
+}
+let socialNotifs=[];
+/* Carica notifiche "sociali": inviti che HO mandato e sono stati accettati, e nuovi follower.
+   Confronta con ciò che ho già visto (localStorage) per non ripeterle all'infinito. */
+async function loadSocialNotifs(){
+ if(mode!=='cloud'||!supa){socialNotifs=[];return;}
+ const out=[];
+ try{
+   // inviti accettati che ho mandato io
+   const {data:inv}=await supa.from('club_invites').select('id,club_id,invitee_id,status').eq('inviter_id',authUser.id).eq('status','accepted');
+   if(inv&&inv.length){
+     const cids=[...new Set(inv.map(i=>i.club_id))];const uids=[...new Set(inv.map(i=>i.invitee_id))];
+     const cmap={},umap={};
+     try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
+     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     inv.forEach(i=>out.push({ic:'✅',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
+   }
+ }catch(e){}
+ try{
+   // nuovi follower
+   const {data:fol}=await supa.from('follows').select('follower_id,created_at').eq('followed_id',authUser.id).order('created_at',{ascending:false}).limit(20);
+   if(fol&&fol.length){
+     const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
+     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     fol.forEach(f=>out.push({ic:'👤',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'home',key:'fol-'+f.follower_id}));
+   }
+ }catch(e){}
+ socialNotifs=out;
 }
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
@@ -3180,6 +3214,32 @@ async function loadFollowing(){
  try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
    myFollowing=(data||[]).map(r=>r.followed_id);}catch(e){myFollowing=[];}
 }
+async function renderFollowingList(){
+ const box=$('#followingList');if(!box)return;
+ box.innerHTML='<div class="uhint">Carico…</div>';
+ try{
+   const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
+   const ids=(data||[]).map(r=>r.followed_id);
+   myFollowing=ids;
+   if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
+   const {data:profs}=await supa.from('profiles').select('id,name,username,public_library').in('id',ids);
+   box.innerHTML=(profs||[]).map(u=>`<div class="user-row">
+     <div class="user-av">${ini2(u.name||u.username||'?')}</div>
+     <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
+       <b>${esc(u.name||u.username)}</b>
+       <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 libreria visibile':'· 🔒 privata'}</div>
+     </div>
+     <button class="btn ghost sm" onclick="unfollowFromList('${u.id}',this)">Smetti</button>
+   </div>`).join('');
+ }catch(e){box.innerHTML='<div class="uhint">Errore nel caricamento.</div>';}
+}
+async function unfollowFromList(uid,btn){
+ try{await supa.from('follows').delete().eq('follower_id',authUser.id).eq('followed_id',uid);
+   myFollowing=myFollowing.filter(x=>x!==uid);
+   const row=btn.closest('.user-row');if(row)row.remove();
+   const box=$('#followingList');if(box&&!box.querySelector('.user-row'))box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';
+ }catch(e){alert('Errore: '+e.message);}
+}
 let _usearchT=null;
 async function searchUsers(q){
  q=(q||'').trim().replace(/^@/,'');
@@ -3231,7 +3291,11 @@ async function viewUserLibrary(uid,name){
 async function loadMyInvites(){
  try{const {data}=await supa.from('club_invites').select('*').eq('invitee_id',authUser.id).eq('status','pending');return data||[];}catch(e){return[];}
 }
+let _clubPendingInvites=[],_clubMemberIds=[];
 async function inviteToClub(clubId){
+ _clubPendingInvites=[];_clubMemberIds=[];
+ try{const {data}=await supa.from('club_invites').select('invitee_id,status').eq('club_id',clubId).eq('status','pending');_clubPendingInvites=(data||[]).map(r=>r.invitee_id);}catch(e){}
+ try{const {data}=await supa.from('club_members').select('user_id').eq('club_id',clubId);_clubMemberIds=(data||[]).map(r=>r.user_id);}catch(e){}
  $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita al club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email. La persona riceverà un invito da accettare.</div>
@@ -3256,17 +3320,24 @@ async function doSearchInvitees(clubId,q){
    query = isEmail ? query.ilike('email','%'+q+'%') : query.or('username.ilike.%'+q+'%,name.ilike.%'+q+'%');
    const {data}=await query;
    if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
-   box.innerHTML=data.map(u=>`<div class="user-row">
-     <div class="user-av">${ini2(u.name||u.username||'?')}</div>
-     <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')}</div></div>
-     <button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">✉️ Invita</button>
-   </div>`).join('');
+   box.innerHTML=data.map(u=>{
+     let btn;
+     if(_clubMemberIds.includes(u.id))btn='<span class="inv-state ok">✓ Già membro</span>';
+     else if(_clubPendingInvites.includes(u.id))btn='<span class="inv-state wait">⏳ In attesa di risposta</span>';
+     else btn=`<button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">✉️ Invita</button>`;
+     return `<div class="user-row">
+       <div class="user-av">${ini2(u.name||u.username||'?')}</div>
+       <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')}</div></div>
+       ${btn}
+     </div>`;
+   }).join('');
  }catch(e){box.innerHTML='<div class="uhint">Errore.</div>';}
 }
 async function sendClubInvite(clubId,uid,btn){
  try{const {error}=await supa.from('club_invites').insert({club_id:clubId,inviter_id:authUser.id,invitee_id:uid,status:'pending'});
    if(error){if(error.code==='23505'){alert('Hai già invitato questa persona.');}else{alert('Errore: '+error.message);}return;}
-   if(btn){btn.textContent='✓ Invitato';btn.disabled=true;btn.classList.add('ghost');}
+   _clubPendingInvites.push(uid);
+   if(btn){const span=document.createElement('span');span.className='inv-state wait';span.textContent='⏳ In attesa di risposta';btn.replaceWith(span);}
  }catch(e){alert('Errore: '+e.message);}
 }
 async function respondInvite(inviteId,clubId,accept){
@@ -3816,16 +3887,17 @@ function renderHomeCloud(){
  <!-- INVITI (se presenti) -->
  <div id="invitesBox"></div>
 
- <!-- TROVA LETTORI (collassabile) -->
+ <!-- LETTORI (collassabile): chi seguo + ricerca -->
  <div class="card me-collapse" style="margin-top:18px">
-   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open');setTimeout(()=>{const i=document.getElementById('userSearch');if(i&&this.parentElement.classList.contains('open'))i.focus()},260)">
-     <span>🔎 Trova lettori</span><span class="me-chev">⌄</span>
+   <button class="me-collapse-head" onclick="this.parentElement.classList.toggle('open');if(this.parentElement.classList.contains('open'))renderFollowingList()">
+     <span>👥 Lettori che segui</span><span class="me-chev">⌄</span>
    </button>
    <div class="me-collapse-body">
-     <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email e segui altri lettori. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
+     <div id="followingList"></div>
+     <div class="follow-sep">Trova nuovi lettori</div>
      <div class="usearch">
        <span class="usearch-ic">🔎</span>
-       <input id="userSearch" placeholder="Username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
+       <input id="userSearch" placeholder="Cerca per username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
      </div>
      <div id="userResults" class="uresults"></div>
    </div>
@@ -4007,8 +4079,23 @@ function renderNotifCloud(){
 }
 function toggleCurioNotif(el){
  const on=el.classList.contains('on');
- if(on){curioDisableNotif();el.classList.remove('on');}
- else{curioEnableNotif();/* il permesso è async; aggiorno se concesso */setTimeout(()=>{try{if(loadCurioState().notif)el.classList.add('on')}catch(e){}},400);}
+ if(on){
+   try{const s=loadCurioState();s.notif=false;saveCurioState(s);}catch(e){}
+   el.classList.remove('on');
+ }else{
+   if(!('Notification' in window)){alert('Il tuo browser non supporta le notifiche.');return;}
+   if(Notification.permission==='granted'){
+     try{const s=loadCurioState();s.notif=true;saveCurioState(s);}catch(e){}
+     el.classList.add('on');
+   }else if(Notification.permission==='denied'){
+     alert('Le notifiche sono bloccate nelle impostazioni del browser. Sbloccale per attivarle.');
+   }else{
+     Notification.requestPermission().then(perm=>{
+       if(perm==='granted'){try{const s=loadCurioState();s.notif=true;saveCurioState(s);}catch(e){}el.classList.add('on');
+         try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò della curiosità della settimana.'})}catch(e){}}
+     });
+   }
+ }
 }
 /* Puntino campanella: acceso finché ci sono novità non ancora "viste" (aperte). */
 function notifSig(items){return (items||[]).map(it=>it.t+'|'+it.p).sort().join('§');}
@@ -4268,6 +4355,7 @@ function startApp(target){
  buildNav();go(target||'home');
  enrichCovers();
  maybeShowOnboarding();
+ if(mode==='cloud'){loadSocialNotifs().then(()=>{try{updateBellDot()}catch(e){}});}
 }
 
 /* ---- Onboarding primo accesso: appare una sola volta, per accompagnare l'utente nuovo che
