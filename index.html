@@ -898,6 +898,15 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .prof-av:hover .prof-av-cam{opacity:1}
 .side-foot .av img,#meAv img{width:100%;height:100%;object-fit:cover;display:block}
 .stat-pills{display:flex;gap:8px;flex-wrap:wrap}
+.nc-hero{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.nc-photo{position:relative;width:76px;height:76px;border-radius:20px;flex:none;cursor:pointer;overflow:hidden;
+  background:var(--surface2);border:2px dashed var(--line);display:grid;place-items:center;font-size:26px;transition:.15s}
+.nc-photo:hover{border-color:var(--brand-solid)}
+.nc-photo img{width:100%;height:100%;object-fit:cover}
+.nc-photo .nc-photo-cam{position:absolute;right:-6px;bottom:-6px;width:28px;height:28px;border-radius:50%;background:var(--brand-solid);color:#fff;display:grid;place-items:center;font-size:15px;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid var(--surface)}
+.club-desc{font-size:13.5px;color:rgba(255,255,255,.92);position:relative;z-index:1;max-width:60ch;display:flex;align-items:center;gap:6px;margin-top:2px}
+.club-desc-edit{background:rgba(255,255,255,.2);border:none;border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:12px;flex:none}
+.club-desc-edit:hover{background:rgba(255,255,255,.35)}
 .usearch{position:relative;display:flex;align-items:center}
 .usearch-ic{position:absolute;left:14px;font-size:15px;opacity:.5;pointer-events:none}
 .usearch input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font-size:14px;outline:none;transition:.15s}
@@ -1753,7 +1762,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v66 (ripristino Home e Diario condiviso)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v67 (creazione club con foto, descrizione leggibile, bottoni scelta gated)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2148,6 +2157,11 @@ async function saveAvatarEdited(){
  const dw=s.img.width*s.base*s.scale*k, dh=s.img.height*s.base*s.scale*k;
  octx.drawImage(s.img,(OUT-dw)/2+s.ox*k,(OUT-dh)/2+s.oy*k,dw,dh);
  const dataUrl=out.toDataURL('image/jpeg',0.82);
+ if(_avTargetClub==='__new__'){
+   _newClubImg=dataUrl;_avTargetClub=null;_avCleanup();
+   openClubModalWithPhoto();
+   return;
+ }
  if(_avTargetClub){await saveClubImage(_avTargetClub,dataUrl);}
  else{await saveAvatar(dataUrl);}
  _avCleanup();
@@ -2224,7 +2238,7 @@ function renderClubCloud(){
      <div style="font-size:46px">👥</div>
      <h2 style="font-size:22px;margin:10px 0 6px">Nessun club, per ora</h2>
      <div class="muted" style="max-width:430px;margin:0 auto 18px">Crea il tuo club del libro e invita gli amici con un codice, oppure unisciti a un club esistente.</div>
-     <button class="btn" onclick="openClubModal()">＋ Crea o unisciti a un club</button>
+     <button class="btn" onclick="openClubModalFresh()">＋ Crea o unisciti a un club</button>
    </div>`;return}
  const c=myClubs.find(x=>x.id===clubSel)||myClubs[0];clubSel=c.id;
  const role=myRoles[c.id]||'membro';
@@ -2234,7 +2248,7 @@ function renderClubCloud(){
      <span class="club-tab-em">${cl.emoji||'📖'}</span>
      <span style="min-width:0"><b>${esc(cl.name)}</b><small>${esc(myRoles[cl.id]||'membro')}</small></span>
    </button>`).join('')}
-   <button class="club-tab add" onclick="openClubModal()"><span class="club-tab-em">＋</span><span><b>Crea o unisciti</b><small>nuovo club</small></span></button>
+   <button class="club-tab add" onclick="openClubModalFresh()"><span class="club-tab-em">＋</span><span><b>Crea o unisciti</b><small>nuovo club</small></span></button>
   </div>
 
   <div class="club-banner">
@@ -2242,7 +2256,7 @@ function renderClubCloud(){
    <div style="flex:1;min-width:0">
      <div class="club-eyebrow">Club del libro</div>
      <h2>${esc(c.name)}</h2>
-     <p id="clubDescText">${c.description?esc(c.description):'<span class="muted" style="font-size:13px">Nessuna descrizione</span>'} <button class="linklike" onclick="editClubDesc(${c.id})">✏️</button></p>
+     <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span style="opacity:.7;font-style:italic">Aggiungi una descrizione</span>'} <button class="club-desc-edit" onclick="editClubDesc(${c.id})" title="Modifica descrizione">✏️</button></p>
      <div class="avstack" id="clubAvs"></div>
    </div>
    <span class="role-chip">${role==='admin'?'★ Admin':'Membro'}</span>
@@ -2287,32 +2301,56 @@ function renderClubCloud(){
    if(c.selection_mode==='voting')loadAndRenderProposals(c.id);
  }).catch(()=>{});
 }
+let _newClubImg=null,_ncDraft={name:'',desc:''};
+function openClubModalFresh(){_newClubImg=null;_ncDraft={name:'',desc:''};openClubModal();}
 function openClubModal(){
  $('#modal').innerHTML=`
   <div class="modal-top"><b>Club del libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <h3 style="font-size:16px;margin-bottom:10px">＋ Crea un nuovo club</h3>
-    <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
-    <div class="row" style="gap:12px">
-      <div class="field" style="flex:none;width:90px"><label>Emoji</label><input id="ncEmoji" maxlength="2" value="📖"></div>
-      <div class="field" style="flex:1"><label>Descrizione</label><input id="ncDesc" placeholder="Una breve descrizione del club"></div>
+    <div class="nc-hero">
+      <div class="nc-photo" id="ncPhoto" onclick="pickNewClubPhoto()">
+        <span id="ncPhotoPlaceholder">📷</span>
+        <div class="nc-photo-cam">＋</div>
+      </div>
+      <div style="flex:1;min-width:0">
+        <h3 style="font-size:17px;margin:0 0 4px">Crea un nuovo club</h3>
+        <div class="muted" style="font-size:12.5px">Dà un nome e un volto al tuo club del libro.</div>
+      </div>
     </div>
-    <button class="btn" onclick="createClub()">Crea club</button>
-    <hr>
-    <h3 style="font-size:16px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
+    <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
+    <div class="field"><label>Descrizione <span class="muted" style="font-weight:400">(facoltativa)</span></label><input id="ncDesc" placeholder="Una breve descrizione del club"></div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">✨ Crea club</button>
+    <hr style="margin:22px 0">
+    <h3 style="font-size:15px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
     <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
     <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
  openOverlay();
 }
+function pickNewClubPhoto(){
+ _ncDraft.name=($('#ncName')||{}).value||'';
+ _ncDraft.desc=($('#ncDesc')||{}).value||'';
+ const i=document.createElement('input');i.type='file';i.accept='image/*';
+ i.onchange=()=>{const f=i.files&&i.files[0];if(!f)return;
+   _avTargetClub='__new__';openAvatarEditor(f);};
+ i.click();
+}
+function openClubModalWithPhoto(){
+ openClubModal();
+ if(_ncDraft.name&&$('#ncName'))$('#ncName').value=_ncDraft.name;
+ if(_ncDraft.desc&&$('#ncDesc'))$('#ncDesc').value=_ncDraft.desc;
+ const ph=$('#ncPhoto');if(ph&&_newClubImg)ph.innerHTML=`<img src="${_newClubImg}" alt=""><div class="nc-photo-cam">✎</div>`;
+}
 function clubMsg(m,ok){const e=$('#clubMsg');if(e){e.textContent=m;e.classList.add('show');e.style.color=ok?'var(--sage)':'';e.style.background=ok?'#e3f1e8':''}}
 async function createClub(){
  const name=$('#ncName').value.trim();if(!name)return clubMsg('Inserisci il nome del club.');
- const emoji=$('#ncEmoji').value.trim()||'📖';const desc=$('#ncDesc').value.trim();
- const {data,error}=await supa.from('clubs').insert({name,emoji,description:desc,owner:authUser.id}).select('*').single();
+ const desc=$('#ncDesc').value.trim();
+ const payload={name,emoji:'📖',description:desc,owner:authUser.id};
+ if(_newClubImg)payload.image=_newClubImg;
+ const {data,error}=await supa.from('clubs').insert(payload).select('*').single();
  if(error)return clubMsg('Errore: '+error.message);
  await supa.from('club_members').insert({club_id:data.id,user_id:authUser.id,role:'admin'});
- clubsLoaded=false;clubSel=data.id;closeModal();go('club');
+ _newClubImg=null;clubsLoaded=false;clubSel=data.id;closeModal();go('club');
 }
 async function joinClub(){
  const code=($('#joinCode').value||'').trim();const id=clubCodeToId(code);
@@ -2419,10 +2457,17 @@ function selectionPanelHTML(c,role,members){
        </div>
        <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.5">Giro in corso: hanno scelto <b>${chosen.length}/${total}</b>. Sorteggiabili ora: ${remaining.map(m=>m.name).join(', ')}.</div>`;
    }else{
-     h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-         <button class="btn sm" onclick="startRotation(${c.id})">🎲 ${completed?'Nuovo giro: sorteggia tutti':'Sorteggio a turni'}</button>
-         <button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>
-       </div><div class="muted" style="font-size:11.5px;margin-top:6px;line-height:1.5">${completed?'Giro completato 🎉 Il nuovo sorteggio includerà di nuovo tutti i membri.':'Il sorteggio decide da chi iniziare; chi sceglie viene escluso dai sorteggi finché non hanno scelto tutti.'}</div>`;
+     const nMembers=(members||[]).length;
+     const canRotate=nMembers>=2;const canVote=nMembers>=3;
+     if(canRotate||canVote){
+       h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+         ${canRotate?`<button class="btn sm" onclick="startRotation(${c.id})">🎲 ${completed?'Nuovo giro: sorteggia tutti':'Sorteggio a turni'}</button>`:''}
+         ${canVote?`<button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>`:''}
+       </div><div class="muted" style="font-size:11.5px;margin-top:6px;line-height:1.5">${completed?'Giro completato 🎉 Il nuovo sorteggio includerà di nuovo tutti i membri.':'Il sorteggio decide da chi iniziare; chi sceglie viene escluso dai sorteggi finché non hanno scelto tutti.'}${!canVote&&canRotate?' La votazione si sblocca da 3 membri.':''}</div>`;
+     }else{
+       h+=`<div class="note" style="margin-top:14px;padding:11px 13px"><div style="font-size:12.5px">👥 Invita almeno <b>un altro membro</b> per scegliere il libro insieme (sorteggio da 2, votazione da 3).</div></div>
+         <div style="margin-top:10px"><button class="btn sm" onclick="inviteToClub(${c.id})">🔎 Invita al club</button></div>`;
+     }
    }
  }else if(!c.current_title)h+=`<div class="muted" style="font-size:12px;margin-top:8px">L'admin avvierà la scelta del libro.</div>`;
  return h;
