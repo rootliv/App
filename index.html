@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v78 (ricerca lettori live piu robusta, username+nome+email)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v79 (fix toggle curiosita: preferenza indipendente dal permesso)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4079,7 +4079,7 @@ function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
  const items=pendingItems();
  markNotifsSeen(items); // aprendo la pagina, le novità diventano "lette"
- const curioOn=(function(){try{return !!loadCurioState().notif && ('Notification' in window) && Notification.permission==='granted'}catch(e){return false}})();
+ const curioOn=(function(){try{const s=loadCurioState();return (s.notifPref!==undefined)?!!s.notifPref:!!s.notif}catch(e){return false}})();
  const opts=[['📖 Promemoria di lettura',null],['📅 Incontro imminente',null],['📚 Nuovo libro scelto',null],['📝 Nuova nota disponibile',null],['🗳️ Votazione aperta',null],['✨ Curiosità settimanale','curio']];
  view.innerHTML=`
  <div class="row">
@@ -4095,21 +4095,17 @@ function renderNotifCloud(){
 }
 function toggleCurioNotif(el){
  const on=el.classList.contains('on');
- if(on){
-   try{const s=loadCurioState();s.notif=false;saveCurioState(s);}catch(e){}
-   el.classList.remove('on');
- }else{
-   if(!('Notification' in window)){alert('Il tuo browser non supporta le notifiche.');return;}
-   if(Notification.permission==='granted'){
-     try{const s=loadCurioState();s.notif=true;saveCurioState(s);}catch(e){}
-     el.classList.add('on');
-   }else if(Notification.permission==='denied'){
-     alert('Le notifiche sono bloccate nelle impostazioni del browser. Sbloccale per attivarle.');
-   }else{
+ // Registra sempre la PREFERENZA dell'utente (indipendente dal permesso di sistema)
+ try{const s=loadCurioState();s.notifPref=!on;s.notif=!on;saveCurioState(s);}catch(e){}
+ el.classList.toggle('on');
+ // Se sta attivando e il permesso di sistema non è ancora concesso, prova a chiederlo (best effort)
+ if(!on && ('Notification' in window)){
+   if(Notification.permission==='default'){
      Notification.requestPermission().then(perm=>{
-       if(perm==='granted'){try{const s=loadCurioState();s.notif=true;saveCurioState(s);}catch(e){}el.classList.add('on');
-         try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò della curiosità della settimana.'})}catch(e){}}
+       if(perm==='granted'){try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò della curiosità della settimana.'})}catch(e){}}
      });
+   }else if(Notification.permission==='denied'){
+     setTimeout(()=>alert('Ho salvato la preferenza. Per ricevere anche l\'avviso di sistema, sblocca le notifiche per questo sito nelle impostazioni del browser.'),50);
    }
  }
 }
