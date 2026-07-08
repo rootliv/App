@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v77 (sezione Lettori nel menu, preferenze visibili prima della curiosita)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v78 (ricerca lettori live piu robusta, username+nome+email)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3275,13 +3275,20 @@ async function searchUsers(q){
 async function doSearchUsers(q){
  const box=$('#userResults');if(!box)return;
  box.innerHTML='<div class="uhint">Cerco…</div>';
+ const esc2=s=>s.replace(/[%,()]/g,' ').trim();
+ const qq=esc2(q);
+ if(!qq){box.innerHTML='';return}
  try{
-   const isEmail=q.includes('@');
-   let query=supa.from('profiles').select('id,name,username,email,public_library').neq('id',authUser.id).limit(12);
-   query = isEmail ? query.ilike('email','%'+q+'%') : query.or('username.ilike.%'+q+'%,name.ilike.%'+q+'%');
-   const {data}=await query;
-   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
-   box.innerHTML=data.map(u=>{
+   // cerca in parallelo su username/nome e su email, poi unisce
+   const base=()=>supa.from('profiles').select('id,name,username,email,public_library').neq('id',authUser.id).limit(12);
+   const [r1,r2]=await Promise.all([
+     base().or(`username.ilike.%${qq}%,name.ilike.%${qq}%`),
+     q.includes('@')||/[a-z0-9._-]+@?/i.test(qq) ? base().ilike('email','%'+qq+'%') : Promise.resolve({data:[]})
+   ]);
+   const seen=new Set();const data=[];
+   [...(r1.data||[]),...(r2.data||[])].forEach(u=>{if(!seen.has(u.id)){seen.add(u.id);data.push(u);}});
+   if(!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
+   box.innerHTML=data.slice(0,12).map(u=>{
      const following=myFollowing.includes(u.id);
      return `<div class="user-row">
        <div class="user-av">${ini2(u.name||u.username||'?')}</div>
@@ -3338,13 +3345,18 @@ async function searchInvitees(clubId,q){
 async function doSearchInvitees(clubId,q){
  const box=$('#inviteResults');if(!box)return;
  box.innerHTML='<div class="uhint">Cerco…</div>';
+ const qq=(q||'').replace(/[%,()]/g,' ').trim();
+ if(!qq){box.innerHTML='';return}
  try{
-   const isEmail=q.includes('@');
-   let query=supa.from('profiles').select('id,name,username,email').neq('id',authUser.id).limit(12);
-   query = isEmail ? query.ilike('email','%'+q+'%') : query.or('username.ilike.%'+q+'%,name.ilike.%'+q+'%');
-   const {data}=await query;
-   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
-   box.innerHTML=data.map(u=>{
+   const base=()=>supa.from('profiles').select('id,name,username,email').neq('id',authUser.id).limit(12);
+   const [r1,r2]=await Promise.all([
+     base().or(`username.ilike.%${qq}%,name.ilike.%${qq}%`),
+     q.includes('@') ? base().ilike('email','%'+qq+'%') : Promise.resolve({data:[]})
+   ]);
+   const seen=new Set();const data=[];
+   [...(r1.data||[]),...(r2.data||[])].forEach(u=>{if(!seen.has(u.id)){seen.add(u.id);data.push(u);}});
+   if(!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
+   box.innerHTML=data.slice(0,12).map(u=>{
      let btn;
      if(_clubMemberIds.includes(u.id))btn='<span class="inv-state ok">✓ Già membro</span>';
      else if(_clubPendingInvites.includes(u.id))btn='<span class="inv-state wait">⏳ In attesa di risposta</span>';
