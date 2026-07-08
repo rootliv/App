@@ -924,7 +924,8 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .usearch-ic{position:absolute;left:14px;font-size:15px;opacity:.5;pointer-events:none}
 .usearch input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font-size:14px;outline:none;transition:.15s}
 .usearch input:focus{border-color:var(--brand-solid);box-shadow:0 0 0 4px var(--glow1)}
-.uresults{margin-top:10px}
+.uresults{margin-top:10px;max-height:340px;overflow-y:auto}
+#followingList{max-height:300px;overflow-y:auto}
 .uhint{font-size:13px;color:var(--ink-soft);padding:10px 2px}
 .linklike-danger{background:none;border:none;color:var(--danger,#c0524a);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
 .lib-priv{font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;cursor:pointer;
@@ -1775,7 +1776,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v74 (chi seguo, stato in attesa inviti, notifiche social)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v75 (scalabilita: note paginabili, liste con scroll)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2723,7 +2724,10 @@ function renderNotesList(){
  const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">🔒 ${cloudNotesLocked} ${cloudNotesLocked===1?'nota più avanti nel libro':'note più avanti nel libro'} — si sbloccano man mano che avanzi con la lettura.</div></div>`:'';
  if(!cloudNotes.length){el.innerHTML=(lockedNote||'<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>');return}
  const pos=bookPos(curDiaryTitle);
- el.innerHTML=cloudNotes.map(n=>{
+ const LIM=notesShown||20;
+ const shown=cloudNotes.slice(0,LIM);
+ const more=cloudNotes.length-shown.length;
+ el.innerHTML=shown.map(n=>{
    const nm=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].name)||'Lettore';
    const own=n.user_id===authUser.id;
    const when=fmtNoteDate(n.created_at);
@@ -2735,14 +2739,13 @@ function renderNotesList(){
        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
    }
    const actions=own?`<div class="note-actions"><button class="btn ghost sm" onclick="editClubNote(${n.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteClubNote(${n.id})" title="Elimina">🗑</button></div>`:'';
-   // Tutte le note qui presenti sono già "sbloccate" (le altre non sono nemmeno state scaricate).
-   // Per le note altrui teniamo il tocca-per-svelare come cortesia anti-spoiler visivo.
    const body=own
      ? `<p class="note-body" style="font-size:14px;line-height:1.6;margin-top:10px">${esc(sc.clean)}</p>`
      : `<p class="note-body reach" onclick="this.classList.toggle('show');try{this.classList.contains('show')&&toast('Nota svelata','👁')}catch(e){}">${esc(sc.clean)}</p><div class="note-hint">👁 Tocca per leggere / nascondere</div>`;
    return `<div class="note fade">${head}${body}${actions}</div>`;
- }).join('')+lockedNote;
+ }).join('')+(more>0?`<button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="notesShown=${LIM+20};renderNotesList()">Mostra altre ${Math.min(20,more)} note (${more} rimaste)</button>`:'')+lockedNote;
 }
+let notesShown=20;
 let noteScope='page';
 function setNoteScope(k){noteScope=k;
  const seg=$('#scopeSeg');if(seg)seg.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-s')===k));
@@ -2781,6 +2784,7 @@ async function deleteClubNote(id){
  const c=myClubs.find(x=>x.id===clubSel);if(c){await loadClubNotes(c);paintDiary(c);}toast('Nota eliminata','🗑');
 }
 function renderDiarioCloud(){
+ notesShown=20;
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';
    cloudLoadClubs().then(()=>{clubsLoaded=true;renderDiarioCloud()});return}
  const withBook=myClubs.filter(c=>c.current_title);
