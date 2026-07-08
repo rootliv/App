@@ -1769,7 +1769,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v68 (foto club tonda, descrizione elegante)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v69 (curiosita semplificata, promemoria solo da notifiche)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3680,7 +3680,7 @@ async function aiCuriosity(b){
    let t=stripHtml(data.testo);
    if(!validTrama(t))return null;
    if(!spoilersOk&&SPOILER_RE.test(t))return null;                     // filtro anti-spoiler solo se NON già letto
-   return mkCurio(b,(data.categoria||'Curiosità')+' (AI)',b.t,t,'AI');
+   return mkCurio(b,(data.categoria||'Curiosità'),b.t,t,'AI');
  }catch(e){return null}
 }
 async function buildCuriosity(b,seed){
@@ -3698,25 +3698,17 @@ function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">�
 function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni settimana una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
 function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
- const notifBtn=('Notification' in window)
-   ?((st.notif&&Notification.permission==='granted')
-       ?'<button class="btn ghost sm" onclick="curioDisableNotif()">🔕 Promemoria attivi</button>'
-       :'<button class="btn ghost sm" onclick="curioEnableNotif()">🔔 Promemoria settimanale</button>')
-   :'';
  box.innerHTML='<div class="card pad" style="position:relative">'
   +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
    +'<span class="pill '+curioPillColor(p.category)+'">'+esc(p.category)+'</span>'
-   +'<span class="muted" style="font-size:12.5px">Da «'+esc(p.title)+'» · '+esc(p.author)+'</span>'
-   +(p.read?'<span class="pill sky" style="font-size:11px">📖 già letto · può contenere spoiler</span>':'')
-   +(isNew?'<span class="pill gold" style="font-size:11px">✨ Novità</span>':'')
+   +'<span class="muted" style="font-size:12.5px">«'+esc(p.title)+'» · '+esc(p.author)+'</span>'
+   +(p.read?'<span class="pill sky" style="font-size:11px">⚠️ possibili spoiler</span>':'')
   +'</div>'
   +'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
    +'<button class="btn sm" onclick="openBook('+p.bookId+')">📖 Apri libro</button>'
    +'<button class="btn ghost sm" onclick="curioAnother()">🔄 Un\'altra</button>'
   +'</div>'
-  +'<div style="margin-top:8px">'+notifBtn+'</div>'
-  +'<div class="muted" style="font-size:11px;margin-top:10px">Fonte: '+esc(p.source)+' · senza spoiler</div>'
  +'</div>';
  if(isNew&&!curioOverride){const s=loadCurioState();s.seen=true;saveCurioState(s);}
 }
@@ -3988,7 +3980,8 @@ function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
  const items=pendingItems();
  markNotifsSeen(items); // aprendo la pagina, le novità diventano "lette"
- const opts=['📖 Promemoria di lettura','📅 Incontro imminente','📚 Nuovo libro scelto','📝 Nuova nota disponibile','🗳️ Votazione aperta','✨ Curiosità giornaliera'];
+ const curioOn=(function(){try{return !!loadCurioState().notif && ('Notification' in window) && Notification.permission==='granted'}catch(e){return false}})();
+ const opts=[['📖 Promemoria di lettura',null],['📅 Incontro imminente',null],['📚 Nuovo libro scelto',null],['📝 Nuova nota disponibile',null],['🗳️ Votazione aperta',null],['✨ Curiosità settimanale','curio']];
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1.4;min-width:300px">
@@ -3997,9 +3990,14 @@ function renderNotifCloud(){
    </div>
    <div class="card pad" style="flex:1;min-width:260px">
      <h3 style="font-size:16px;margin-bottom:6px">⚙️ Cosa vuoi ricevere</h3>
-     ${opts.map(o=>`<div class="set-row"><div>${o}</div><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>`).join('')}
+     ${opts.map(([o,key])=>`<div class="set-row"><div>${o}</div><div class="toggle ${key==='curio'?(curioOn?'on':''):'on'}" onclick="${key==='curio'?'toggleCurioNotif(this)':'this.classList.toggle(\'on\')'}"></div></div>`).join('')}
    </div>
  </div>`;
+}
+function toggleCurioNotif(el){
+ const on=el.classList.contains('on');
+ if(on){curioDisableNotif();el.classList.remove('on');}
+ else{curioEnableNotif();/* il permesso è async; aggiorno se concesso */setTimeout(()=>{try{if(loadCurioState().notif)el.classList.add('on')}catch(e){}},400);}
 }
 /* Puntino campanella: acceso finché ci sono novità non ancora "viste" (aperte). */
 function notifSig(items){return (items||[]).map(it=>it.t+'|'+it.p).sort().join('§');}
