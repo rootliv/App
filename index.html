@@ -1203,10 +1203,10 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
 
 /* ============ NAV ============ */
 const pages=[
- {id:'home',ic:'📖',label:'Diario',title:'Diario',sub:'Il tuo diario di lettura',grp:'Tu'},
+ {id:'home',ic:'🏠',label:'Home',title:'Home',sub:'Il tuo diario di lettura',grp:'Tu'},
  {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
  {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
- {id:'diario',ic:'✍️',label:'Diario del club',title:'Diario del club',sub:'Note senza spoiler',grp:'Insieme'},
+ {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
  {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
  {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
  {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Strumenti'},
@@ -1753,7 +1753,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v65 (sezione Diario, no doppio username)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v66 (ripristino Home e Diario condiviso)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
