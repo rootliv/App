@@ -1771,7 +1771,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v72 (limite 120 caratteri descrizione club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v73 (descrizione club max 60 caratteri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2195,8 +2195,8 @@ function editClubDesc(clubId){
   <div class="modal-top"><b>✏️ Descrizione del club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Descrizione</label>
-      <textarea id="clubDescTa" rows="3" maxlength="120" placeholder="Una breve frase che presenta il club…" oninput="document.getElementById('descCount').textContent=this.value.length">${esc(cur)}</textarea>
-      <div class="muted" style="font-size:11.5px;margin-top:6px;text-align:right"><span id="descCount">${cur.length}</span>/120</div>
+      <textarea id="clubDescTa" rows="2" maxlength="60" placeholder="Una breve frase che presenta il club…" oninput="document.getElementById('descCount').textContent=this.value.length">${esc(cur)}</textarea>
+      <div class="muted" style="font-size:11.5px;margin-top:6px;text-align:right"><span id="descCount">${cur.length}</span>/60</div>
     </div>
     <button class="btn" style="width:100%;justify-content:center" onclick="saveClubDesc(${clubId})">💾 Salva</button>
   </div>`;
@@ -2204,7 +2204,7 @@ function editClubDesc(clubId){
 }
 async function saveClubDesc(clubId){
  const ta=$('#clubDescTa');if(!ta)return;
- const desc=(ta.value||'').trim().slice(0,120);
+ const desc=(ta.value||'').trim().slice(0,60);
  const c=myClubs.find(x=>x.id===clubId);if(c)c.description=desc;
  try{const {error}=await supa.from('clubs').update({description:desc}).eq('id',clubId);
    if(error){alert('Non riesco a salvare: '+error.message);return;}}
@@ -2336,7 +2336,7 @@ function openClubModal(){
       </div>
     </div>
     <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
-    <div class="field"><label>Descrizione <span class="muted" style="font-weight:400">(facoltativa)</span></label><input id="ncDesc" maxlength="120" placeholder="Una breve frase che presenta il club"></div>
+    <div class="field"><label>Descrizione <span class="muted" style="font-weight:400">(facoltativa)</span></label><input id="ncDesc" maxlength="60" placeholder="Una breve frase che presenta il club"></div>
     <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">✨ Crea club</button>
     <hr style="margin:22px 0">
     <h3 style="font-size:15px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
@@ -2362,7 +2362,7 @@ function openClubModalWithPhoto(){
 function clubMsg(m,ok){const e=$('#clubMsg');if(e){e.textContent=m;e.classList.add('show');e.style.color=ok?'var(--sage)':'';e.style.background=ok?'#e3f1e8':''}}
 async function createClub(){
  const name=$('#ncName').value.trim();if(!name)return clubMsg('Inserisci il nome del club.');
- const desc=$('#ncDesc').value.trim().slice(0,120);
+ const desc=$('#ncDesc').value.trim().slice(0,60);
  const payload={name,emoji:'📖',description:desc,owner:authUser.id};
  if(_newClubImg)payload.image=_newClubImg;
  const {data,error}=await supa.from('clubs').insert(payload).select('*').single();
