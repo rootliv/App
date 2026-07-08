@@ -909,11 +909,11 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .nc-photo:hover{border-color:var(--brand-solid)}
 .nc-photo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
 .nc-photo .nc-photo-cam{position:absolute;right:2px;bottom:2px;width:26px;height:26px;border-radius:50%;background:var(--brand-solid);color:#fff;display:grid;place-items:center;font-size:14px;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid var(--surface)}
-.club-desc{font-size:13.5px;color:rgba(255,255,255,.9);position:relative;z-index:1;max-width:56ch;line-height:1.45;margin-top:4px;display:flex;align-items:flex-start;gap:8px}
+.club-desc{font-size:13.5px;color:rgba(255,255,255,.9);position:relative;z-index:1;max-width:56ch;line-height:1.5;margin-top:4px}
 .club-desc>span{flex:1;min-width:0}
 .club-desc-empty{opacity:.7;font-style:italic}
-.club-desc-edit{background:none;border:none;color:rgba(255,255,255,.75);cursor:pointer;font-size:13px;padding:0;flex:none;line-height:1.45}
-.club-desc-edit:hover{color:#fff}
+.club-desc-edit{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;margin-left:7px;width:24px;height:24px;background:rgba(255,255,255,.16);border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:11px;padding:0;line-height:1}
+.club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
 .usearch-ic{position:absolute;left:14px;font-size:15px;opacity:.5;pointer-events:none}
 .usearch input{width:100%;padding:12px 14px 12px 40px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);font-size:14px;outline:none;transition:.15s}
@@ -1769,7 +1769,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v69 (curiosita semplificata, promemoria solo da notifiche)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v70 (descrizione club: matita inline pulita)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2263,7 +2263,7 @@ function renderClubCloud(){
    <div style="flex:1;min-width:0">
      <div class="club-eyebrow">Club del libro</div>
      <h2>${esc(c.name)}</h2>
-     <p id="clubDescText" class="club-desc">${c.description?`<span>${esc(c.description)}</span>`:'<span class="club-desc-empty">Aggiungi una descrizione…</span>'}<button class="club-desc-edit" onclick="editClubDesc(${c.id})" title="Modifica descrizione">✏️</button></p>
+     <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span class="club-desc-empty">Aggiungi una descrizione</span>'}<button class="club-desc-edit" onclick="editClubDesc(${c.id})" title="Modifica descrizione">✏️</button></p>
      <div class="avstack" id="clubAvs"></div>
    </div>
    <span class="role-chip">${role==='admin'?'★ Admin':'Membro'}</span>
