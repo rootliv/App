@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v81 (verde uniforme ed elegante home e club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v82 (inviti ricevuti nelle notifiche, tasto Apri sensato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2102,6 +2102,17 @@ async function loadSocialNotifs(){
  if(mode!=='cloud'||!supa){socialNotifs=[];return;}
  const out=[];
  try{
+   // INVITI RICEVUTI da accettare (i più importanti: in cima)
+   const {data:rec}=await supa.from('club_invites').select('id,club_id,inviter_id,status').eq('invitee_id',authUser.id).eq('status','pending');
+   if(rec&&rec.length){
+     const cids=[...new Set(rec.map(i=>i.club_id))];const uids=[...new Set(rec.map(i=>i.inviter_id))];
+     const cmap={},umap={};
+     try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
+     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     rec.forEach(i=>out.push({ic:'✉️',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
+   }
+ }catch(e){}
+ try{
    // inviti accettati che ho mandato io
    const {data:inv}=await supa.from('club_invites').select('id,club_id,invitee_id,status').eq('inviter_id',authUser.id).eq('status','accepted');
    if(inv&&inv.length){
@@ -2118,7 +2129,7 @@ async function loadSocialNotifs(){
    if(fol&&fol.length){
      const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
      try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
-     fol.forEach(f=>out.push({ic:'👤',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'home',key:'fol-'+f.follower_id}));
+     fol.forEach(f=>out.push({ic:'👤',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
    }
  }catch(e){}
  socialNotifs=out;
