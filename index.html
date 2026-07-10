@@ -1783,7 +1783,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v86 (fix link reset password)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v87 (home anno corrente, ritmo rimosso - parte 1)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3585,13 +3585,7 @@ function openEditProfile(){
     <div class="field"><label>Username</label><input id="epUser" value="${esc((profile&&profile.username)||'')}" autocapitalize="off" autocomplete="off" placeholder="es. alice_libri" oninput="checkUsername()"><small id="epUserHint" style="display:block;margin-top:5px;font-size:12px" class="muted">3-20 caratteri: lettere, numeri o _</small></div>
     <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
     ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
-    <div class="goal-grid">
-      <div class="goal-card">
-        <div class="goal-ic">🔥</div>
-        <div style="flex:1"><label class="goal-lab">Ritmo di lettura</label>
-          <div class="goal-in"><input id="epPace" type="number" min="0" placeholder="0" value="${d.pace||''}"><span class="goal-unit">pag/giorno</span></div>
-        </div>
-      </div>
+    <div class="goal-grid" style="grid-template-columns:1fr">
       <div class="goal-card">
         <div class="goal-ic">🎯</div>
         <div style="flex:1"><label class="goal-lab">Obiettivo annuale</label>
@@ -3645,7 +3639,7 @@ async function saveProfile(){
  const d=Object.assign({},(profile&&profile.data)||{},{
    genres:editSel.genres.slice(),authors:editSel.authors.slice(),
    loved:editSel.loved.slice(),disliked:editSel.disliked.slice(),
-   pace:+$('#epPace').value||0,goal:+$('#epGoal').value||0
+   goal:+$('#epGoal').value||0
  });
  const upd={name,data:d};
  if(uname!==currentU)upd.username=uname||null;
@@ -3927,19 +3921,35 @@ function curioDismiss(id){const s=loadCurioState();s.disliked=(s.disliked||[]);i
 function curioEnableNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(perm=>{const s=loadCurioState();s.notif=(perm==='granted');saveCurioState(s);if(perm==='granted'){try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò quando c\'è una nuova curiosità della settimana.'})}catch(e){}}renderCuriosity();})}
 function curioDisableNotif(){const s=loadCurioState();s.notif=false;saveCurioState(s);renderCuriosity();}
 
+/* Anno di completamento di un libro: usa finished_year se presente, altrimenti l'anno di creazione record.
+   I libri letti senza anno noto restituiscono null (restano navigabili in "Senza data"). */
+function bookYear(b){
+ if(b&&b.finishedYear)return +b.finishedYear;
+ if(b&&b.finished_year)return +b.finished_year;
+ return null;
+}
+function topCount(arr,lim){
+ const m={};arr.forEach(x=>{const k=(x||'').trim();if(k)m[k]=(m[k]||0)+1;});
+ return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,lim||8);
+}
+let libYear='all'; // filtro anno libreria: 'all' | numero | 'nodate'
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
  const p=profile||{};const d=p.data||{};
- const read=books.filter(b=>b.status==='read').length;
+ const YR=new Date().getFullYear();
  const reading=books.filter(b=>b.status==='reading');
  const toread=books.filter(b=>b.status==='toread').length;
- const up=upcomingMeetings();const next=up[0];
+ const readThisYear=books.filter(b=>b.status==='read'&&bookYear(b)===YR);
+ const read=readThisYear.length; // obiettivo e contatore = anno corrente
  const items=pendingItems();
  const nm=(p.name||'Lettore').split(' ')[0];
  const goal=+d.goal||0;
- const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
+ const yr=p.created_at?new Date(p.created_at).getFullYear():YR;
  const av=safeImgUrl(d.avatar);
  const goalPct=goal?Math.min(100,Math.round(read/goal*100)):0;
+ // generi e autori dell'anno corrente (dai libri letti quest'anno)
+ const yrGenres=topCount(readThisYear.map(b=>b.g).filter(Boolean),6);
+ const yrAuthors=topCount(readThisYear.map(b=>b.a).filter(Boolean),6);
  view.innerHTML=`
  <!-- HERO IDENTITÀ (pulito) -->
  <div class="me-hero">
@@ -3952,24 +3962,17 @@ function renderHomeCloud(){
    <button class="me-edit" onclick="openEditProfile()">✏️ Modifica</button>
  </div>
 
- <!-- RITMO + OBIETTIVO + STATISTICHE (in un colpo d'occhio) -->
+ <!-- OBIETTIVO ANNO CORRENTE + STATISTICHE -->
  <div class="card me-panel">
-   <div class="me-panel-top">
-     <div class="me-metric">
-       <div class="me-metric-lab">IL TUO RITMO</div>
-       ${d.pace?`<div><span class="me-metric-n">${+d.pace}</span> <span class="me-metric-u">pag/giorno</span></div>`
-         :`<a href="#" onclick="openEditProfile();return false" class="me-metric-set">imposta →</a>`}
-     </div>
-     <div class="me-panel-div"></div>
-     <div class="me-metric">
-       <div class="me-metric-lab">OBIETTIVO ${new Date().getFullYear()}</div>
-       ${goal?`<div><span class="me-metric-n gold">${read}</span> <span class="me-metric-u">/ ${goal} libri</span></div>
-         <div class="bar" style="height:6px;margin-top:7px"><i style="width:${goalPct}%"></i></div>`
-         :`<a href="#" onclick="openEditProfile();return false" class="me-metric-set">imposta →</a>`}
-     </div>
+   <div class="me-goal-full">
+     <div class="me-metric-lab">OBIETTIVO ${YR}</div>
+     ${goal?`<div style="display:flex;align-items:baseline;gap:6px"><span class="me-metric-n gold">${read}</span><span class="me-metric-u">/ ${goal} libri quest'anno</span></div>
+       <div class="bar" style="height:8px;margin-top:9px"><i style="width:${goalPct}%"></i></div>
+       <div class="muted" style="font-size:11.5px;margin-top:6px">${read>=goal?'Obiettivo raggiunto! 🎉':(goal-read)+' libri al traguardo'}</div>`
+       :`<a href="#" onclick="openEditProfile();return false" class="me-metric-set">Imposta un obiettivo →</a>`}
    </div>
    <div class="me-panel-stats">
-     <div class="me-stat" onclick="libTab='read';go('libreria')"><div class="ms-ic">📚</div><div class="ms-n">${read}</div><div class="ms-l">letti</div></div>
+     <div class="me-stat" onclick="libYear=${YR};libTab='read';go('libreria')"><div class="ms-ic">📚</div><div class="ms-n">${read}</div><div class="ms-l">letti nel ${YR}</div></div>
      <div class="me-stat" onclick="libTab='reading';go('libreria')"><div class="ms-ic">📖</div><div class="ms-n">${reading.length}</div><div class="ms-l">in lettura</div></div>
      <div class="me-stat" onclick="libTab='toread';go('libreria')"><div class="ms-ic">🔖</div><div class="ms-n">${toread}</div><div class="ms-l">da leggere</div></div>
      <div class="me-stat" onclick="go('club')"><div class="ms-ic">👥</div><div class="ms-n">${myClubs.length}</div><div class="ms-l">club</div></div>
@@ -3985,13 +3988,13 @@ function renderHomeCloud(){
      <div class="muted" style="font-size:11px;margin-top:4px">${b.pg?('pag. '+Math.round(b.pg*(b.prog||0)/100)+' di '+b.pg):((b.prog||0)+'%')}</div>
    </div></div>`).join('')}</div>`:''}
 
- <!-- GENERI E AUTORI (sempre visibili, prima della curiosità) -->
- <div class="sec-title">📗 Generi e autori preferiti</div>
+ <!-- GENERI E AUTORI DELL'ANNO (dai libri letti quest'anno) -->
+ <div class="sec-title">📗 Cosa hai letto nel ${YR}</div>
  <div class="card pad">
-   <h4 style="font-size:13px;margin:0 0 8px;color:var(--ink-soft)">Generi</h4>
-   <div class="chips">${(d.genres&&d.genres.length)?d.genres.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid)">Aggiungi →</a></span>'}</div>
-   <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori</h4>
-   <div class="chips">${(d.authors&&d.authors.length)?d.authors.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):'<span class="muted" style="font-size:13px">Nessuno indicato.</span>'}</div>
+   <h4 style="font-size:13px;margin:0 0 8px;color:var(--ink-soft)">Generi dell'anno</h4>
+   <div class="chips">${yrGenres.length?yrGenres.map(x=>`<span class="pill">${esc(x[0])} <b style="opacity:.6">${x[1]}</b></span>`).join(''):'<span class="muted" style="font-size:13px">Ancora nessun libro completato nel '+YR+'.</span>'}</div>
+   <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori dell'anno</h4>
+   <div class="chips">${yrAuthors.length?yrAuthors.map(x=>`<span class="pill">${esc(x[0])}</span>`).join(''):'<span class="muted" style="font-size:13px">—</span>'}</div>
  </div>
 
  <!-- CURIOSITÀ -->
