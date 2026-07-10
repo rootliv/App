@@ -917,15 +917,18 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit{flex:none;width:30px;height:30px;background:rgba(255,255,255,.15);border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;display:grid;place-items:center;padding:0}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
-.donut-wrap{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
-.donut{width:160px;height:160px;flex:none}
-.donut-c-n{font-family:'Fraunces',serif;font-size:30px;font-weight:600;fill:var(--ink)}
+.donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.donut{width:168px;height:168px;flex:none;filter:drop-shadow(0 2px 8px rgba(30,60,50,.1))}
+.donut-c-n{font-family:'Fraunces',serif;font-size:32px;font-weight:600;fill:var(--ink)}
 .donut-c-l{font-size:11px;fill:var(--ink-soft)}
-.donut-legend{flex:1;min-width:180px;display:flex;flex-direction:column;gap:7px}
-.lg-row{display:flex;align-items:center;gap:9px;font-size:13px}
-.lg-dot{width:11px;height:11px;border-radius:3px;flex:none}
-.lg-name{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lg-pct{color:var(--ink-soft);font-weight:600;font-size:12px}
+.donut-legend{flex:1;min-width:190px;display:flex;flex-direction:column;gap:10px}
+.lg-row{display:grid;grid-template-columns:12px 1fr 46px 34px;align-items:center;gap:9px;font-size:13px}
+.lg-dot{width:11px;height:11px;border-radius:50%;flex:none}
+.lg-name{min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.lg-bar{height:6px;border-radius:3px;background:var(--surface2);overflow:hidden}
+.lg-bar i{display:block;height:100%;border-radius:3px}
+.lg-pct{color:var(--ink-soft);font-weight:600;font-size:12px;text-align:right}
+@media(max-width:440px){.lg-row{grid-template-columns:12px 1fr 34px}.lg-bar{display:none}}
 .year-bar{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:18px;padding-bottom:4px}
 .year-chip{flex:none;white-space:nowrap;font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:18px;cursor:pointer;background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s}
 .year-chip.active{background:var(--brand-grad);color:#fff;border-color:transparent}
@@ -1827,7 +1830,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v93 (generi mai in inglese, mappa ampliata)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v94 (grafico migliore, generi riprocessati anche se raw)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4097,23 +4100,23 @@ function renderProfiloPage(){
  const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
  const readAll=books.filter(b=>b.status==='read');
  // generi/autori da TUTTA la libreria (letti), + preferenze manuali
- const genreCounts=topCount(books.map(b=>b.g).filter(Boolean),12);
+ const genreCounts=topCount(books.map(b=>b.g).filter(Boolean),8);
  const authorCounts=topCount(readAll.map(b=>b.a).filter(Boolean),8);
  const manualGenres=(d.genres||[]);
  const manualAuthors=(d.authors||[]);
- // colori per il donut
- const palette=['#2f8168','#b98f3f','#4a6fa5','#a85a5a','#7a5a9e','#4a8a7a','#c07d35','#5a8a4a','#9e5a7a','#5a7a9e','#8a7a4a','#6a6a6a'];
+ const palette=['#2f8168','#c79a3c','#4a6fa5','#b0654f','#7a5a9e','#4a8a7a','#9e5a7a','#5a7a4a'];
  const total=genreCounts.reduce((s,g)=>s+g[1],0);
- // costruisci il donut SVG
+ const nGenres=genreCounts.length;
+ // donut con segmenti separati da un piccolo gap, ordinati per grandezza
  let donut='',legend='',acc=0;
  if(total>0){
-   const R=64,C=2*Math.PI*R,cx=80,cy=80;
+   const R=62,C=2*Math.PI*R,cx=80,cy=80,gap=nGenres>1?2.2:0;
    genreCounts.forEach((g,i)=>{
-     const frac=g[1]/total;const len=frac*C;const col=palette[i%palette.length];
-     donut+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="26" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-acc}" transform="rotate(-90 ${cx} ${cy})"></circle>`;
-     acc+=len;
+     const frac=g[1]/total;const seg=Math.max(0,frac*C-gap);const col=palette[i%palette.length];
+     donut+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="20" stroke-linecap="round" stroke-dasharray="${seg} ${C-seg}" stroke-dashoffset="${-acc}" transform="rotate(-90 ${cx} ${cy})" style="transition:stroke-dasharray .6s ease"></circle>`;
+     acc+=frac*C;
      const pct=Math.round(frac*100);
-     legend+=`<div class="lg-row"><span class="lg-dot" style="background:${col}"></span><span class="lg-name">${esc(g[0])}</span><span class="lg-pct">${pct}%</span></div>`;
+     legend+=`<div class="lg-row"><span class="lg-dot" style="background:${col}"></span><span class="lg-name">${esc(g[0])}</span><span class="lg-bar"><i style="width:${pct}%;background:${col}"></i></span><span class="lg-pct">${pct}%</span></div>`;
    });
  }
  view.innerHTML=`
@@ -4130,7 +4133,7 @@ function renderProfiloPage(){
  <div class="sec-title">📊 I tuoi generi</div>
  <div class="card pad">
    ${total>0?`<div class="donut-wrap">
-     <svg viewBox="0 0 160 160" class="donut">${donut}<text x="80" y="74" text-anchor="middle" class="donut-c-n">${readAll.length}</text><text x="80" y="94" text-anchor="middle" class="donut-c-l">libri</text></svg>
+     <svg viewBox="0 0 160 160" class="donut">${donut}<text x="80" y="74" text-anchor="middle" class="donut-c-n">${books.length}</text><text x="80" y="94" text-anchor="middle" class="donut-c-l">${books.length===1?'libro':'libri'}</text></svg>
      <div class="donut-legend">${legend}</div>
    </div>`:`<div class="muted" style="font-size:13.5px;padding:6px 0">Aggiungi libri alla libreria per vedere il ritratto dei tuoi generi. 📚</div>`}
  </div>
@@ -4151,7 +4154,10 @@ let _genreEnriching=false;
 async function autoEnrichGenres(){
  if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
  try{
-   const todo=books.filter(b=>!b.g||GENERIC_GENRES.has(b.g)||b.g==='Narrativa'||b.g==='Romanzo').slice(0,8);
+   // Da arricchire: libri senza genere, generico, o con genere NON presente nella mappa italiana
+   // (es. categorie grezze di Google Books tipo "domestic fiction", "Subculture").
+   const isCleanIt=g=>g&&(IT_VALID.has(g.toLowerCase())||Object.values(GENRE_IT).includes(g));
+   const todo=books.filter(b=>!isCleanIt(b.g)||GENERIC_GENRES.has(b.g)).slice(0,10);
    let changed=false;
    for(const b of todo){
      const g=await wikiGenre(b.t,b.a);
