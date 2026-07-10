@@ -1320,6 +1320,7 @@ renders.profilo=()=>renderProfiloPage();
 
 let libTab='all';
 renders.libreria=()=>{
+ if(typeof autoEnrichGenres==='function')autoEnrichGenres();
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
@@ -1826,7 +1827,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v92 (generi da Wikidata P136, arricchimento automatico)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v93 (generi mai in inglese, mappa ampliata)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2014,35 +2015,47 @@ function liveSearch(q){
 }
 /* ===== GENERI DA WIKIPEDIA (fonte affidabile), normalizzati in italiano ===== */
 const GENRE_IT={
- 'historical novel':'Romanzo storico','historical fiction':'Romanzo storico','history':'Storico',
- 'science fiction':'Fantascienza','sci-fi':'Fantascienza','fantasy':'Fantasy','high fantasy':'Fantasy',
- 'mystery':'Giallo','detective fiction':'Giallo','detective':'Giallo','crime':'Giallo','crime fiction':'Giallo',
- 'giallo':'Giallo','noir':'Noir','hardboiled':'Noir','thriller':'Thriller','techno-thriller':'Thriller',
- 'legal thriller':'Thriller','horror':'Horror','romance':'Rosa','romance novel':'Rosa','rosa':'Rosa',
- 'gothic':'Gotico','gothic fiction':'Gotico','dystopian':'Distopia','dystopia':'Distopia',
- 'utopian and dystopian fiction':'Distopia','adventure':'Avventura','adventure fiction':'Avventura',
+ 'historical novel':'Romanzo storico','historical fiction':'Romanzo storico','history':'Storico','historical':'Storico',
+ 'science fiction':'Fantascienza','sci-fi':'Fantascienza','science-fiction':'Fantascienza','speculative fiction':'Fantascienza',
+ 'fantasy':'Fantasy','high fantasy':'Fantasy','fantasy literature':'Fantasy','fantastique':'Fantasy','fantastic':'Fantastico',
+ 'mystery':'Giallo','mystery fiction':'Giallo','detective fiction':'Giallo','detective novel':'Giallo','detective':'Giallo',
+ 'crime':'Giallo','crime fiction':'Giallo','crime novel':'Giallo','whodunit':'Giallo','murder mystery':'Giallo',
+ 'giallo':'Giallo','noir':'Noir','noir fiction':'Noir','hardboiled':'Noir','hard-boiled':'Noir',
+ 'thriller':'Thriller','techno-thriller':'Thriller','legal thriller':'Thriller','psychological thriller':'Thriller psicologico',
+ 'horror':'Horror','horror fiction':'Horror','romance':'Rosa','romance novel':'Rosa','romantic novel':'Rosa','rosa':'Rosa',
+ 'gothic':'Gotico','gothic fiction':'Gotico','gothic novel':'Gotico','dystopian':'Distopia','dystopia':'Distopia',
+ 'dystopian fiction':'Distopia','utopian and dystopian fiction':'Distopia','utopian fiction':'Utopia',
+ 'adventure':'Avventura','adventure fiction':'Avventura','adventure novel':'Avventura',
  'biography':'Biografia','biografia':'Biografia','autobiography':'Autobiografia','autobiografia':'Autobiografia',
- 'memoir':'Memoir','autobiographical':'Autobiografia','autobiographical novel':'Autobiografia',
- 'essay':'Saggistica','essays':'Saggistica','non-fiction':'Saggistica','nonfiction':'Saggistica',
- 'saggistica':'Saggistica','saggio':'Saggistica','poetry':'Poesia','poesia':'Poesia','drama':'Teatro',
- 'play':'Teatro','tragedy':'Tragedia','comedy':'Commedia','short story':'Racconti','short stories':'Racconti',
- 'short story collection':'Racconti','racconti':'Racconti','satire':'Satira','magic realism':'Realismo magico',
- 'magical realism':'Realismo magico','realismo magico':'Realismo magico','young adult':'Young adult',
- 'children':'Per ragazzi',"children's literature":'Per ragazzi','philosophical':'Filosofico',
- 'philosophical fiction':'Filosofico','psychological':'Psicologico','psychological fiction':'Psicologico',
- 'psychological thriller':'Thriller psicologico','coming-of-age':'Formazione',
- 'bildungsroman':'Romanzo di formazione','war novel':'Romanzo di guerra','war':'Guerra',
- 'spy':'Spionaggio','spy fiction':'Spionaggio','western':'Western','epic':'Epico','epic poetry':'Poema epico',
- 'fairy tale':'Fiaba','fable':'Favola','travel':'Viaggio','travel literature':'Letteratura di viaggio',
- 'graphic novel':'Graphic novel','comic':'Fumetto','erotica':'Erotico','erotic':'Erotico',
- 'literary fiction':'Narrativa','literary':'Narrativa','fiction':'Narrativa','novel':'Romanzo','classic':'Classico','classics':'Classico'
+ 'autobiographical novel':'Autobiografia','autobiographical':'Autobiografia','memoir':'Memoir','memoirs':'Memoir',
+ 'essay':'Saggistica','essays':'Saggistica','non-fiction':'Saggistica','nonfiction':'Saggistica','non-fiction novel':'Saggistica',
+ 'saggistica':'Saggistica','saggio':'Saggistica','treatise':'Saggistica','poetry':'Poesia','poesia':'Poesia','poem':'Poesia',
+ 'drama':'Teatro','play':'Teatro','theatre':'Teatro','tragedy':'Tragedia','comedy':'Commedia','tragicomedy':'Tragicommedia',
+ 'short story':'Racconti','short stories':'Racconti','short story collection':'Racconti','short fiction':'Racconti','racconti':'Racconti','racconto':'Racconti',
+ 'satire':'Satira','satirical':'Satira','magic realism':'Realismo magico','magical realism':'Realismo magico','realismo magico':'Realismo magico',
+ 'young adult':'Young adult','young adult fiction':'Young adult',"children's literature":'Per ragazzi','children':'Per ragazzi',"children's fiction":'Per ragazzi',
+ 'philosophical':'Filosofico','philosophical fiction':'Filosofico','philosophical novel':'Filosofico','philosophy':'Filosofia',
+ 'psychological':'Psicologico','psychological fiction':'Psicologico','psychological novel':'Psicologico',
+ 'coming-of-age':'Formazione','coming-of-age story':'Formazione','bildungsroman':'Romanzo di formazione',
+ 'war novel':'Romanzo di guerra','war':'Guerra','war fiction':'Romanzo di guerra','spy':'Spionaggio','spy fiction':'Spionaggio','spy novel':'Spionaggio',
+ 'western':'Western','western fiction':'Western','epic':'Epico','epic poetry':'Poema epico','epic novel':'Romanzo epico',
+ 'fairy tale':'Fiaba','fable':'Favola','myth':'Mito','mythology':'Mitologia','legend':'Leggenda',
+ 'travel':'Viaggio','travel literature':'Letteratura di viaggio','travelogue':'Diario di viaggio',
+ 'graphic novel':'Graphic novel','comic':'Fumetto','comics':'Fumetto','manga':'Manga','erotica':'Erotico','erotic':'Erotico','erotic fiction':'Erotico',
+ 'epistolary novel':'Romanzo epistolare','epistolary':'Romanzo epistolare','fantasy fiction':'Fantasy',
+ 'social novel':'Romanzo sociale','political fiction':'Romanzo politico','political novel':'Romanzo politico',
+ 'realism':'Realismo','realist':'Realismo','naturalism':'Naturalismo','modernism':'Modernismo','postmodern':'Postmoderno','postmodernism':'Postmoderno',
+ 'literary fiction':'Narrativa','literary':'Narrativa','literary realism':'Narrativa realista','fiction':'Narrativa','prose':'Prosa',
+ 'novel':'Romanzo','classic':'Classico','classics':'Classico','literature':'Letteratura'
 };
-// generi "troppo generici": usati solo se non c'è di meglio
-const GENERIC_GENRES=new Set(['Romanzo','Narrativa']);
+const GENERIC_GENRES=new Set(['Romanzo','Narrativa','Letteratura','Prosa','Fantastico']);
+const IT_VALID=new Set(Object.values(GENRE_IT).map(v=>v.toLowerCase()));
 function normalizeGenreIt(raw){
  if(!raw)return '';
  let s=(''+raw).toLowerCase().trim().replace(/\s+/g,' ');
- s=s.replace(/\b(american|english|british|french|italian|juvenile|adult)\b/g,'').replace(/\s+/g,' ').trim();
+ // già un genere italiano valido? restituiscilo capitalizzato
+ if(IT_VALID.has(s)){for(const k in GENRE_IT){if(GENRE_IT[k].toLowerCase()===s)return GENRE_IT[k];}}
+ s=s.replace(/\b(american|english|british|french|italian|german|russian|japanese|juvenile|adult|contemporary)\b/g,'').replace(/\s+/g,' ').trim();
  if(GENRE_IT[s])return GENRE_IT[s];
  for(const k in GENRE_IT){if(s.includes(k))return GENRE_IT[k];}
  return '';
@@ -2078,8 +2091,17 @@ async function wikiGenre(title,author){
    const ents=lRes&&lRes.entities;if(!ents)return '';
    const labels=genreQids.map(id=>{
      const e=ents[id];if(!e||!e.labels)return '';
-     const it=e.labels.it&&e.labels.it.value;const en=e.labels.en&&e.labels.en.value;
-     return normalizeGenreIt(it||en)||(it?cap(it):(en?(normalizeGenreIt(en)||cap(en)):''));
+     const it=e.labels.it&&e.labels.it.value;
+     const en=e.labels.en&&e.labels.en.value;
+     // 1) prova a mappare l'inglese verso un genere italiano pulito (fonte controllata)
+     const fromEn=normalizeGenreIt(en);
+     if(fromEn)return fromEn;
+     // 2) prova a mappare l'etichetta italiana di Wikidata
+     const fromIt=normalizeGenreIt(it);
+     if(fromIt)return fromIt;
+     // 3) usa l'etichetta italiana ufficiale SOLO se pulita e breve (mai inglese grezzo)
+     if(it && it.length<=22 && !/\(/.test(it))return cap(it);
+     return '';
    }).filter(Boolean);
    if(!labels.length)return '';
    // preferisci un genere specifico (non "Romanzo"/"Narrativa")
