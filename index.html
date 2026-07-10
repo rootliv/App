@@ -1826,7 +1826,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v90 (profilo: sezioni unite, autori dai letti, generi granulari)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v91 (autori preferiti solo con 2+ libri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4110,7 +4110,7 @@ function renderProfiloPage(){
    <div class="muted" style="font-size:12px;margin-bottom:10px">Gli autori che hai scelto tu e quelli più presenti tra le tue letture.</div>
    <div class="chips">
      ${manualAuthors.map(a=>`<span class="pill green">${esc(a)}</span>`).join('')}
-     ${authorCounts.filter(a=>!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase())).slice(0,8).map(a=>`<span class="pill">${esc(a[0])}${a[1]>1?` <b style="opacity:.6">${a[1]}</b>`:''}</span>`).join('')}
+     ${authorCounts.filter(a=>a[1]>1&&!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase())).slice(0,8).map(a=>`<span class="pill">${esc(a[0])} <b style="opacity:.6">${a[1]}</b></span>`).join('')}
      ${(!manualAuthors.length&&!authorCounts.length)?'<span class="muted" style="font-size:13px">Nessun autore ancora. Segna qualche libro come letto o aggiungine ai preferiti.</span>':''}
    </div>
  </div>`;
