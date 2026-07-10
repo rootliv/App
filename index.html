@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v83 (libro club torna in libreria e segnalibro diario ripristinato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v84 (no doppioni libreria, no libro gia letto nel club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2002,6 +2002,9 @@ async function searchBooksClub(q,clubId){
 }
 async function addFoundBook(i){
  const s=searchResults[i];if(!s)return;
+ // niente doppioni: se il titolo (stesso autore) è già in libreria, avvisa e apri quello
+ const dup=books.find(b=>normKey(b.t)===normKey(s.t)&&(!s.a||!b.a||normKey(b.a)===normKey(s.a)));
+ if(dup){closeModal();toast('«'+s.t+'» è già nella tua libreria','📚');openBook(dup.id);return;}
  if(mode==='cloud'&&supa){
    const {data,error}=await supa.from('books').insert({user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status:'toread',progress:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null}).select('*').single();
    if(error){alert('Non riesco a salvare il libro nel cloud: '+error.message);return}
@@ -2455,9 +2458,20 @@ async function addClubBookToLibrary(title,author,cover){
    books.push({id,t:title,a:author||'',g,pg,ch:0,status:'reading',prog:0,rate:0,trama,set:[],cur:'',quote:'',coverUrl:cov});save();
  }
 }
+async function clubMemberWhoRead(clubId,title){
+ try{
+   const {data,error}=await supa.rpc('club_member_read_book',{p_club_id:clubId,p_title:title});
+   if(error)return null; // se la funzione non c'è, non blocchiamo
+   if(data&&data.length){return data[0].reader_name||'un membro';}
+   return null;
+ }catch(e){return null;}
+}
 async function chooseClubBook(clubId,i){
  const s=searchResults[i];if(!s)return;
  const c=myClubs.find(x=>x.id===clubId)||{};
+ // Verifica: qualcuno nel club ha GIÀ LETTO questo libro?
+ const already=await clubMemberWhoRead(clubId,s.t);
+ if(already){alert('«'+s.t+'» è già stato letto da un membro del club ('+already+'). Scegliete un libro nuovo per tutti. 📚');return;}
  const patch={current_title:s.t,current_author:s.a,current_cover:s.coverUrl||null,selection_mode:null,current_chooser:null};
  if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id){
    const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers.slice():[];if(!cc.includes(authUser.id))cc.push(authUser.id);patch.cycle_choosers=cc;
@@ -2469,6 +2483,8 @@ async function chooseClubBook(clubId,i){
 }
 async function proposeFound(clubId,i){
  const s=searchResults[i];if(!s)return;
+ const already=await clubMemberWhoRead(clubId,s.t);
+ if(already){alert('«'+s.t+'» è già stato letto da un membro del club ('+already+'). Proponi un libro nuovo per tutti. 📚');return;}
  const {data:existing}=await supa.from('proposals').select('id').eq('club_id',clubId).eq('user_id',authUser.id).maybeSingle();
  if(existing){alert('Hai già proposto un libro per questo club.\nPer proporne un altro, togli prima la tua proposta attuale (pulsante "🗑 Togli" accanto al tuo libro).');closeModal();return}
  const {error}=await supa.from('proposals').insert({club_id:clubId,user_id:authUser.id,title:s.t,author:s.a,cover:s.coverUrl||null});
