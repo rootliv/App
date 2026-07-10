@@ -1778,7 +1778,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v82 (inviti ricevuti nelle notifiche, tasto Apri sensato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v83 (libro club torna in libreria e segnalibro diario ripristinato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2804,7 +2804,33 @@ function renderDiarioCloud(){
  if(!withBook.length){view.innerHTML=`<div class="card pad" style="text-align:center;padding:44px 20px"><div style="font-size:42px">✍️</div><div class="muted" style="margin:12px auto 16px;max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</div><button class="btn" onclick="go('club')">Vai ai club</button></div>`;return}
  const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;curDiaryClub=c;curDiaryTitle=c.current_title;
  view.innerHTML='<div class="card pad"><div class="srch-empty">Carico il diario… ✍️</div></div>';
- loadClubNotes(c).then(()=>paintDiary(c)).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel diario.</div></div>'});
+ Promise.all([loadClubNotes(c),ensureClubBookPages(c)]).then(()=>paintDiary(c)).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel diario.</div></div>'});
+}
+/* Garantisce che il libro corrente del club sia nella libreria con il numero di pagine,
+   così il segnalibro del diario funziona anche per libri scelti in passato. */
+async function ensureClubBookPages(c){
+ if(!c||!c.current_title)return;
+ const existing=books.find(x=>normKey(x.t)===normKey(c.current_title));
+ if(existing&&existing.pg)return; // già a posto
+ try{
+   const res=await doSearch(c.current_title+' '+(c.current_author||''));
+   const best=res&&res[0];
+   const pg=(best&&titlesRoughlyMatch(c.current_title,best.t))?(best.pg||0):0;
+   const cov=(best&&best.coverUrl)||c.current_cover||'';
+   const g=(best&&best.g)||'';const trama=(best&&best.trama)||'';
+   if(existing){
+     if(pg){existing.pg=pg;if(mode==='cloud'&&supa){try{await supa.from('books').update({pages:pg}).eq('id',existing.id)}catch(e){}}}
+   }else if(pg||true){
+     // aggiungi il libro del club alla libreria (come "in lettura")
+     if(mode==='cloud'&&supa){
+       try{const {data}=await supa.from('books').insert({user_id:authUser.id,title:c.current_title,author:c.current_author||'',genre:g,pages:pg,status:'reading',progress:0,rating:0,cover_url:cov||null,plot:trama,note:null}).select('*').single();
+         if(data)books.push(dbToBook(data));}catch(e){}
+     }else{
+       const id=Math.max(0,...books.map(b=>b.id))+1;
+       books.push({id,t:c.current_title,a:c.current_author||'',g,pg,ch:0,status:'reading',prog:0,rate:0,trama,set:[],cur:'',quote:'',coverUrl:cov});save();
+     }
+   }
+ }catch(e){}
 }
 function paintDiary(c){
  curDiaryClub=c;curDiaryTitle=c.current_title;noteScope='page';
