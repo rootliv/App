@@ -1826,7 +1826,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v91 (autori preferiti solo con 2+ libri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v92 (generi da Wikidata P136, arricchimento automatico)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2048,38 +2048,46 @@ function normalizeGenreIt(raw){
  return '';
 }
 async function wikiGenre(title,author){
- const tryWiki=async(lang)=>{
+ // Cerca la pagina del libro su Wikipedia, risali all'entità Wikidata,
+ // leggi la proprietà "genere" (P136) e prendi l'etichetta ufficiale in italiano.
+ const findQid=async(lang)=>{
    try{
-     const sq=encodeURIComponent(title+(author?(' '+author):'')+(lang==='it'?' (romanzo)':' (novel)'));
-     const sUrl=`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${sq}&format=json&origin=*&srlimit=1`;
-     const sRes=await fetch(sUrl).then(r=>r.json());
-     const hit=sRes&&sRes.query&&sRes.query.search&&sRes.query.search[0];
-     if(!hit)return '';
-     const pUrl=`https://${lang}.wikipedia.org/w/api.php?action=parse&pageid=${hit.pageid}&prop=wikitext&format=json&origin=*`;
-     const pRes=await fetch(pUrl).then(r=>r.json());
-     const wt=(pRes&&pRes.parse&&pRes.parse.wikitext&&pRes.parse.wikitext['*'])||'';
-     const m=wt.match(/\|\s*(genere|genre|subject)\s*=\s*([^\n|]+)/i);
-     if(!m)return '';
-     // estrai TUTTI i valori del campo genere, poi scegli il più specifico
-     const raw=m[2].replace(/\[\[|\]\]/g,'').replace(/\{\{[^}]*\}\}/g,'').replace(/<[^>]+>/g,'');
-     const parts=raw.split(/[,;/•·]| e | and /i).map(x=>x.trim()).filter(Boolean);
-     const mapped=[];
-     parts.forEach(v=>{
-       const it=normalizeGenreIt(v);
-       if(it)mapped.push(it);
-       else if(lang==='it'&&v&&v.length<30)mapped.push(v.charAt(0).toUpperCase()+v.slice(1));
-     });
-     if(!mapped.length)return '';
-     // preferisci un genere specifico (non "Romanzo"/"Narrativa") se disponibile
-     const specific=mapped.find(g=>!GENERIC_GENRES.has(g));
-     return specific||mapped[0];
-   }catch(e){}
-   return '';
+     const sq=encodeURIComponent(title+(author?(' '+author):''));
+     const url=`https://${lang}.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${sq}&gsrlimit=1&prop=pageprops&ppprop=wikibase_item&format=json&origin=*`;
+     const res=await fetch(url).then(r=>r.json());
+     const pages=res&&res.query&&res.query.pages;
+     if(!pages)return '';
+     const pg=Object.values(pages)[0];
+     return (pg&&pg.pageprops&&pg.pageprops.wikibase_item)||'';
+   }catch(e){return '';}
  };
- let g=await tryWiki('it');
- if(!g)g=await tryWiki('en');
- return g;
+ let qid=await findQid('it');
+ if(!qid)qid=await findQid('en');
+ if(!qid)return '';
+ try{
+   // leggi le entità: P136 = genere. Prendi gli id dei generi.
+   const eUrl=`https://www.wikidata.org/w/api.php?action=wbgetclaims&entity=${qid}&property=P136&format=json&origin=*`;
+   const eRes=await fetch(eUrl).then(r=>r.json());
+   const claims=eRes&&eRes.claims&&eRes.claims.P136;
+   if(!claims||!claims.length)return '';
+   const genreQids=claims.map(c=>c.mainsnak&&c.mainsnak.datavalue&&c.mainsnak.datavalue.value&&c.mainsnak.datavalue.value.id).filter(Boolean);
+   if(!genreQids.length)return '';
+   // prendi le etichette italiane (fallback inglese) di questi generi
+   const lUrl=`https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${genreQids.join('|')}&props=labels&languages=it|en&format=json&origin=*`;
+   const lRes=await fetch(lUrl).then(r=>r.json());
+   const ents=lRes&&lRes.entities;if(!ents)return '';
+   const labels=genreQids.map(id=>{
+     const e=ents[id];if(!e||!e.labels)return '';
+     const it=e.labels.it&&e.labels.it.value;const en=e.labels.en&&e.labels.en.value;
+     return normalizeGenreIt(it||en)||(it?cap(it):(en?(normalizeGenreIt(en)||cap(en)):''));
+   }).filter(Boolean);
+   if(!labels.length)return '';
+   // preferisci un genere specifico (non "Romanzo"/"Narrativa")
+   const specific=labels.find(g=>!GENERIC_GENRES.has(g));
+   return specific||labels[0];
+ }catch(e){return '';}
 }
+function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 async function doSearch(q){
  let cands=[];
  try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}   // edizioni italiane per prime
@@ -4061,6 +4069,7 @@ let libYear='all'; // filtro anno libreria: 'all' | numero | 'nodate'
 /* ===== PAGINA PROFILO: ritratto del lettore su TUTTA la libreria ===== */
 function renderProfiloPage(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderProfiloPage()});return}
+ autoEnrichGenres();
  const p=profile||{};const d=p.data||{};
  const av=safeImgUrl(d.avatar);
  const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
@@ -4101,8 +4110,7 @@ function renderProfiloPage(){
    ${total>0?`<div class="donut-wrap">
      <svg viewBox="0 0 160 160" class="donut">${donut}<text x="80" y="74" text-anchor="middle" class="donut-c-n">${readAll.length}</text><text x="80" y="94" text-anchor="middle" class="donut-c-l">libri</text></svg>
      <div class="donut-legend">${legend}</div>
-   </div>
-   <div style="margin-top:14px;text-align:right"><button class="btn ghost sm" onclick="refreshAllGenres(this)">🔄 Aggiorna generi da Wikipedia</button></div>`:`<div class="muted" style="font-size:13.5px;padding:6px 0">Aggiungi libri alla libreria per vedere il ritratto dei tuoi generi. I generi si assegnano da Wikipedia. 📚</div>`}
+   </div>`:`<div class="muted" style="font-size:13.5px;padding:6px 0">Aggiungi libri alla libreria per vedere il ritratto dei tuoi generi. 📚</div>`}
  </div>
 
  <div class="sec-title">✍️ Autori preferiti</div>
@@ -4115,20 +4123,23 @@ function renderProfiloPage(){
    </div>
  </div>`;
 }
-async function refreshAllGenres(btn){
- if(btn){btn.disabled=true;btn.textContent='🔄 Aggiorno…';}
- let changed=0;
- for(const b of books){
-   try{
+/* Arricchimento automatico dei generi: al caricamento della libreria, i libri privi di genere
+   o con genere generico vengono aggiornati da Wikidata in background, uno alla volta. */
+let _genreEnriching=false;
+async function autoEnrichGenres(){
+ if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
+ try{
+   const todo=books.filter(b=>!b.g||GENERIC_GENRES.has(b.g)||b.g==='Narrativa'||b.g==='Romanzo').slice(0,8);
+   let changed=false;
+   for(const b of todo){
      const g=await wikiGenre(b.t,b.a);
-     if(g&&g!==b.g){b.g=g;changed++;
-       if(mode==='cloud'&&supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
+     if(g&&g!==b.g){b.g=g;changed=true;
+       if(supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
      }
-   }catch(e){}
- }
- if(mode!=='cloud')save();
- toast(changed?('Aggiornati '+changed+' generi ✓'):'Generi già aggiornati','📚');
- renderProfiloPage();
+   }
+   if(changed&&(current==='profilo'||current==='libreria'))refreshView();
+ }catch(e){}
+ _genreEnriching=false;
 }
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
