@@ -917,6 +917,9 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit{flex:none;width:30px;height:30px;background:rgba(255,255,255,.15);border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;display:grid;place-items:center;padding:0}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
+.year-bar{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:18px;padding-bottom:4px}
+.year-chip{flex:none;white-space:nowrap;font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:18px;cursor:pointer;background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s}
+.year-chip.active{background:var(--brand-grad);color:#fff;border-color:transparent}
 .meet-row{display:flex;align-items:center;gap:14px;cursor:pointer;padding:6px 0}
 .meet-date{width:52px;height:56px;border-radius:14px;background:var(--brand-grad);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
 .meet-date .meet-d{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1}
@@ -1311,21 +1314,39 @@ renders.libreria=()=>{
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
  const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead],['ai','Consigliati AI',null]];
- const list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
+ let list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
+ // Filtro temporale: attivo solo nel tab "Letti"
+ let yearBar='';
+ if(libTab==='read'){
+   const readBooks=books.filter(b=>b.status==='read');
+   const years=[...new Set(readBooks.map(bookYear).filter(y=>y))].sort((a,b)=>b-a);
+   const hasNoDate=readBooks.some(b=>!bookYear(b));
+   const YR=new Date().getFullYear();
+   const chips=[['all','Tutti']];
+   years.forEach(y=>chips.push([String(y),y===YR?('Quest\'anno ('+y+')'):String(y)]));
+   if(hasNoDate)chips.push(['nodate','Senza data']);
+   if(chips.length>1){
+     yearBar=`<div class="year-bar">${chips.map(c=>`<button class="year-chip ${String(libYear)===c[0]?'active':''}" onclick="libYear='${c[0]}';renders.libreria()">${c[1]}</button>`).join('')}</div>`;
+   }
+   if(libYear!=='all'){
+     list=list.filter(b=>libYear==='nodate'?!bookYear(b):bookYear(b)===+libYear);
+   }
+ }
  view.innerHTML=`
- <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:2px 0 24px">
+ <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:2px 0 16px">
    <div class="tabs">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}${t[2]!=null?` <i class="tabn">${t[2]}</i>`:''}</button>`).join('')}</div>
    <div style="display:flex;gap:8px;align-items:center">
      ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria pubblica — chi ti segue la vede':'Libreria privata — solo tu la vedi'}">${profile&&profile.public_library?'🌐 Pubblica':'🔒 Privata'}</button>`:''}
      <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
    </div>
- </div>`+`
+ </div>
+ ${yearBar}`+`
  ${libTab==='ai'
   ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
   : (list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad" style="text-align:center;padding:48px 20px">
         <div style="font-size:46px">📚</div>
-        <h2 style="font-size:21px;margin:10px 0 6px">${libTab==='all'?'La tua libreria è vuota':'Niente qui, per ora'}</h2>
+        <h2 style="font-size:21px;margin:10px 0 6px">${libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora')}</h2>
         <div class="muted" style="max-width:420px;margin:0 auto 18px">${libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.'}</div>
         <button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>
       </div>`)}`;
@@ -1637,6 +1658,13 @@ function openBook(id){
     <div class="field" style="margin-top:18px"><label>⭐ La tua valutazione</label>${b.status==='read'
       ? `${!b.rate?`<div class="muted" style="font-size:13px;margin-bottom:8px">Hai finito il libro 🎉 Che voto gli dai?</div>`:''}<div class="stars rate-stars${!b.rate?' pulse':''}" style="font-size:32px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div>`
       : `<div class="muted" style="font-size:13px;padding:2px 0">Potrai valutare il libro quando l'avrai finito. ${b.status==='reading'?'Continua così! 📖':''}</div>`}</div>
+    ${b.status==='read'?`<div class="field" style="margin-top:14px"><label>📅 Anno di lettura</label>
+      <select id="bookYearSel" onchange="setBookYear(${b.id},this.value)" style="max-width:200px">
+        <option value="">Non ricordo</option>
+        ${(function(){const now=new Date().getFullYear();let o='';for(let y=now;y>=now-40;y--){o+=`<option value="${y}" ${bookYear(b)===y?'selected':''}>${y}</option>`;}return o;})()}
+      </select>
+      <div class="muted" style="font-size:11.5px;margin-top:5px">Serve a organizzare la libreria per anno. Se non lo ricordi, resta tra i libri "Senza data".</div>
+    </div>`:''}
     <hr>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -1719,13 +1747,18 @@ async function enrichBook(b){
  return changed;
 }
 function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;
- if(st==='read')b.prog=100;
+ if(st==='read'){b.prog=100;if(!b.finishedYear)b.finishedYear=new Date().getFullYear();}
  if(st==='reading')b.prog=0; // riportare in lettura azzera il segnalibro
  // azzera anche la posizione condivisa del diario per questo titolo
  if(st==='reading'){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');if(m[b.t]){m[b.t]=1;localStorage.setItem(posKey(),JSON.stringify(m));}}catch(e){}}
- persistBook(id,{status:st,progress:b.prog});
+ persistBook(id,{status:st,progress:b.prog,finished_year:(st==='read'?b.finishedYear:null)});
  if(st==='read'){openBook(id);setTimeout(scrollToRate,80);}
  else{closeModal();go(current);}
+}
+function setBookYear(id,val){const b=book(id);if(!b)return;
+ const y=val?+val:null;b.finishedYear=y;
+ persistBook(id,{finished_year:y});
+ toast(y?('Anno di lettura: '+y):'Anno rimosso','📅');
 }
 function scrollToRate(){const el=$('#rateStars')||document.querySelector('.rate-stars');if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){el.scrollIntoView()}}}
 /* Segnalibro virtuale a numero di pagina. Internamente il progresso resta in % (b.prog) per
@@ -1783,7 +1816,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v87 (home anno corrente, ritmo rimosso - parte 1)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v88 (libreria navigabile per anno - parte 2)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4393,6 +4426,7 @@ async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localSto
 /* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
 function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
+   finishedYear:r.finished_year||null,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
  const {data,error}=await supa.from('books').select('*').eq('user_id',authUser.id).order('id');
