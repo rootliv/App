@@ -917,6 +917,15 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit{flex:none;width:30px;height:30px;background:rgba(255,255,255,.15);border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;display:grid;place-items:center;padding:0}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
+.donut-wrap{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.donut{width:160px;height:160px;flex:none}
+.donut-c-n{font-family:'Fraunces',serif;font-size:30px;font-weight:600;fill:var(--ink)}
+.donut-c-l{font-size:11px;fill:var(--ink-soft)}
+.donut-legend{flex:1;min-width:180px;display:flex;flex-direction:column;gap:7px}
+.lg-row{display:flex;align-items:center;gap:9px;font-size:13px}
+.lg-dot{width:11px;height:11px;border-radius:3px;flex:none}
+.lg-name{flex:1;min-width:0;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lg-pct{color:var(--ink-soft);font-weight:600;font-size:12px}
 .year-bar{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:18px;padding-bottom:4px}
 .year-chip{flex:none;white-space:nowrap;font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:18px;cursor:pointer;background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s}
 .year-chip.active{background:var(--brand-grad);color:#fff;border-color:transparent}
@@ -1235,6 +1244,7 @@ function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'
 /* ============ NAV ============ */
 const pages=[
  {id:'home',ic:'🏠',label:'Home',title:'Home',sub:'Il tuo diario di lettura',grp:'Tu'},
+ {id:'profilo',ic:'👤',label:'Profilo',title:'Profilo lettore',sub:'Il tuo ritratto di lettore',grp:'Tu'},
  {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
  {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
  {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
@@ -1306,7 +1316,7 @@ const renders={};
 
 renders.home=()=>renderHomeCloud();
 
-renders.profilo=()=>renderHomeCloud();
+renders.profilo=()=>renderProfiloPage();
 
 let libTab='all';
 renders.libreria=()=>{
@@ -1816,7 +1826,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v88 (libreria navigabile per anno - parte 2)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v89 (profilo separato con grafico, generi da Wikipedia - parte 3)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2002,6 +2012,54 @@ function liveSearch(q){
  if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere per vedere i suggerimenti…</div>';return}
  searchTimer=setTimeout(()=>searchBooks(q),350);
 }
+/* ===== GENERI DA WIKIPEDIA (fonte affidabile), normalizzati in italiano ===== */
+const GENRE_IT={
+ 'novel':'Romanzo','fiction':'Narrativa','literary fiction':'Narrativa','historical novel':'Romanzo storico',
+ 'historical fiction':'Romanzo storico','science fiction':'Fantascienza','sci-fi':'Fantascienza','fantasy':'Fantasy',
+ 'high fantasy':'Fantasy','mystery':'Giallo','detective fiction':'Giallo','crime':'Giallo','crime fiction':'Giallo',
+ 'thriller':'Thriller','horror':'Horror','romance':'Rosa','romance novel':'Rosa','gothic':'Gotico','gothic fiction':'Gotico',
+ 'dystopian':'Distopia','dystopia':'Distopia','utopian and dystopian fiction':'Distopia','adventure':'Avventura',
+ 'adventure fiction':'Avventura','biography':'Biografia','autobiography':'Autobiografia','memoir':'Memoir',
+ 'essay':'Saggistica','non-fiction':'Saggistica','nonfiction':'Saggistica','poetry':'Poesia','drama':'Teatro',
+ 'play':'Teatro','short story':'Racconti','short stories':'Racconti','satire':'Satira','magic realism':'Realismo magico',
+ 'magical realism':'Realismo magico','young adult':'Young adult','children':'Per ragazzi','philosophical':'Filosofico',
+ 'philosophical fiction':'Filosofico','psychological':'Psicologico','psychological fiction':'Psicologico',
+ 'coming-of-age':'Formazione','bildungsroman':'Romanzo di formazione','war novel':'Romanzo di guerra',
+ 'spy':'Spionaggio','spy fiction':'Spionaggio','western':'Western','classic':'Classico','classics':'Classico'
+};
+function normalizeGenreIt(raw){
+ if(!raw)return '';
+ let s=(''+raw).toLowerCase().trim().replace(/\s+/g,' ');
+ s=s.replace(/\b(american|english|british|french|italian|juvenile|adult)\b/g,'').replace(/\s+/g,' ').trim();
+ if(GENRE_IT[s])return GENRE_IT[s];
+ for(const k in GENRE_IT){if(s.includes(k))return GENRE_IT[k];}
+ return '';
+}
+async function wikiGenre(title,author){
+ const tryWiki=async(lang)=>{
+   try{
+     const sq=encodeURIComponent(title+(author?(' '+author):'')+(lang==='it'?' (romanzo)':' (novel)'));
+     const sUrl=`https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${sq}&format=json&origin=*&srlimit=1`;
+     const sRes=await fetch(sUrl).then(r=>r.json());
+     const hit=sRes&&sRes.query&&sRes.query.search&&sRes.query.search[0];
+     if(!hit)return '';
+     const pUrl=`https://${lang}.wikipedia.org/w/api.php?action=parse&pageid=${hit.pageid}&prop=wikitext&format=json&origin=*`;
+     const pRes=await fetch(pUrl).then(r=>r.json());
+     const wt=(pRes&&pRes.parse&&pRes.parse.wikitext&&pRes.parse.wikitext['*'])||'';
+     const m=wt.match(/\|\s*(genere|genre|subject)\s*=\s*([^\n|]+)/i);
+     if(m){
+       let val=m[2].replace(/\[\[|\]\]/g,'').replace(/\{\{[^}]*\}\}/g,'').replace(/<[^>]+>/g,'').split(/[,;/]/)[0].trim();
+       const it=normalizeGenreIt(val);
+       if(it)return it;
+       if(lang==='it'&&val)return val.charAt(0).toUpperCase()+val.slice(1);
+     }
+   }catch(e){}
+   return '';
+ };
+ let g=await tryWiki('it');
+ if(!g)g=await tryWiki('en');
+ return g;
+}
 async function doSearch(q){
  let cands=[];
  try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}   // edizioni italiane per prime
@@ -2053,6 +2111,20 @@ async function addFoundBook(i){
    save();
  }
  closeModal();libTab='toread';go('libreria');
+ // Arricchisci il genere da Wikipedia (fonte affidabile) in background
+ enrichGenreFromWiki(s.t,s.a);
+}
+async function enrichGenreFromWiki(title,author){
+ try{
+   const g=await wikiGenre(title,author);
+   if(!g)return;
+   const b=books.find(x=>normKey(x.t)===normKey(title));
+   if(!b||b.g===g)return;
+   b.g=g;
+   if(mode==='cloud'&&supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
+   else save();
+   if(current==='libreria')refreshView();
+ }catch(e){}
 }
 function openAddBook(){
  $('#modal').innerHTML=`
@@ -3966,6 +4038,71 @@ function topCount(arr,lim){
  return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,lim||8);
 }
 let libYear='all'; // filtro anno libreria: 'all' | numero | 'nodate'
+/* ===== PAGINA PROFILO: ritratto del lettore su TUTTA la libreria ===== */
+function renderProfiloPage(){
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderProfiloPage()});return}
+ const p=profile||{};const d=p.data||{};
+ const av=safeImgUrl(d.avatar);
+ const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
+ const readAll=books.filter(b=>b.status==='read');
+ // generi/autori da TUTTA la libreria (letti), + preferenze manuali
+ const genreCounts=topCount(books.map(b=>b.g).filter(Boolean),12);
+ const authorCounts=topCount(readAll.map(b=>b.a).filter(Boolean),8);
+ const manualGenres=(d.genres||[]);
+ const manualAuthors=(d.authors||[]);
+ // colori per il donut
+ const palette=['#2f8168','#b98f3f','#4a6fa5','#a85a5a','#7a5a9e','#4a8a7a','#c07d35','#5a8a4a','#9e5a7a','#5a7a9e','#8a7a4a','#6a6a6a'];
+ const total=genreCounts.reduce((s,g)=>s+g[1],0);
+ // costruisci il donut SVG
+ let donut='',legend='',acc=0;
+ if(total>0){
+   const R=64,C=2*Math.PI*R,cx=80,cy=80;
+   genreCounts.forEach((g,i)=>{
+     const frac=g[1]/total;const len=frac*C;const col=palette[i%palette.length];
+     donut+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-width="26" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${-acc}" transform="rotate(-90 ${cx} ${cy})"></circle>`;
+     acc+=len;
+     const pct=Math.round(frac*100);
+     legend+=`<div class="lg-row"><span class="lg-dot" style="background:${col}"></span><span class="lg-name">${esc(g[0])}</span><span class="lg-pct">${pct}%</span></div>`;
+   });
+ }
+ view.innerHTML=`
+ <div class="me-hero">
+   <div class="me-av" onclick="openAvatarMenu()">${av?`<img src="${esc(av)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}</div>
+   <div class="me-id">
+     ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
+       ? `<div class="me-name">${esc(p.name)}</div><div class="me-sub">Lettore dal ${yr}</div>`
+       : `<div class="me-name">${esc(p.name)||'Lettore'}</div><div class="me-sub">${p.username?'@'+esc(p.username)+' · ':''}Lettore dal ${yr}</div>`}
+   </div>
+   <button class="me-edit" onclick="openEditProfile()">✏️ Modifica</button>
+ </div>
+
+ <div class="sec-title">📊 I tuoi generi</div>
+ <div class="card pad">
+   ${total>0?`<div class="donut-wrap">
+     <svg viewBox="0 0 160 160" class="donut">${donut}<text x="80" y="74" text-anchor="middle" class="donut-c-n">${readAll.length}</text><text x="80" y="94" text-anchor="middle" class="donut-c-l">libri</text></svg>
+     <div class="donut-legend">${legend}</div>
+   </div>`:`<div class="muted" style="font-size:13.5px;padding:6px 0">Aggiungi libri alla libreria per vedere il ritratto dei tuoi generi. I generi si assegnano da Wikipedia. 📚</div>`}
+ </div>
+
+ <div class="sec-title">💚 Generi preferiti</div>
+ <div class="card pad">
+   <div class="muted" style="font-size:12px;margin-bottom:10px">I generi che ami — quelli che hai scelto tu, più quelli che emergono dalle tue letture.</div>
+   <div class="chips">
+     ${manualGenres.map(g=>`<span class="pill green">${esc(g)}</span>`).join('')}
+     ${genreCounts.filter(g=>!manualGenres.some(m=>m.toLowerCase()===g[0].toLowerCase())).slice(0,6).map(g=>`<span class="pill">${esc(g[0])} <b style="opacity:.6">${g[1]}</b></span>`).join('')}
+     ${(!manualGenres.length&&!genreCounts.length)?'<span class="muted" style="font-size:13px">Nessun genere ancora. <a href="#" onclick="openEditProfile();return false" style="color:var(--brand-solid)">Aggiungi →</a></span>':''}
+   </div>
+ </div>
+
+ <div class="sec-title">✍️ Autori preferiti</div>
+ <div class="card pad">
+   <div class="chips">
+     ${manualAuthors.map(a=>`<span class="pill green">${esc(a)}</span>`).join('')}
+     ${authorCounts.filter(a=>a[1]>1&&!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase())).slice(0,5).map(a=>`<span class="pill">${esc(a[0])} <b style="opacity:.6">${a[1]}</b></span>`).join('')}
+     ${(!manualAuthors.length&&!authorCounts.length)?'<span class="muted" style="font-size:13px">Nessun autore ancora.</span>':''}
+   </div>
+ </div>`;
+}
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
  const p=profile||{};const d=p.data||{};
