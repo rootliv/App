@@ -917,6 +917,22 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit{flex:none;width:30px;height:30px;background:rgba(255,255,255,.15);border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;display:grid;place-items:center;padding:0}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
+.lib-head{margin:2px 0 16px}
+.lib-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px}
+.lib-tabs{display:flex;flex-wrap:wrap;gap:8px}
+.lib-tab{flex:1;min-width:calc(33.333% - 6px);display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:inherit;font-size:13px;font-weight:600;padding:10px 8px;border-radius:14px;cursor:pointer;
+  background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap}
+.lib-tab.active{background:var(--brand-grad);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(30,80,60,.2)}
+.lib-tabn{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(0,0,0,.08)}
+.lib-tab.active .lib-tabn{background:rgba(255,255,255,.25)}
+.add-status{display:flex;flex-direction:column;gap:10px}
+.add-st{display:flex;align-items:center;gap:14px;text-align:left;width:100%;padding:14px 16px;border-radius:16px;
+  background:var(--surface2);border:1.5px solid var(--line);cursor:pointer;font-family:inherit;transition:.15s}
+.add-st:hover,.add-st.sel{border-color:var(--brand-solid);background:var(--hover)}
+.add-st-ic{font-size:24px;flex:none}
+.add-st b{display:block;font-size:14.5px;color:var(--ink)}
+.add-st small{color:var(--ink-soft);font-size:12px}
 .donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
 .donut{width:168px;height:168px;flex:none;filter:drop-shadow(0 2px 8px rgba(30,60,50,.1))}
 .donut-c-n{font-family:'Fraunces',serif;font-size:32px;font-weight:600;fill:var(--ink)}
@@ -1347,12 +1363,12 @@ renders.libreria=()=>{
    }
  }
  view.innerHTML=`
- <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin:2px 0 16px">
-   <div class="tabs">${tabs.map(t=>`<button class="${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}${t[2]!=null?` <i class="tabn">${t[2]}</i>`:''}</button>`).join('')}</div>
-   <div style="display:flex;gap:8px;align-items:center">
-     ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria pubblica — chi ti segue la vede':'Libreria privata — solo tu la vedi'}">${profile&&profile.public_library?'🌐 Pubblica':'🔒 Privata'}</button>`:''}
+ <div class="lib-head">
+   <div class="lib-actions">
+     ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria pubblica':'Libreria privata'}">${profile&&profile.public_library?'🌐 Pubblica':'🔒 Privata'}</button>`:''}
      <button class="btn" onclick="openAddBook()">＋ Aggiungi libro</button>
    </div>
+   <div class="lib-tabs">${tabs.map(t=>`<button class="lib-tab ${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()">${t[1]}${t[2]!=null?`<i class="lib-tabn">${t[2]}</i>`:''}</button>`).join('')}</div>
  </div>
  ${yearBar}`+`
  ${libTab==='ai'
@@ -1830,7 +1846,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v94 (grafico migliore, generi riprocessati anche se raw)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v95 (aggiunta libro con stato, tab libreria a griglia)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2149,22 +2165,50 @@ async function searchBooksClub(q,clubId){
  searchResults=await doSearch(q);
  renderResults(i=>`<button class="btn sm" onclick="chooseClubBook(${clubId},${i})">Scegli</button>`);
 }
-async function addFoundBook(i){
+function addFoundBook(i){
  const s=searchResults[i];if(!s)return;
- // niente doppioni: se il titolo (stesso autore) è già in libreria, avvisa e apri quello
+ // niente doppioni
  const dup=books.find(b=>normKey(b.t)===normKey(s.t)&&(!s.a||!b.a||normKey(b.a)===normKey(s.a)));
  if(dup){closeModal();toast('«'+s.t+'» è già nella tua libreria','📚');openBook(dup.id);return;}
+ // chiedi lo stato prima di salvare
+ const now=new Date().getFullYear();
+ let yopts='';for(let y=now;y>=now-40;y--)yopts+=`<option value="${y}">${y}</option>`;
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>Aggiungi alla libreria</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
+      <div style="width:56px;flex:none">${coverEl('add',s.t,s.a,'📖',s.coverUrl)}</div>
+      <div style="min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(s.t)}</b><div class="muted" style="font-size:13px">${esc(s.a||'')}</div></div>
+    </div>
+    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:10px">A che punto sei con questo libro?</label>
+    <div class="add-status">
+      <button class="add-st" onclick="confirmAddBook(${i},'toread')"><span class="add-st-ic">🔖</span><b>Da leggere</b><small>Lo voglio leggere</small></button>
+      <button class="add-st" onclick="confirmAddBook(${i},'reading')"><span class="add-st-ic">📖</span><b>Lo sto leggendo</b><small>In corso</small></button>
+      <button class="add-st" onclick="document.getElementById('readYearWrap').style.display='block';this.classList.add('sel')"><span class="add-st-ic">✅</span><b>Già letto</b><small>L'ho finito</small></button>
+    </div>
+    <div id="readYearWrap" style="display:none;margin-top:16px">
+      <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">📅 In che anno l'hai letto?</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <select id="addReadYear" style="max-width:160px"><option value="">Non ricordo</option>${yopts}</select>
+        <button class="btn" onclick="confirmAddBook(${i},'read')">✅ Aggiungi come letto</button>
+      </div>
+    </div>
+  </div>`;
+ openOverlay();
+}
+async function confirmAddBook(i,status){
+ const s=searchResults[i];if(!s)return;
+ const fy=(status==='read')?(+($('#addReadYear')||{}).value||null):null;
  if(mode==='cloud'&&supa){
-   const {data,error}=await supa.from('books').insert({user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status:'toread',progress:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null}).select('*').single();
+   const {data,error}=await supa.from('books').insert({user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status,progress:status==='read'?100:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null,finished_year:fy}).select('*').single();
    if(error){alert('Non riesco a salvare il libro nel cloud: '+error.message);return}
    books.push(dbToBook(data));
  }else{
    const id=Math.max(0,...books.map(b=>b.id))+1;
-   books.push({id,t:s.t,a:s.a,g:s.g,pg:s.pg,ch:0,status:'toread',prog:0,rate:0,trama:s.trama,set:[],cur:'',quote:'',coverUrl:s.coverUrl});
+   books.push({id,t:s.t,a:s.a,g:s.g,pg:s.pg,ch:0,status,prog:status==='read'?100:0,rate:0,trama:s.trama,set:[],cur:'',quote:'',coverUrl:s.coverUrl,finishedYear:fy});
    save();
  }
- closeModal();libTab='toread';go('libreria');
- // Arricchisci il genere da Wikipedia (fonte affidabile) in background
+ closeModal();libTab=status;if(status==='read'&&fy)libYear='all';go('libreria');
  enrichGenreFromWiki(s.t,s.a);
 }
 async function enrichGenreFromWiki(title,author){
