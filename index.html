@@ -1197,7 +1197,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
 <script>
 /* ============ DATI DI ESEMPIO ============ */
 const palettes=[['#6d2540','#a8536f'],['#34678f','#5a93c0'],['#3f7d5a','#6fb189'],['#9a6a2f','#caa14a'],['#5b3a72','#8a63a8'],['#9a3b3b','#cf6f50'],['#2f6d6a','#4ea59f']];
-function pal(i){return palettes[i%palettes.length]}
+function pal(i){const n=(typeof i==='number'&&isFinite(i))?i:(String(i).split('').reduce((a,c)=>a+c.charCodeAt(0),0));return palettes[Math.abs(n)%palettes.length]}
 function coverStyle(i){const[a,b]=pal(i);return`background:linear-gradient(150deg,${a},${b})`}
 
 const seedBooks=[
@@ -1856,7 +1856,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v97 (fix gia letto, obiettivo inline, generi manuali+libreria, tab belli)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v98 (FIX gia letto: coverEl con id stringa crashava)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2210,7 +2210,7 @@ function askReadYear(i){
   <div class="modal-top"><b>✅ Già letto</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px">
-      <div style="width:52px;flex:none">${coverEl('add',s.t,s.a,'📖',s.coverUrl)}</div>
+      <div style="width:52px;flex:none">${coverEl(i,s.t,s.a,'📖',s.coverUrl)}</div>
       <div style="min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(s.t)}</b><div class="muted" style="font-size:13px">${esc(s.a||'')}</div></div>
     </div>
     <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">📅 In che anno l'hai letto? <span style="font-weight:400">(facoltativo)</span></label>
