@@ -928,6 +928,10 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .lib-tab.active .lib-tabn{background:rgba(255,255,255,.25)}
 @media(max-width:400px){.lib-tabs{grid-template-columns:repeat(2,1fr)}}
 .add-status{display:flex;flex-direction:column;gap:10px}
+.add-choice{display:flex;gap:6px;flex:none}
+.add-mini{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-size:18px;display:grid;place-items:center;transition:.15s;flex:none}
+.add-mini:hover{border-color:var(--brand-solid);background:var(--hover);transform:translateY(-1px)}
+.add-mini.gold:hover{border-color:var(--gold)}
 .add-st{display:flex;align-items:center;gap:14px;text-align:left;width:100%;padding:14px 16px;border-radius:16px;
   background:var(--surface2);border:1.5px solid var(--line);cursor:pointer;font-family:inherit;transition:.15s}
 .add-st:hover,.add-st.sel{border-color:var(--brand-solid);background:var(--hover)}
@@ -1293,7 +1297,7 @@ function buildNav(){
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
    html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${p.ic}</span>${p.label}</button>`});
  $('#nav').innerHTML=html;
- const main=['home','libreria','club','ai','incontri'];
+ const main=['home','profilo','libreria','club','ai'];
  $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
    return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${p.ic}</span>${p.label.split(' ')[0]}</button>`}).join('');
 }
@@ -1847,7 +1851,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v95 (tab libreria a griglia, stato all-aggiunta)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v96 (aggiunta libro immediata, profilo in bottom-nav)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2157,7 +2161,11 @@ async function searchBooks(q){
  q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);
  const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco nell\'archivio…</div>';
  searchResults=await doSearch(q);
- renderResults(i=>`<button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>`);
+ renderResults(i=>`<div class="add-choice">
+   <button class="add-mini" onclick="quickAdd(${i},'toread')" title="Da leggere">🔖</button>
+   <button class="add-mini" onclick="quickAdd(${i},'reading')" title="Lo sto leggendo">📖</button>
+   <button class="add-mini gold" onclick="askReadYear(${i})" title="Già letto">✅</button>
+ </div>`);
 }
 function liveSearchClub(q,clubId){clearTimeout(searchTimer);q=(q||'').trim();const box=$('#searchResults');if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere…</div>';return}searchTimer=setTimeout(()=>searchBooksClub(q,clubId),350)}
 async function searchBooksClub(q,clubId){
@@ -2166,51 +2174,45 @@ async function searchBooksClub(q,clubId){
  searchResults=await doSearch(q);
  renderResults(i=>`<button class="btn sm" onclick="chooseClubBook(${clubId},${i})">Scegli</button>`);
 }
-function addFoundBook(i){
+function addFoundBook(i){quickAdd(i,'toread');}
+async function quickAdd(i,status,fy){
  const s=searchResults[i];if(!s)return;
- // niente doppioni
  const dup=books.find(b=>normKey(b.t)===normKey(s.t)&&(!s.a||!b.a||normKey(b.a)===normKey(s.a)));
  if(dup){closeModal();toast('«'+s.t+'» è già nella tua libreria','📚');openBook(dup.id);return;}
- // chiedi lo stato prima di salvare
- const now=new Date().getFullYear();
- let yopts='';for(let y=now;y>=now-40;y--)yopts+=`<option value="${y}">${y}</option>`;
- $('#modal').innerHTML=`
-  <div class="modal-top"><b>Aggiungi alla libreria</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
-  <div class="modal-body">
-    <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px">
-      <div style="width:56px;flex:none">${coverEl('add',s.t,s.a,'📖',s.coverUrl)}</div>
-      <div style="min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(s.t)}</b><div class="muted" style="font-size:13px">${esc(s.a||'')}</div></div>
-    </div>
-    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:10px">A che punto sei con questo libro?</label>
-    <div class="add-status">
-      <button class="add-st" onclick="confirmAddBook(${i},'toread')"><span class="add-st-ic">🔖</span><b>Da leggere</b><small>Lo voglio leggere</small></button>
-      <button class="add-st" onclick="confirmAddBook(${i},'reading')"><span class="add-st-ic">📖</span><b>Lo sto leggendo</b><small>In corso</small></button>
-      <button class="add-st" onclick="document.getElementById('readYearWrap').style.display='block';this.classList.add('sel')"><span class="add-st-ic">✅</span><b>Già letto</b><small>L'ho finito</small></button>
-    </div>
-    <div id="readYearWrap" style="display:none;margin-top:16px">
-      <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">📅 In che anno l'hai letto?</label>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <select id="addReadYear" style="max-width:160px"><option value="">Non ricordo</option>${yopts}</select>
-        <button class="btn" onclick="confirmAddBook(${i},'read')">✅ Aggiungi come letto</button>
-      </div>
-    </div>
-  </div>`;
- openOverlay();
-}
-async function confirmAddBook(i,status){
- const s=searchResults[i];if(!s)return;
- const fy=(status==='read')?(+($('#addReadYear')||{}).value||null):null;
+ fy=fy||null;
  if(mode==='cloud'&&supa){
-   const {data,error}=await supa.from('books').insert({user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status,progress:status==='read'?100:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null,finished_year:fy}).select('*').single();
-   if(error){alert('Non riesco a salvare il libro nel cloud: '+error.message);return}
-   books.push(dbToBook(data));
+   const row={user_id:authUser.id,title:s.t,author:s.a,genre:s.g,pages:s.pg,status,progress:status==='read'?100:0,rating:0,cover_url:s.coverUrl||null,plot:s.trama,note:null};
+   if(fy)row.finished_year=fy;
+   let {data,error}=await supa.from('books').insert(row).select('*').single();
+   if(error&&/finished_year/.test(error.message||'')){ // colonna non ancora creata: riprova senza
+     delete row.finished_year;({data,error}=await supa.from('books').insert(row).select('*').single());
+   }
+   if(error){alert('Non riesco a salvare il libro: '+error.message);return}
+   const nb=dbToBook(data);if(fy)nb.finishedYear=fy;books.push(nb);
  }else{
    const id=Math.max(0,...books.map(b=>b.id))+1;
    books.push({id,t:s.t,a:s.a,g:s.g,pg:s.pg,ch:0,status,prog:status==='read'?100:0,rate:0,trama:s.trama,set:[],cur:'',quote:'',coverUrl:s.coverUrl,finishedYear:fy});
    save();
  }
- closeModal();libTab=status;if(status==='read'&&fy)libYear='all';go('libreria');
+ closeModal();libTab=status;libYear='all';go('libreria');
+ toast(status==='read'?'Aggiunto ai letti ✓':(status==='reading'?'Buona lettura! 📖':'Aggiunto alla lista 🔖'),'📚');
  enrichGenreFromWiki(s.t,s.a);
+}
+function askReadYear(i){
+ const s=searchResults[i];if(!s)return;
+ const now=new Date().getFullYear();let yopts='';for(let y=now;y>=now-40;y--)yopts+=`<option value="${y}">${y}</option>`;
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>✅ Già letto</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px">
+      <div style="width:52px;flex:none">${coverEl('add',s.t,s.a,'📖',s.coverUrl)}</div>
+      <div style="min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(s.t)}</b><div class="muted" style="font-size:13px">${esc(s.a||'')}</div></div>
+    </div>
+    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">📅 In che anno l'hai letto? <span style="font-weight:400">(facoltativo)</span></label>
+    <select id="addReadYear" style="max-width:200px;margin-bottom:18px"><option value="">Non ricordo</option>${yopts}</select>
+    <button class="btn" style="width:100%;justify-content:center" onclick="quickAdd(${i},'read',(+(document.getElementById('addReadYear').value)||null))">✅ Aggiungi ai letti</button>
+  </div>`;
+ openOverlay();
 }
 async function enrichGenreFromWiki(title,author){
  try{
@@ -4232,17 +4234,6 @@ function renderHomeCloud(){
  const yrGenres=topCount(readThisYear.map(b=>b.g).filter(Boolean),6);
  const yrAuthors=topCount(readThisYear.map(b=>b.a).filter(Boolean),6);
  view.innerHTML=`
- <!-- HERO IDENTITÀ (pulito) -->
- <div class="me-hero">
-   <div class="me-av" onclick="openAvatarMenu()" title="Foto profilo">${av?`<img src="${esc(av)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}</div>
-   <div class="me-id">
-     ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
-       ? `<div class="me-name">${esc(p.name)}</div><div class="me-sub">Lettore dal ${yr}</div>`
-       : `<div class="me-name">${esc(p.name)||'Lettore'}</div><div class="me-sub">${p.username?'@'+esc(p.username)+' · ':''}Lettore dal ${yr}</div>`}
-   </div>
-   <button class="me-edit" onclick="openEditProfile()">✏️ Modifica</button>
- </div>
-
  <!-- OBIETTIVO ANNO CORRENTE + STATISTICHE -->
  <div class="card me-panel">
    <div class="me-goal-full">
