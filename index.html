@@ -1868,7 +1868,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v100 (barra anni a capo, letto porta a recensione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v101 (scroll stelle stabile, generi con fallback multipli)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2214,10 +2214,19 @@ async function quickAdd(i,status,fy){
    save();
  }
    const nbid=(function(){const b=books.find(x=>normKey(x.t)===normKey(s.t));return b?b.id:null;})();
-   if(status==='read'&&nbid){closeModal();enrichGenreFromWiki(s.t,s.a);openBook(nbid);setTimeout(scrollToRate,120);toast('Aggiunto ai letti ✓ Ora dagli un voto!','⭐');return;}
+   if(status==='read'&&nbid){closeModal();enrichGenreFromWiki(s.t,s.a);openBookToRate(nbid);return;}
    closeModal();libTab=status;libYear='all';go('libreria');
    toast(status==='reading'?'Buona lettura! 📖':'Aggiunto alla lista 🔖','📚');
    enrichGenreFromWiki(s.t,s.a);
+}
+/* Apre il dettaglio libro e posiziona SUBITO la vista sulle stelle, una volta sola,
+   senza animazioni che rimbalzano. */
+function openBookToRate(id){
+ openBook(id);
+ requestAnimationFrame(()=>{requestAnimationFrame(()=>{
+   const el=document.getElementById('rateStars')||document.querySelector('.rate-stars');
+   if(el){el.scrollIntoView({block:'center'});el.classList.add('pulse');}
+ });});
 }
 function askReadYear(i){
  const s=searchResults[i];if(!s)return;
@@ -4250,18 +4259,60 @@ function renderProfiloPage(){
 /* Arricchimento automatico dei generi: al caricamento della libreria, i libri privi di genere
    o con genere generico vengono aggiornati da Wikidata in background, uno alla volta. */
 let _genreEnriching=false;
+// Deduce un genere italiano da parole chiave nella trama/descrizione (rete di sicurezza offline)
+// Generi noti per alcuni libri/autori molto diffusi (garanzia immediata, senza rete)
+const KNOWN_GENRES=[
+ [/\beducated\b|l'educazione/i,'Autobiografia'],
+ [/\bsolaris\b/i,'Fantascienza'],
+ [/\bstoner\b/i,'Romanzo'],
+ [/1984|fahrenheit 451|il mondo nuovo|la strada/i,'Distopia'],
+ [/il nome della rosa|il pendolo di foucault/i,'Giallo storico'],
+ [/il signore degli anelli|lo hobbit|harry potter|le cronache di narnia/i,'Fantasy']
+];
+function genreFromKnown(title,author){
+ const s=(title||'')+' '+(author||'');
+ for(const[re,g]of KNOWN_GENRES){if(re.test(s))return g;}
+ return '';
+}
+function genreFromText(txt){
+ if(!txt)return '';
+ const t=(' '+txt+' ').toLowerCase();
+ const rules=[
+   [/\b(memoir|autobiograf|proprie memorie|sua infanzia|racconta la sua vita)\b/,'Autobiografia'],
+   [/\b(biografia|vita di|biografico)\b/,'Biografia'],
+   [/\b(fantascienz|pianeta|spaziale|astronav|futuro distopico|alieni|robot)\b/,'Fantascienza'],
+   [/\b(distop|totalitar)\b/,'Distopia'],
+   [/\b(giallo|delitto|omicidio|indagine|commissario|detective|assassinio)\b/,'Giallo'],
+   [/\b(thriller|suspense)\b/,'Thriller'],
+   [/\b(horror|terrore|soprannaturale)\b/,'Horror'],
+   [/\b(fantasy|magia|draghi|maghi|regno incantato)\b/,'Fantasy'],
+   [/\b(romantic|storia d'amore|innamora)\b/,'Rosa'],
+   [/\b(storico|ambientato nel|guerra mondiale|medioevo|ottocento|novecento)\b/,'Romanzo storico'],
+   [/\b(avventur|viaggio)\b/,'Avventura'],
+   [/\b(saggio|saggistica|analisi|inchiesta)\b/,'Saggistica'],
+   [/\b(poesie|poesia|versi)\b/,'Poesia'],
+   [/\b(racconti|novelle)\b/,'Racconti'],
+   [/\b(formazione|crescita|adolescen)\b/,'Formazione']
+ ];
+ for(const[re,g]of rules){if(re.test(t))return g;}
+ return '';
+}
 async function autoEnrichGenres(){
  if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
  try{
-   // Da arricchire: libri senza genere, generico, o con genere NON presente nella mappa italiana
-   // (es. categorie grezze di Google Books tipo "domestic fiction", "Subculture").
    const isCleanIt=g=>g&&(IT_VALID.has(g.toLowerCase())||Object.values(GENRE_IT).includes(g));
    const todo=books.filter(b=>!isCleanIt(b.g)||GENERIC_GENRES.has(b.g)).slice(0,10);
    let changed=false;
    for(const b of todo){
-     let g=await wikiGenre(b.t,b.a);
-     // fallback: se Wikidata non risolve, prova a mappare il genere grezzo esistente in italiano
+     let g='';
+     // 1) libri noti: genere garantito subito
+     g=genreFromKnown(b.t,b.a);
+     // 2) Wikidata (fonte migliore, dipende dalla rete)
+     if(!g){try{g=await wikiGenre(b.t,b.a);}catch(e){}}
+     // 3) mappa il genere grezzo esistente
      if(!g&&b.g)g=normalizeGenreIt(b.g);
+     // 4) deduci dalla trama/descrizione
+     if(!g)g=genreFromText(b.trama||'');
      if(g&&g!==b.g){b.g=g;changed=true;
        if(supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
      }
