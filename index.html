@@ -919,13 +919,14 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .usearch{position:relative;display:flex;align-items:center}
 .lib-head{margin:2px 0 16px}
 .lib-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px}
-.lib-tabs{display:flex;flex-wrap:wrap;gap:8px}
-.lib-tab{flex:1;min-width:calc(33.333% - 6px);display:flex;align-items:center;justify-content:center;gap:6px;
-  font-family:inherit;font-size:13px;font-weight:600;padding:10px 8px;border-radius:14px;cursor:pointer;
+.lib-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lib-tab{display:flex;align-items:center;justify-content:center;gap:6px;
+  font-family:inherit;font-size:12.5px;font-weight:600;padding:11px 8px;border-radius:14px;cursor:pointer;
   background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap}
 .lib-tab.active{background:var(--brand-grad);color:#fff;border-color:transparent;box-shadow:0 3px 10px rgba(30,80,60,.2)}
 .lib-tabn{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;background:rgba(0,0,0,.08)}
 .lib-tab.active .lib-tabn{background:rgba(255,255,255,.25)}
+@media(max-width:400px){.lib-tabs{grid-template-columns:repeat(2,1fr)}}
 .add-status{display:flex;flex-direction:column;gap:10px}
 .add-st{display:flex;align-items:center;gap:14px;text-align:left;width:100%;padding:14px 16px;border-radius:16px;
   background:var(--surface2);border:1.5px solid var(--line);cursor:pointer;font-family:inherit;transition:.15s}
@@ -1343,7 +1344,7 @@ renders.libreria=()=>{
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
- const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead],['ai','Consigliati AI',null]];
+ const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead],['ai','✨ Consigli',null]];
  let list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
  // Filtro temporale: attivo solo nel tab "Letti"
  let yearBar='';
@@ -1846,7 +1847,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v95 (aggiunta libro con stato, tab libreria a griglia)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v95 (tab libreria a griglia, stato all-aggiunta)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
