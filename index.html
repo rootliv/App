@@ -918,7 +918,9 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
 .lib-head{margin:2px 0 16px}
-.lib-actions{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-bottom:12px}
+.lib-actions{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
+.lib-actions .lib-priv{flex:1}
+.lib-actions .btn{flex:1;justify-content:center}
 .lib-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
 .lib-tab{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;
   font-family:inherit;font-size:11px;font-weight:600;padding:11px 4px 9px;border-radius:15px;cursor:pointer;
@@ -973,10 +975,17 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 #followingList{max-height:300px;overflow-y:auto}
 .uhint{font-size:13px;color:var(--ink-soft);padding:10px 2px}
 .linklike-danger{background:none;border:none;color:var(--danger,#c0524a);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
-.lib-priv{font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 13px;border-radius:20px;cursor:pointer;
-  background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap}
+.lib-priv{font-family:inherit;font-size:13px;font-weight:600;padding:11px 14px;border-radius:14px;cursor:pointer;
+  background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;white-space:nowrap;
+  display:flex;align-items:center;justify-content:center;gap:5px}
 .lib-priv:hover{border-color:var(--ink-faint)}
 .lib-priv.pub{background:var(--sage-soft,#e7efe9);color:var(--brand-solid);border-color:var(--brand-solid)}
+select{font-family:inherit;font-weight:600;color:var(--ink);background:var(--surface2);
+  border:1px solid var(--line);border-radius:13px;padding:12px 40px 12px 15px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center}
+select:focus{outline:none;border-color:var(--brand-solid)}
 /* ===== HOME "Oggi" ===== */
 .me-hero{position:relative;border-radius:22px;padding:16px 18px;margin-bottom:14px;
   background:var(--brand-grad);color:#fff;box-shadow:0 6px 18px rgba(20,50,40,.16);
@@ -1856,7 +1865,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v98 (FIX gia letto: coverEl con id stringa crashava)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v99 (azioni libreria bilanciate, select elegante, generi it fallback)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2075,6 +2084,8 @@ const GENRE_IT={
  'social novel':'Romanzo sociale','political fiction':'Romanzo politico','political novel':'Romanzo politico',
  'realism':'Realismo','realist':'Realismo','naturalism':'Naturalismo','modernism':'Modernismo','postmodern':'Postmoderno','postmodernism':'Postmoderno',
  'literary fiction':'Narrativa','literary':'Narrativa','literary realism':'Narrativa realista','fiction':'Narrativa','prose':'Prosa',
+ 'domestic fiction':'Narrativa','general fiction':'Narrativa','contemporary fiction':'Narrativa contemporanea',
+ 'subculture':'Narrativa','translations into english':'Narrativa','american fiction':'Narrativa','english fiction':'Narrativa',
  'novel':'Romanzo','classic':'Classico','classics':'Classico','literature':'Letteratura'
 };
 const GENERIC_GENRES=new Set(['Romanzo','Narrativa','Letteratura','Prosa','Fantastico']);
@@ -4243,7 +4254,9 @@ async function autoEnrichGenres(){
    const todo=books.filter(b=>!isCleanIt(b.g)||GENERIC_GENRES.has(b.g)).slice(0,10);
    let changed=false;
    for(const b of todo){
-     const g=await wikiGenre(b.t,b.a);
+     let g=await wikiGenre(b.t,b.a);
+     // fallback: se Wikidata non risolve, prova a mappare il genere grezzo esistente in italiano
+     if(!g&&b.g)g=normalizeGenreIt(b.g);
      if(g&&g!==b.g){b.g=g;changed=true;
        if(supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
      }
