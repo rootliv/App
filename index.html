@@ -957,6 +957,13 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .lg-pct{color:var(--ink-soft);font-weight:600;font-size:12px;text-align:right}
 @media(max-width:440px){.lg-row{grid-template-columns:12px 1fr 34px}.lg-bar{display:none}}
 .year-wrap{margin-bottom:18px}
+.hub-lab{display:block;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:9px}
+.codechip.big{font-size:22px;letter-spacing:4px;padding:12px 24px;font-weight:700}
+.lib-search{position:relative;display:flex;align-items:center;margin-bottom:16px}
+.lib-search-ic{position:absolute;left:15px;font-size:15px;pointer-events:none;opacity:.6}
+.lib-search input{width:100%;font-family:inherit;font-size:14px;padding:13px 40px 13px 42px;border-radius:14px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);transition:.15s}
+.lib-search input:focus{outline:none;border-color:var(--brand-solid);background:var(--surface)}
+.lib-search-x{position:absolute;right:8px;width:28px;height:28px;border:none;background:var(--hover);border-radius:50%;cursor:pointer;font-size:12px;color:var(--ink-soft)}
 .year-lab{display:block;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin-bottom:9px}
 .year-bar{display:flex;gap:8px;flex-wrap:wrap}
 .year-chip{white-space:nowrap;font-family:inherit;font-size:12.5px;font-weight:600;padding:8px 15px;border-radius:20px;cursor:pointer;background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.15s;-webkit-tap-highlight-color:transparent}
@@ -1384,6 +1391,13 @@ renders.libreria=()=>{
    }
  }
  const tabMeta={all:['📚','Tutti'],reading:['📖','In lettura'],toread:['🔖','Da leggere'],read:['✅','Letti'],ai:['✨','Consigli']};
+ // Ricerca nello scaffale: filtra per titolo, autore o genere (compare quando la libreria cresce)
+ const showSearch=libTab!=='ai'&&books.length>=6;
+ if(showSearch&&libFilter){
+   const q=libFilter.toLowerCase();
+   list=(list||[]).filter(b=>(b.t||'').toLowerCase().includes(q)||(b.a||'').toLowerCase().includes(q)||(b.g||'').toLowerCase().includes(q));
+ }
+ const searchBar=showSearch?`<div class="lib-search"><span class="lib-search-ic">🔎</span><input id="libFilterInput" placeholder="Cerca nella libreria: titolo, autore, genere…" value="${esc(libFilter||'')}" oninput="libFilter=this.value;refreshLibraryList()"><button class="lib-search-x" onclick="libFilter='';renders.libreria()" style="${libFilter?'':'display:none'}">✕</button></div>`:'';
  view.innerHTML=`
  <div class="lib-head">
    <div class="lib-actions">
@@ -1392,16 +1406,17 @@ renders.libreria=()=>{
    </div>
    <div class="lib-tabs">${tabs.map(t=>{const meta=tabMeta[t[0]]||['',t[1]];return `<button class="lib-tab ${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()"><span class="lib-tab-ic">${meta[0]}</span><span class="lib-tab-tx">${meta[1]}</span>${t[2]!=null?`<i class="lib-tabn">${t[2]}</i>`:''}</button>`}).join('')}</div>
  </div>
+ ${searchBar}
  ${yearBar}`+`
  ${libTab==='ai'
   ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
-  : (list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
+  : `<div id="libShelf">${list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad" style="text-align:center;padding:48px 20px">
-        <div style="font-size:46px">📚</div>
-        <h2 style="font-size:21px;margin:10px 0 6px">${libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora')}</h2>
-        <div class="muted" style="max-width:420px;margin:0 auto 18px">${libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.'}</div>
-        <button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>
-      </div>`)}`;
+        <div style="font-size:46px">${libFilter?'🔍':'📚'}</div>
+        <h2 style="font-size:21px;margin:10px 0 6px">${libFilter?'Nessun libro trovato':(libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora'))}</h2>
+        <div class="muted" style="max-width:420px;margin:0 auto 18px">${libFilter?('Nessun risultato per «'+esc(libFilter)+'». Prova con un altro termine.'):(libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.')}</div>
+        ${libFilter?`<button class="btn ghost" onclick="libFilter='';renders.libreria()">Azzera ricerca</button>`:`<button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>`}
+      </div>`}</div>`}`;
  if(libTab==='ai')loadAiRecs();
 };
 
@@ -1868,7 +1883,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v101 (scroll stelle stabile, generi con fallback multipli)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v102 (ricerca libreria, hub invito dai membri, diario in libro del mese)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2594,21 +2609,13 @@ function renderClubCloud(){
      <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span class="club-desc-empty">Aggiungi una descrizione</span>'}</p>
      <button class="club-desc-edit" onclick="editClubDesc(${c.id})" title="Modifica descrizione">✏️</button>
    </div>
-   <div class="avstack" id="clubAvs"></div>
+   <div class="avstack" id="clubAvs" onclick="openInviteHub(${c.id})" style="cursor:pointer" title="Membri e inviti"></div>
   </div>
 
-  <div class="club-cols">
-   <div class="panel feat">
+  <div class="panel feat" style="margin-top:2px">
      <div class="panel-title">📖 Libro del mese</div>
      <div id="selPanel"><div class="muted" style="font-size:13px">Carico…</div></div>
-   </div>
-   <div class="panel">
-     <div class="panel-title">✉️ Invita al club</div>
-     <button class="btn sm" onclick="inviteToClub(${c.id})">🔎 Invita per username</button>
-     <button class="btn gold sm" style="margin-top:8px" onclick="copyInvite(${c.id},this)">🔗 Copia link d'invito</button>
-     <div class="code-row"><span class="muted" style="font-size:12px">oppure codice</span><code class="codechip" onclick="copyCode('${clubCode(c.id)}',this)" title="Tocca per copiare">${clubCode(c.id)}</code></div>
-     <div class="muted" style="font-size:11.5px;margin-top:10px;line-height:1.55">Cerca un utente per <b>username</b> e mandagli un invito da accettare, oppure condividi <b>link</b> o <b>codice</b>.</div>
-   </div>
+     ${c.current_title?`<button class="btn" style="margin-top:16px;width:100%;justify-content:center" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
   </div>
 
   <div class="panel" style="margin-top:16px">
@@ -2626,8 +2633,6 @@ function renderClubCloud(){
    <div id="clubMembers" class="member-grid"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
   </div>
 
-  ${c.current_title?`<button class="btn" style="margin-top:16px" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
-
   <div class="panel" style="margin-top:16px">
    ${c.owner===authUser.id
      ? `<details class="club-set"><summary>⚙️ Impostazioni club</summary>
@@ -2641,7 +2646,7 @@ function renderClubCloud(){
    if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
      <div style="min-width:0"><b>${esc(m.name)}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+esc(m.username)+' · ':''}${esc(m.role)}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
    const av=$('#clubAvs');
-   if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'}</span>`;
+   if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'} · <b>invita ›</b></span>`;
    const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
    if(c.selection_mode==='voting')loadAndRenderProposals(c.id);
  }).catch(()=>{});
@@ -3652,17 +3657,26 @@ async function loadMyInvites(){
  try{const {data}=await supa.from('club_invites').select('*').eq('invitee_id',authUser.id).eq('status','pending');return data||[];}catch(e){return[];}
 }
 let _clubPendingInvites=[],_clubMemberIds=[];
-async function inviteToClub(clubId){
+async function openInviteHub(clubId){
+ const c=myClubs.find(x=>x.id===clubId)||{};
  _clubPendingInvites=[];_clubMemberIds=[];
  try{const {data}=await supa.from('club_invites').select('invitee_id,status').eq('club_id',clubId).eq('status','pending');_clubPendingInvites=(data||[]).map(r=>r.invitee_id);}catch(e){}
  try{const {data}=await supa.from('club_members').select('user_id').eq('club_id',clubId);_clubMemberIds=(data||[]).map(r=>r.user_id);}catch(e){}
- $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita al club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+ $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita a ${esc(c.name||'club')}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email. La persona riceverà un invito da accettare.</div>
+    <label class="hub-lab">🔎 Cerca e invita una persona</label>
     <div class="usearch"><span class="usearch-ic">🔎</span><input id="inviteSearch" placeholder="Username o email…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
     <div id="inviteResults" class="uresults"></div>
-  </div>`;openOverlay();setTimeout(()=>{const el=$('#inviteSearch');if(el)el.focus()},80);
+    <hr style="margin:20px 0 18px">
+    <label class="hub-lab">🔗 Condividi il link d'invito</label>
+    <button class="btn gold" style="width:100%;justify-content:center" onclick="copyInvite(${clubId},this)">🔗 Copia link d'invito</button>
+    <label class="hub-lab" style="margin-top:20px">🔑 Oppure il codice</label>
+    <div style="display:flex;justify-content:center"><code class="codechip big" onclick="copyCode('${clubCode(clubId)}',this)" title="Tocca per copiare">${clubCode(clubId)}</code></div>
+    <div class="muted" style="font-size:11.5px;margin-top:16px;line-height:1.55;text-align:center">Chi cerchi per <b>username</b> riceve un invito da accettare. Con <b>link</b> o <b>codice</b> può unirsi da solo.</div>
+  </div>`;
+ openOverlay();setTimeout(()=>{const el=$('#inviteSearch');if(el)el.focus()},80);
 }
+async function inviteToClub(clubId){openInviteHub(clubId);}
 let _inviteT=null;
 async function searchInvitees(clubId,q){
  q=(q||'').trim().replace(/^@/,'');
@@ -4320,6 +4334,17 @@ async function autoEnrichGenres(){
    if(changed&&(current==='profilo'||current==='libreria'))refreshView();
  }catch(e){}
  _genreEnriching=false;
+}
+let libFilter='';
+function refreshLibraryList(){
+ // Aggiorna solo lo scaffale mentre si digita, senza ridisegnare l'input (mantiene il focus)
+ const shelf=document.getElementById('libShelf');if(!shelf)return;
+ let list=books.filter(b=>libTab==='all'||b.status===libTab);
+ if(libTab==='read'&&libYear!=='all')list=list.filter(b=>libYear==='nodate'?!bookYear(b):bookYear(b)===+libYear);
+ if(libFilter){const q=libFilter.toLowerCase();list=list.filter(b=>(b.t||'').toLowerCase().includes(q)||(b.a||'').toLowerCase().includes(q)||(b.g||'').toLowerCase().includes(q));}
+ const x=document.querySelector('.lib-search-x');if(x)x.style.display=libFilter?'':'none';
+ shelf.innerHTML=list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
+   :`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:40px">🔍</div><h2 style="font-size:19px;margin:10px 0 6px">Nessun libro trovato</h2><div class="muted" style="font-size:13px">Nessun risultato per «${esc(libFilter)}».</div></div>`;
 }
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
