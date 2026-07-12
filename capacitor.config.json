@@ -1,0 +1,34 @@
+{
+  "appId": "io.github.rootliv.pagina",
+  "appName": "Pàgina",
+  "webDir": "www",
+  "backgroundColor": "#123829",
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#123829"
+  },
+  "android": {
+    "backgroundColor": "#123829",
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "launchAutoHide": true,
+      "backgroundColor": "#123829",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP",
+      "splashImmersive": true
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "Keyboard": {
+      "resize": "native"
+    }
+  }
+}
