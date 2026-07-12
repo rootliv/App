@@ -1001,7 +1001,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v118 (notifiche: icone vere, riga cliccabile, letto/non letto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v119 (FIX z-index mappa, focus notifica, singolare libri)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3517,7 +3517,7 @@ function renderProfiloPage(){
  <div class="card pad">
    ${total>0?`
    <div class="genre-summary-row">
-     <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total}`:`Tutti i ${total} libri sono classificati`}</div>
+     <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total}`:(total===1?'Il tuo libro è classificato':`Tutti i ${total} libri sono classificati`)}</div>
      ${dist.total-dist.classified>0
        ?`<button class="link-btn sm" onclick="openClassifyMissing()" aria-label="Classifica i ${dist.total-dist.classified} libri senza genere">Classifica i ${dist.total-dist.classified} mancanti</button>`
        :''}
@@ -3930,7 +3930,8 @@ function readNotifKeys(){try{return new Set(JSON.parse(localStorage.getItem('pag
 function markNotifKeyRead(key){try{const s=readNotifKeys();s.add(key);localStorage.setItem('pagina_notif_read_keys',JSON.stringify([...s]))}catch(e){}}
 function openNotifItem(key,cid,go){
  markNotifKeyRead(key);
- const row=document.querySelector('[data-notif-key="'+CSS.escape(key)+'"]');if(row)row.classList.remove('unread');
+ const row=document.querySelector('[data-notif-key="'+CSS.escape(key)+'"]');
+ if(row){row.classList.remove('unread');row.blur();}
  if(cid)clubSel=cid;
  window.go(go);
 }
