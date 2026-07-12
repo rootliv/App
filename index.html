@@ -995,7 +995,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v115 (menu, assistente, diario, incontri - meno emoji, piu chiaro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v116 (modale profilo + mappa: meno duplicazioni, aggregazione marker)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2614,11 +2614,14 @@ async function detectBookLocations(){
  // Ririleva sia i libri mai analizzati sia quelli rimasti "senza luogo" (in caso di errori passati)
  const todo=books.filter(b=>{const e=m[normKey(b.t)];return !e||e.noPlace});
  const btn=$('#detectBtn');if(btn){btn.disabled=true;}
- if(!todo.length){toast('Ambientazioni già sulla mappa','🗺️');curioMapBusy=false;if(btn)btn.disabled=false;return}
+ const live=$('#detectLive');
+ if(!todo.length){toast('Ambientazioni già sulla mappa','✓');curioMapBusy=false;if(btn)btn.disabled=false;return}
  let done=0,noPlaceN=0,errors=0,i=0;
  for(const b of todo){
    i++;
-   if(btn)btn.textContent='⏳ '+i+'/'+todo.length;
+   const label='Analisi di '+i+' su '+todo.length;
+   if(btn)btn.textContent=label;
+   if(live)live.textContent=label;
    try{
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which real-world city and country is the novel "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Reply ONLY with "City, Country" in English, or just "Country". If the setting is fictional/imaginary (invented world), or not a real place, or unknown, reply ONLY with the single word: UNKNOWN.'}});
      if(error){errors++;continue}   // errore di rete: NON segna il libro, così verrà ritentato
@@ -2634,45 +2637,68 @@ async function detectBookLocations(){
    }catch(e){errors++}
  }
  curioMapBusy=false;
- if(errors&&!done&&!noPlaceN)toast('AI non raggiungibile: riprova o deploya la function "assistente"','⚠️');
+ if(live)live.textContent='Analisi completata.';
+ if(errors&&!done&&!noPlaceN)toast('AI non raggiungibile: riprova più tardi','⚠');
  else{
    const parts=[];
    if(done)parts.push(done+' sulla mappa');
    if(noPlaceN)parts.push(noPlaceN+' senza luogo reale');
    if(errors)parts.push(errors+' da riprovare');
-   toast(parts.length?parts.join(' · '):'Nessuna ambientazione trovata','🗺️');
+   toast(parts.length?parts.join(' · '):'Nessuna ambientazione trovata','✓');
  }
  if(current==='mappa')renderMappaCloud();   // un solo re-render, alla fine
- else{const b2=$('#detectBtn');if(b2){b2.disabled=false;b2.textContent='✨ Rileva ambientazioni'}}
+ else{const b2=$('#detectBtn');if(b2){b2.disabled=false;b2.textContent='Analizza la libreria'}}
 }
-function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','🗺️');renderMappaCloud()}
+function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','✓');renderMappaCloud()}
 function renderMappaCloud(){
  const all=Object.values(bookLocs());
  const locs=all.filter(l=>l.lat!=null);           // effettivamente sulla mappa
  const noPlace=all.filter(l=>l.noPlace);          // rilevati come senza luogo reale
  const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
  const todo=books.filter(b=>!bookLocs()[normKey(b.t)]).length;  // non ancora rilevati
+ const empty=!locs.length; // nessuna ambientazione ancora sulla mappa
+
+ // Conteggio libri per paese, per la lista testuale (accessibile, non solo sulla mappa)
+ const byCountry={};locs.forEach(l=>{const k=l.country||'—';(byCountry[k]=byCountry[k]||[]).push(l);});
+ const countryRows=Object.entries(byCountry).sort((a,b)=>b[1].length-a[1].length);
+
  view.innerHTML=`
- <div style="margin-bottom:16px">
-   <h3 style="font-size:17px">🗺️ Le tue letture nel mondo</h3>
-   <div class="muted" style="font-size:12.5px;margin-top:2px">Dove sono ambientati i libri della tua libreria.</div>
-   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">
-     <span class="pill sky">🌍 ${countries.length} paesi · ${locs.length} libri</span>
-     ${(todo||(books.length&&!all.length))?`<button id="detectBtn" class="btn sm" onclick="detectBookLocations()">✨ Rileva ambientazioni</button>`:''}
-     ${all.length?`<button class="btn ghost sm" onclick="clearMapLocs()">🗑 Svuota</button>`:''}
-   </div>
- </div>
- <div id="map"></div>
- <div class="card pad" style="margin-top:18px">
-   ${locs.length?`<div class="muted" style="font-size:13.5px">Paesi esplorati: <b>${countries.join(', ')||'—'}</b>.${todo?` ${todo} libri ancora da posizionare: premi "✨ Rileva ambientazioni".`:''}</div>`
-     :(books.length?`<div class="srch-empty">La mappa è pronta! Premi <b>✨ Rileva ambientazioni</b>: l'AI individua dove sono ambientati i tuoi libri e li posiziona sul planisfero. 🌏</div>`
-       :`<div class="srch-empty">Aggiungi libri alla libreria e poi premi "Rileva ambientazioni" per vederli sulla mappa. 🌏</div>`)}
-   ${noPlace.length?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
-     <div class="muted" style="font-size:12.5px;margin-bottom:8px">✨ ${noPlace.length} ${noPlace.length===1?'libro senza luogo reale':'libri senza luogo reale'} — ambientazione immaginaria o non specificata, quindi non compaiono sul planisfero:</div>
-     <div class="chips">${noPlace.map(l=>`<span class="pill gold" title="${esc(l.author||'')}">📖 ${esc(l.title)}</span>`).join('')}</div>
+ <div style="margin-bottom:14px">
+   <h3 style="font-size:17px">Le tue letture nel mondo</h3>
+   <div class="muted" style="font-size:12.5px;margin-top:2px">Scopri dove sono ambientati i libri della tua libreria.</div>
+   ${!empty?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">
+     <span class="pill sky" style="display:inline-flex;align-items:center;gap:5px">${icon('globe')} ${fmtIt(countries.length)} ${countries.length===1?'paese':'paesi'} · ${fmtIt(locs.length)} ${locs.length===1?'libro':'libri'}${todo?` · ${fmtIt(todo)} da verificare`:''}</span>
+     <button id="detectBtn" class="btn ghost sm" onclick="detectBookLocations()" aria-label="Aggiorna analisi ambientazioni">${icon('sparkles')} Aggiorna analisi</button>
+     <button class="btn ghost sm danger-text" onclick="clearMapLocs()" aria-label="Svuota mappa">${icon('trash')} Svuota</button>
    </div>`:''}
- </div>`;
+ </div>
+ <div id="mapWrap" style="position:relative">
+   <div id="map" style="${empty?'height:220px':''}"></div>
+   ${empty?`<div class="map-empty-overlay">
+     <span class="icn-badge sky">${icon(books.length?'sparkles':'globe')}</span>
+     <h3>Nessuna ambientazione rilevata</h3>
+     <p>${books.length?'Analizza i libri della tua libreria per visualizzare sulla mappa i luoghi in cui sono ambientati.':'Aggiungi libri alla libreria per poterne analizzare le ambientazioni.'}</p>
+     ${books.length?`<button id="detectBtn" class="btn" onclick="detectBookLocations()">${icon('sparkles')} Analizza la libreria</button>`:''}
+   </div>`:''}
+ </div>
+ <div id="detectLive" aria-live="polite" class="sr-only"></div>
+ ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
+ <div class="card pad">
+   <div class="place-list">${countryRows.map(([country,items])=>`<div class="place-row" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')">
+     <span style="flex:1">${esc(country)}</span><span class="muted">${items.length} ${items.length===1?'libro':'libri'}</span>
+   </div>`).join('')}</div>
+ </div>`:''}
+ ${noPlace.length?`<div class="card pad" style="margin-top:16px">
+   <div class="muted" style="font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px">${icon('sparkles')} ${noPlace.length} ${noPlace.length===1?'libro senza luogo reale':'libri senza luogo reale'} — ambientazione immaginaria o non specificata:</div>
+   <div class="chips">${noPlace.map(l=>`<span class="pill gold">${esc(l.title)}</span>`).join('')}</div>
+ </div>`:''}`;
  setTimeout(()=>initMapCloud(locs),60);
+}
+function focusMapCountry(country){
+ if(!mapObj)return;
+ const pts=Object.values(bookLocs()).filter(l=>l.lat!=null&&l.country===country);
+ if(!pts.length)return;
+ try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.4));}catch(e){}
 }
 function initMapCloud(locs){
  if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
@@ -2680,10 +2706,18 @@ function initMapCloud(locs){
  mapObj=L.map('map',{scrollWheelZoom:false}).setView([25,12],2);
  mapObj.on('focus',()=>mapObj.scrollWheelZoom.enable());
  mapObj.on('blur',()=>mapObj.scrollWheelZoom.disable());
- L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
- const icon=L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:13px">📖</span></div>',iconSize:[30,30],iconAnchor:[15,28]});
+ L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'Leaflet | © OpenStreetMap | © CARTO',maxZoom:18}).addTo(mapObj);
+ const mkIcon=(n)=>L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:12px;font-weight:700">'+(n>1?n:'')+'</span></div>',iconSize:[30,30],iconAnchor:[15,28]});
  const pts=locs.filter(l=>l.lat!=null);
- pts.forEach(l=>L.marker([l.lat,l.lng],{icon}).addTo(mapObj).bindPopup('<b>'+esc(l.title)+'</b><br>'+esc(l.author||'')+'<br><span style="color:#766a61">📍 '+esc(l.place)+'</span>'));
+ // Aggrega i libri con la stessa ambientazione (coordinate arrotondate) in un solo marker,
+ // invece di sovrapporre marker identici senza indicazione del numero di libri.
+ const groups={};
+ pts.forEach(l=>{const key=l.lat.toFixed(2)+','+l.lng.toFixed(2);(groups[key]=groups[key]||[]).push(l);});
+ Object.values(groups).forEach(g=>{
+   const first=g[0];
+   const popup='<b>'+esc(first.place||first.country||'')+'</b><br>'+g.map(l=>esc(l.title)+(l.author?(' — '+esc(l.author)):'')).join('<br>');
+   L.marker([first.lat,first.lng],{icon:mkIcon(g.length)}).addTo(mapObj).bindPopup(popup);
+ });
  fixMapSize(mapObj);
  if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));setTimeout(()=>{try{mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}},160)}catch(e){}}
 }
@@ -3015,31 +3049,44 @@ function openEditProfile(){
  const d=(profile&&profile.data)||{};
  editSel={genres:(d.genres||[]).slice(),authors:(d.authors||[]).slice(),loved:(d.loved||[]).slice(),disliked:(d.disliked||[]).slice()};
  const groups=[
-   ['genres','📗 Generi preferiti','Che tipo di storie ami leggere','Aggiungi un genere…',false],
-   ['authors','✍️ Autori preferiti','Le firme che segui','Aggiungi un autore…',false]
+   ['genres','Generi preferiti','Che tipo di storie ami leggere','Aggiungi un genere…',false],
+   ['authors','Autori preferiti','Le firme che segui','Aggiungi un autore…',false]
  ];
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>✏️ Modifica profilo</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>Modifica profilo</b><button class="icon-close" onclick="closeModal()" aria-label="Chiudi modifica profilo">${icon('close')}</button></div>
   <div class="modal-body">
+    <div class="ep-sec-lab">Dati profilo</div>
     <div class="field"><label>Username</label><input id="epUser" value="${esc((profile&&profile.username)||'')}" autocapitalize="off" autocomplete="off" placeholder="es. alice_libri" oninput="checkUsername()"><small id="epUserHint" style="display:block;margin-top:5px;font-size:12px" class="muted">3-20 caratteri: lettere, numeri o _</small></div>
-    <div class="muted" style="font-size:12.5px;margin:4px 0 16px">Tocca le voci per <b>selezionarle</b> o deselezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
-    ${groups.map(g=>`<div class="pref-group${g[4]?' no':''}"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')">＋ Aggiungi</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
-    <div class="goal-grid" style="grid-template-columns:1fr">
-      <div class="goal-card">
-        <div class="goal-ic">🎯</div>
-        <div style="flex:1"><label class="goal-lab">Obiettivo annuale</label>
-          <div class="goal-in"><input id="epGoal" type="number" min="0" placeholder="0" value="${d.goal||''}"><span class="goal-unit">libri</span></div>
-        </div>
-      </div>
+
+    <div class="ep-divider"></div>
+    <div class="ep-sec-lab">Preferenze</div>
+    <div class="muted" style="font-size:12.5px;margin:2px 0 14px">Tocca le voci per selezionarle. Servono all'assistente per consigliarti (e per evitarti) i libri giusti.</div>
+    ${groups.map(g=>`<div class="pref-open"><h4>${g[1]}</h4><span class="pref-hint">${g[2]}</span><div id="cg_${g[0]}" class="chipsel"></div><div class="chipadd"><input id="ca_${g[0]}" placeholder="${g[3]}" autocomplete="off" oninput="acInput('${g[0]}')" onkeydown="if(event.key==='Enter'){addCustom('${g[0]}');event.preventDefault()}"><button type="button" class="btn ghost sm" onclick="addCustom('${g[0]}')" aria-label="Aggiungi">${icon('plus')}</button></div><div id="ac_${g[0]}" class="acbox"></div></div>`).join('')}
+
+    <div class="ep-divider"></div>
+    <div class="ep-sec-lab">Obiettivo annuale</div>
+    <div class="goal-stepper-row">
+      <button type="button" class="goal-step-btn" onclick="epGoalStep(-1)" aria-label="Diminuisci obiettivo">−</button>
+      <div class="goal-step-val"><input id="epGoal" type="number" min="0" max="365" inputmode="numeric" placeholder="0" value="${d.goal||''}"><span class="goal-unit">libri</span></div>
+      <button type="button" class="goal-step-btn" onclick="epGoalStep(1)" aria-label="Aumenta obiettivo">+</button>
     </div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:18px" onclick="saveProfile()">💾 Salva profilo</button>
-    ${mode==='cloud'?`<div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+    <div class="muted" style="font-size:11.5px;margin-top:6px">Quanti libri vuoi leggere quest'anno.</div>
+
+    <button class="btn" id="epSaveBtn" style="width:100%;justify-content:center;margin-top:22px" onclick="saveProfile()">${icon('check')} Salva profilo</button>
+
+    ${mode==='cloud'?`<div class="ep-danger-zone">
+      <div class="ep-sec-lab" style="color:#c0392b">Zona pericolosa</div>
       <div class="muted" style="font-size:12px;margin-bottom:10px">Eliminare l'account è permanente: rimuove profilo, libreria, note e iscrizioni ai club.</div>
       <button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button>
     </div>`:''}
   </div>`;
  openOverlay();
  ['genres','authors','loved','disliked'].forEach(renderChips);
+}
+function epGoalStep(delta){
+ const inp=$('#epGoal');if(!inp)return;
+ const v=Math.max(0,Math.min(365,(+inp.value||0)+delta));
+ inp.value=v;
 }
 /* Verifica live dello username nel profilo: formato + disponibilità su Supabase (con debounce).
    Lo username attuale dell'utente è sempre considerato valido. */
@@ -3061,7 +3108,9 @@ function checkUsername(){
    }catch(e){_userOk=true;hint.textContent='Non ho potuto verificare ora: lo controllo al salvataggio.';hint.style.color='';}
  },450);
 }
+let _profileSaving=false;
 async function saveProfile(){
+ if(_profileSaving)return;
  const uInp=$('#epUser');
  const uname=uInp?uInp.value.trim().replace(/^@/,''):((profile&&profile.username)||'');
  const name=uname||(profile&&profile.name)||'Lettore';
@@ -3075,6 +3124,9 @@ async function saveProfile(){
      }catch(e){}
    }
  }
+ _profileSaving=true;
+ const btn=$('#epSaveBtn');const prevLabel=btn?btn.innerHTML:'';
+ if(btn){btn.disabled=true;btn.textContent='Salvo…';}
  const d=Object.assign({},(profile&&profile.data)||{},{
    genres:editSel.genres.slice(),authors:editSel.authors.slice(),
    loved:editSel.loved.slice(),disliked:editSel.disliked.slice(),
@@ -3083,9 +3135,14 @@ async function saveProfile(){
  const upd={name,data:d};
  if(uname!==currentU)upd.username=uname||null;
  profile=Object.assign({},profile,{name,username:(uname!==currentU?(uname||''):currentU),data:d});
- try{await supa.from('profiles').update(upd).eq('id',authUser.id)}catch(e){alert('Errore salvataggio: '+e.message)}
+ try{
+   const {error}=await supa.from('profiles').update(upd).eq('id',authUser.id);
+   if(error){alert('Errore salvataggio: '+error.message);_profileSaving=false;if(btn){btn.disabled=false;btn.innerHTML=prevLabel;}return;}
+ }catch(e){alert('Errore salvataggio: '+e.message);_profileSaving=false;if(btn){btn.disabled=false;btn.innerHTML=prevLabel;}return;}
  $('#meName').textContent=name;applyMyAvatar();
  const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account');
+ _profileSaving=false;
+ toast('Profilo salvato','✓');
  closeModal();renderHomeCloud();
 }
 
