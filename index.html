@@ -1234,7 +1234,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="search"><span>🔎</span><input id="topSearch" placeholder="Vai a… sezione o libro" autocomplete="off" oninput="topSearchInput(this.value)" onkeydown="if(event.key==='Enter')topSearchGo();if(event.key==='Escape')topClose()" onblur="setTimeout(topClose,180)"></div>
         <div id="topSearchRes" class="topsearch-res" style="display:none"></div>
       </div>
-      <button class="bell" id="bellBtn" onclick="go('notifiche')" aria-label="Notifiche">${icon('bell')}<span class="dot"></span></button>
+      <button class="bell" id="bellBtn" onclick="go('notifiche')" aria-label="Notifiche"><span id="bellIcon"></span><span class="dot"></span></button>
     </header>
     <div class="view fade" id="view"></div>
   </main>
@@ -1424,6 +1424,8 @@ const STATS={
    if(!a.length)return null;
    const max=a[0][1];
    const tied=a.filter(x=>x[1]===max);
+   // Non significativa: tutti hanno letto un solo libro a testa e ci sono molti autori diversi
+   if(max===1&&tied.length>2)return null;
    if(tied.length===1)return {label:'Autore più letto',text:tied[0][0]};
    if(tied.length===2)return {label:'Autori più letti',text:tied[0][0]+' e '+tied[1][0]};
    return {label:'Autori più letti',text:tied[0][0]+' e altri '+(tied.length-1)};
@@ -1431,6 +1433,7 @@ const STATS={
 };
 
 function buildNav(){
+ const bi=document.getElementById('bellIcon');if(bi)bi.innerHTML=icon('bell');
  let html='',last='';
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
    html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${p.ic}</span>${p.label}</button>`});
@@ -1998,7 +2001,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v105 (profilo: senza genere, ex-aequo autori, a11y, localizzazione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v106 (FIX campanella rotta, autori pari merito nascosti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita

@@ -5,7 +5,7 @@
    con i meta anti-cache già presenti in index.html).
    Nota: la cache viene svuotata e rinominata ad ogni cambio di CACHE_VERSION. */
 
-const CACHE_VERSION = 'pagina-v15';
+const CACHE_VERSION = 'pagina-v16';
 const OFFLINE_URLS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
