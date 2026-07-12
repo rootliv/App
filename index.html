@@ -123,7 +123,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div onclick="go('home')" title="Vai alla Home" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
+      <div onclick="toggleSidebar(false);openEditProfile()" title="Impostazioni account" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
         <div class="av" id="meAv">EM</div>
         <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
@@ -389,18 +389,28 @@ const STATS={
  genreStats(scope){const src=(scope==='year')?this.readThisYear():books;
    return topCount(src.map(b=>normGenre(b.g)).filter(Boolean),12);},
  authorStats(scope){const src=(scope==='year')?this.readThisYear():this.read();
-   return topCount(src.map(b=>b.a).filter(Boolean),12);},
+   // Normalizza il nome (spazi, maiuscole) per il conteggio, mantenendo la forma
+   // "canonica" (la prima incontrata) per la visualizzazione.
+   const canon={};const tally={};
+   src.map(b=>b.a).filter(Boolean).forEach(raw=>{
+     const key=raw.trim().replace(/\s+/g,' ').toLowerCase();
+     if(!key)return;
+     if(!canon[key])canon[key]=raw.trim().replace(/\s+/g,' ');
+     tally[key]=(tally[key]||0)+1;
+   });
+   return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([key,n])=>[canon[key],n]);},
  topGenre(scope){const g=this.genreStats(scope);return g.length?g[0][0]:null;},
  topAuthor(scope){const a=this.authorStats(scope);return a.length?a[0][0]:null;},
  // Gestisce l'ex-aequo: restituisce {label, names} — se un solo massimo, un nome;
  // se più autori a pari merito, elenco con "e altri N".
+ // Significativa SOLO se almeno un autore compare in 2+ libri: altrimenti non c'è
+ // davvero un "più letto", e la statistica va nascosta (non un'ipotesi arbitraria).
  topAuthorsLabel(scope){
    const a=this.authorStats(scope);
    if(!a.length)return null;
    const max=a[0][1];
+   if(max<2)return null;
    const tied=a.filter(x=>x[1]===max);
-   // Non significativa: tutti hanno letto un solo libro a testa e ci sono molti autori diversi
-   if(max===1&&tied.length>2)return null;
    if(tied.length===1)return {label:'Autore più letto',text:tied[0][0]};
    if(tied.length===2)return {label:'Autori più letti',text:tied[0][0]+' e '+tied[1][0]};
    return {label:'Autori più letti',text:tied[0][0]+' e altri '+(tied.length-1)};
@@ -763,20 +773,6 @@ function fixMapSize(m){
  setTimeout(kick,400);
  setTimeout(kick,800); // rete di sicurezza extra: cattura eventuali layout ancora instabili (transizioni, tastiera, ecc.)
 }
-function initMap(){
- if(mapObj){mapObj.remove();mapObj=null}
- mapObj=L.map('map',{scrollWheelZoom:false}).setView([20,10],2);
- mapObj.on('focus',()=>mapObj.scrollWheelZoom.enable());
- mapObj.on('blur',()=>mapObj.scrollWheelZoom.disable());
- L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap, © CARTO',maxZoom:18}).addTo(mapObj);
- const icon=L.divIcon({className:'',html:'<div style="background:#6d2540;color:#fff;width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa14a"><span style="transform:rotate(45deg);font-size:14px">📖</span></div>',iconSize:[32,32],iconAnchor:[16,30]});
- books.forEach(b=>b.set.forEach(s=>{
-   L.marker([s.lat,s.lng],{icon}).addTo(mapObj)
-    .bindPopup(`<b>${esc(b.t)}</b><br>${esc(b.a)}<br><span style="color:#766a61">📍 ${esc(s.city||s.c)}, ${esc(s.c)}</span>`);
- }));
- fixMapSize(mapObj);
-}
-
 renders.incontri=()=>renderIncontriCloud();
 renders.lettori=()=>renderLettoriCloud();
 
@@ -873,7 +869,11 @@ function openBook(id){
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
  if(mode==='cloud'&&supa)supa.from('books').delete().eq('id',id).then(()=>{},()=>{});
- books=books.filter(b=>b.id!==id);if(mode==='demo')save();closeModal();go('libreria');
+ books=books.filter(b=>b.id!==id);if(mode==='demo')save();
+ // Se la curiosità in cache riguardava proprio questo libro, invalidala subito
+ // (non aspettare il prossimo render): niente curiosità orfane, nemmeno per un istante.
+ try{const s=loadCurioState();if(s.payload&&s.payload.bookId===id){s.week=null;s.payload=null;saveCurioState(s);}}catch(e){}
+ closeModal();go('libreria');
 }
 function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
 let noteEditing=false,noteBookId=null;
@@ -1003,7 +1003,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v122 (FIX RADICE: aggiornamento SW forzato, no piu stuck su vecchia versione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v123 (curiosita orfane, dark map, no Modifica in profilo, autore stat)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3460,7 +3460,11 @@ function toggleCurioSpoiler(show){
 async function renderCuriosity(){
  const box=$('#curioCard');if(!box)return;
  const wk=curioWeekKey();let st=loadCurioState();
- if(!curioOverride&&st.week===wk&&st.payload){paintCuriosity(box,st.payload,st);return;}  // stabile per tutta la settimana
+ // La curiosità è stabile per tutta la settimana, MA solo se il libro a cui si riferisce
+ // esiste ancora nella libreria: altrimenti va invalidata subito, non ripresentata da cache.
+ const cachedStillValid=st.payload&&books.some(b=>b.id===st.payload.bookId);
+ if(!curioOverride&&st.week===wk&&st.payload&&cachedStillValid){paintCuriosity(box,st.payload,st);return;}
+ if(st.payload&&!cachedStillValid){st.week=null;st.payload=null;saveCurioState(st);} // invalida: libro rimosso
  box.innerHTML=curioSkeleton();
  const cand=curiosityCandidates();
  if(!cand.length){box.innerHTML=curioEmptyCard();return;}
@@ -3525,7 +3529,6 @@ function renderProfiloPage(){
      <div class="me-name">${esc(p.name)||'Lettore'}</div>
      <div class="me-sub">${(p.username&&p.name&&p.name.toLowerCase()!==p.username.toLowerCase())?'@'+esc(p.username)+' · ':''}Iscritto dal ${yr}</div>
    </div>
-   <button class="me-edit" onclick="openEditProfile()" aria-label="Modifica profilo">${icon('edit')}<span>Modifica</span></button>
  </div>
 
  <div class="stat-strip">
