@@ -580,13 +580,18 @@ function aiDiscuss(kind,book){
 Regole: niente spoiler del finale, tono adatto a un gruppo di lettori, conciso.`;
  return aiAsk(kit);
 }
+function aiTextInput(ta){
+ ta.style.height='auto';ta.style.height=Math.min(140,ta.scrollHeight)+'px';
+ const btn=$('#aiSendBtn');if(btn&&!_aiSending)btn.disabled=!ta.value.trim();
+}
 let _aiSending=false;
 async function aiAsk(q){
  if(!q||!q.trim())return;q=q.trim();
  if(_aiSending)return; // impedisce l'invio doppio mentre una risposta è già in corso
  _aiSending=true;
  const btn=$('#aiSendBtn');if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');}
- const t=$('#aiText');if(t)t.value='';
+ const t=$('#aiText');if(t){t.value='';t.style.height='';}
+ const sb=$('#aiSendBtn');if(sb)sb.disabled=true;
  aiChat.push({who:'me',html:esc(q),raw:q});
  aiChat.push({who:'ai',html:'<span class="ai-typing">scrivo<i>.</i><i>.</i><i>.</i></span>'});
  renderChat();
@@ -608,7 +613,8 @@ async function aiAsk(q){
    aiChat.push({who:'ai',html:'Non sono riuscito a rispondere. <a href="#" onclick="aiRetryLast();return false" style="color:var(--plum);font-weight:600">Riprova</a>',src:'Errore'});
  }finally{
    _aiSending=false;
-   const btn2=$('#aiSendBtn');if(btn2){btn2.disabled=false;btn2.removeAttribute('aria-busy');}
+   const btn2=$('#aiSendBtn');const ta2=$('#aiText');
+   if(btn2){btn2.disabled=!(ta2&&ta2.value.trim());btn2.removeAttribute('aria-busy');}
    renderChat();
  }
 }
@@ -995,7 +1001,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v116 (modale profilo + mappa: meno duplicazioni, aggregazione marker)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v117 (fix overflow diario, chip assistente rifinite)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2170,21 +2176,29 @@ async function loadClubNotes(c){
    visible=data||[];
  }catch(e){visible=[]}
  // conteggio note altrui ancora bloccate (senza testo): solo id/position
- let lockedAhead=0;
+ let lockedAhead=0,lockedMinPos=null;
  try{
    const {data:locked}=await supa.from('notes').select('id,position,user_id')
      .eq('club_id',c.id).eq('book_title',c.current_title)
      .neq('user_id',uid).gt('position',pos);
    lockedAhead=(locked||[]).length;
+   if(lockedAhead)lockedMinPos=Math.min(...locked.map(l=>l.position));
  }catch(e){lockedAhead=0}
- cloudNotes=visible; cloudNotesLocked=lockedAhead;
+ cloudNotes=visible; cloudNotesLocked=lockedAhead; cloudNotesLockedMinPos=lockedMinPos;
  const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
  if(ids.length){const {data:profs}=await supa.from('public_profiles').select('id,name,username,avatar').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
 }
 let cloudNotesLocked=0;
+let cloudNotesLockedMinPos=null;
+function toggleNoteReveal(id){
+ const p=document.getElementById('nb-'+id);const t=document.getElementById('nt-'+id);
+ if(!p)return;
+ const shown=p.classList.toggle('show');
+ if(t)t.textContent=shown?'Nascondi nota':'Mostra nota';
+}
 function renderNotesList(){
  const el=$('#notesList');if(!el)return;
- const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">${icon('lock')} ${cloudNotesLocked} ${cloudNotesLocked===1?'nota bloccata più avanti nel libro':'note bloccate più avanti nel libro'} — si sbloccano man mano che avanzi con la lettura.</div></div>`:'';
+ const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">${icon('lock')} ${cloudNotesLocked} ${cloudNotesLocked===1?'nota':'note'} — ${cloudNotesLockedMinPos?('disponibile dopo pagina '+cloudNotesLockedMinPos):'più avanti nel libro'}. Si sblocca man mano che avanzi con la lettura.</div></div>`:'';
  if(!cloudNotes.length){el.innerHTML=(lockedNote||'<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>');return}
  const pos=bookPos(curDiaryTitle);
  const LIM=notesShown||20;
@@ -2204,7 +2218,7 @@ function renderNotesList(){
    const actions=own?`<div class="note-actions"><button class="btn ghost sm" onclick="editClubNote(${n.id})" aria-label="Modifica nota">${icon('edit')}</button><button class="btn danger sm" onclick="deleteClubNote(${n.id})" aria-label="Elimina nota">${icon('trash')}</button></div>`:'';
    const body=own
      ? `<p class="note-body" style="font-size:14px;line-height:1.6;margin-top:10px">${esc(sc.clean)}</p>`
-     : `<p class="note-body reach" onclick="this.classList.toggle('show')" aria-label="Mostra o nascondi nota">${esc(sc.clean)}</p><div class="note-hint">${icon('chevron')} Tocca per leggere o nascondere</div>`;
+     : `<p class="note-body reach" id="nb-${n.id}">${esc(sc.clean)}</p><button type="button" class="note-hint note-toggle" onclick="toggleNoteReveal(${n.id})" aria-label="Mostra o nascondi questa nota">${icon('chevron')} <span id="nt-${n.id}">Mostra nota</span></button>`;
    return `<div class="note fade">${head}${body}${actions}</div>`;
  }).join('')+(more>0?`<button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="notesShown=${LIM+20};renderNotesList()">Mostra altre ${Math.min(20,more)} note (${more} rimaste)</button>`:'')+lockedNote;
 }
@@ -2382,9 +2396,9 @@ function renderAiCloud(){
    <button class="ai-chip" onclick="go('calendario')">${icon('calendar')} Aiutami col piano di lettura</button>
  </div>
  <div id="aiOut" class="ai-chat" style="margin-top:10px"></div>
- <div class="chatbox">
-   <input id="aiText" placeholder="Scrivi un messaggio…" aria-label="Scrivi un messaggio all'assistente" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
-   <button id="aiSendBtn" class="btn" onclick="aiAsk(document.getElementById('aiText').value)" aria-label="Invia messaggio">${icon('send')}</button>
+ <div class="ai-inputbox">
+   <textarea id="aiText" rows="1" placeholder="Scrivi un messaggio…" aria-label="Scrivi un messaggio all'assistente" oninput="aiTextInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiAsk(this.value)}"></textarea>
+   <button id="aiSendBtn" class="btn" onclick="aiAsk(document.getElementById('aiText').value)" aria-label="Invia messaggio" disabled>${icon('send')}</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
    <span>Risponde in base alla tua libreria e ai tuoi gusti.</span>
