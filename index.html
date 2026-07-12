@@ -119,7 +119,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     <div class="brand">
       <div class="logo"><svg viewBox="0 0 512 512" width="100%" height="100%" style="display:block"><defs><linearGradient id="slg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f2dca0"/><stop offset="0.55" stop-color="#d8b45e"/><stop offset="1" stop-color="#b8923f"/></linearGradient></defs><path d="M194,138 h60 v206 l-30,54 l-30,-54 Z" fill="url(#slg2)"/><path d="M254,138 h16 a70,69 0 0 1 0,138 h-16 v-38 h6 a42,50 0 0 0 0,-100 h-6 Z" fill="url(#slg2)"/></svg></div>
       <div><b>Pàgina</b><small>club & libreria</small></div>
-      <button class="sidebar-close" onclick="toggleSidebar(false)" title="Chiudi menu" aria-label="Chiudi menu">✕</button>
+      <button class="sidebar-close" onclick="toggleSidebar(false)" aria-label="Chiudi menu"><span id="sbCloseIcon"></span></button>
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
@@ -128,7 +128,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
       <button id="themeBtn" onclick="toggleTheme()" aria-label="Cambia tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:grid;place-items:center"></button>
-      <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:17px;padding:4px">⎋</button>
+      <button onclick="logout()" aria-label="Esci dall'account" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:grid;place-items:center"><span id="sbLogoutIcon"></span></button>
     </div>
   </aside>
 
@@ -271,17 +271,17 @@ function bookCard(b){
 
 /* ============ NAV ============ */
 const pages=[
- {id:'home',ic:'🏠',label:'Home',title:'Home',sub:'Il tuo diario di lettura',grp:'Tu'},
- {id:'profilo',ic:'👤',label:'Profilo',title:'Profilo lettore',sub:'Il tuo ritratto di lettore',grp:'Tu'},
- {id:'libreria',ic:'📚',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Tu'},
- {id:'club',ic:'👥',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Insieme'},
- {id:'diario',ic:'✍️',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Insieme'},
- {id:'incontri',ic:'📅',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Insieme'},
- {id:'lettori',ic:'👥',label:'Lettori',title:'Lettori',sub:'Chi segui e nuovi lettori',grp:'Insieme'},
- {id:'ai',ic:'✨',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Strumenti'},
- {id:'calendario',ic:'🗓️',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Strumenti'},
- {id:'mappa',ic:'🗺️',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Strumenti'},
- {id:'notifiche',ic:'🔔',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Strumenti'},
+ {id:'home',ic:'home',label:'Home',title:'Home',sub:'Il tuo diario di lettura',grp:'Personale',inBotNav:true},
+ {id:'profilo',ic:'profile',label:'Profilo',title:'Profilo lettore',sub:'Il tuo ritratto di lettore',grp:'Personale',inBotNav:true},
+ {id:'libreria',ic:'library',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Personale',inBotNav:true},
+ {id:'calendario',ic:'calendar',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Personale'},
+ {id:'mappa',ic:'globe',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Personale'},
+ {id:'notifiche',ic:'bell',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Personale'},
+ {id:'club',ic:'club',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Club e condivisione',inBotNav:true},
+ {id:'diario',ic:'book',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Club e condivisione'},
+ {id:'incontri',ic:'calendar',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Club e condivisione'},
+ {id:'lettori',ic:'club',label:'Lettori',title:'Lettori',sub:'Chi segui e nuovi lettori',grp:'Club e condivisione'},
+ {id:'ai',ic:'sparkles',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Club e condivisione',inBotNav:true},
 ];
 function topSearchInput(q){
  const box=$('#topSearchRes');if(!box)return;q=(q||'').trim();
@@ -327,7 +327,8 @@ const ICONS={
  alert:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>',
  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10c.1.7.6 1.3 1.5 1.5H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
  trash:'<path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/>',
- logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>'
+ logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>',
+ send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 /* Ombra/bordo dell'header sticky solo mentre si scorre, non un'ombra fissa. */
@@ -409,9 +410,11 @@ const STATS={
 function buildNav(){
  const bi=document.getElementById('bellIcon');if(bi)bi.innerHTML=icon('bell');
  const mi=document.getElementById('mtogIcon');if(mi)mi.innerHTML=icon('menu');
+ const ci=document.getElementById('sbCloseIcon');if(ci)ci.innerHTML=icon('close');
+ const li=document.getElementById('sbLogoutIcon');if(li)li.innerHTML=icon('logout');
  let html='',last='';
- pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
-   html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${p.ic}</span>${p.label}</button>`});
+ pages.filter(p=>!p.inBotNav).forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
+   html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${icon(p.ic)}</span>${p.label}</button>`});
  $('#nav').innerHTML=html;
  const main=['home','profilo','libreria','club','ai'];
  $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
@@ -577,25 +580,41 @@ function aiDiscuss(kind,book){
 Regole: niente spoiler del finale, tono adatto a un gruppo di lettori, conciso.`;
  return aiAsk(kit);
 }
+let _aiSending=false;
 async function aiAsk(q){
  if(!q||!q.trim())return;q=q.trim();
+ if(_aiSending)return; // impedisce l'invio doppio mentre una risposta è già in corso
+ _aiSending=true;
+ const btn=$('#aiSendBtn');if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');}
  const t=$('#aiText');if(t)t.value='';
- aiChat.push({who:'me',html:esc(q)});
+ aiChat.push({who:'me',html:esc(q),raw:q});
  aiChat.push({who:'ai',html:'<span class="ai-typing">scrivo<i>.</i><i>.</i><i>.</i></span>'});
  renderChat();
- const ctx=aiCtx();
- const res=await aiProviderAsk(q,ctx);
- aiChat.pop();                                        // togli "scrivo…"
- if(res&&res.answer){
-   let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''))}
-   aiChat.push({who:'ai',html:mdLite(res.answer)+extra,src:'✨ AI · '+esc(res.provider)});
- }else{
-   const loc=localAssistant(q,ctx);
-   if(loc.kind==='search'){const cards=await aiSearchCards(loc.text);
-     aiChat.push({who:'ai',html:(cards?'Ecco alcuni libri che potrebbero piacerti:'+cards:'Non ho trovato libri per questa ricerca: prova con un titolo o un autore.'),src:'🛟 Assistente base gratuito'});}
-   else aiChat.push({who:'ai',html:loc.html,src:'🛟 Assistente base gratuito'});
+ try{
+   const ctx=aiCtx();
+   const res=await aiProviderAsk(q,ctx);
+   aiChat.pop();                                        // togli "scrivo…"
+   if(res&&res.answer){
+     let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''))}
+     aiChat.push({who:'ai',html:mdLite(res.answer)+extra,src:'AI · '+esc(res.provider)});
+   }else{
+     const loc=localAssistant(q,ctx);
+     if(loc.kind==='search'){const cards=await aiSearchCards(loc.text);
+       aiChat.push({who:'ai',html:(cards?'Ecco alcuni libri che potrebbero piacerti:'+cards:'Non ho trovato libri per questa ricerca: prova con un titolo o un autore.'),src:'Assistente base gratuito'});}
+     else aiChat.push({who:'ai',html:loc.html,src:'Assistente base gratuito'});
+   }
+ }catch(e){
+   aiChat.pop();
+   aiChat.push({who:'ai',html:'Non sono riuscito a rispondere. <a href="#" onclick="aiRetryLast();return false" style="color:var(--plum);font-weight:600">Riprova</a>',src:'Errore'});
+ }finally{
+   _aiSending=false;
+   const btn2=$('#aiSendBtn');if(btn2){btn2.disabled=false;btn2.removeAttribute('aria-busy');}
+   renderChat();
  }
- renderChat();
+}
+function aiRetryLast(){
+ const lastUser=[...aiChat].reverse().find(m=>m.who==='me');
+ if(lastUser){const txt=lastUser.raw||lastUser.html;aiChat.pop();aiAsk(txt);}
 }
 function localAssistant(q,ctx){
  const t=deburr(q);const has=(...k)=>k.some(x=>t.includes(x));
@@ -976,7 +995,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v114 (header sticky, tema+club senza emoji, riepilogo generi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v115 (menu, assistente, diario, incontri - meno emoji, piu chiaro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2165,7 +2184,7 @@ async function loadClubNotes(c){
 let cloudNotesLocked=0;
 function renderNotesList(){
  const el=$('#notesList');if(!el)return;
- const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">🔒 ${cloudNotesLocked} ${cloudNotesLocked===1?'nota più avanti nel libro':'note più avanti nel libro'} — si sbloccano man mano che avanzi con la lettura.</div></div>`:'';
+ const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">${icon('lock')} ${cloudNotesLocked} ${cloudNotesLocked===1?'nota bloccata più avanti nel libro':'note bloccate più avanti nel libro'} — si sbloccano man mano che avanzi con la lettura.</div></div>`:'';
  if(!cloudNotes.length){el.innerHTML=(lockedNote||'<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>');return}
  const pos=bookPos(curDiaryTitle);
  const LIM=notesShown||20;
@@ -2180,12 +2199,12 @@ function renderNotesList(){
    const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${avFill(nm,av)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time class="note-when">${when}</time>`:''}</div>`;
    if(editNoteId===n.id&&own){
      return `<div class="note">${head}<textarea id="editNoteTa" rows="3" style="margin-top:8px">${esc(sc.clean)}</textarea>
-       <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
+       <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditNote(${n.id})">${icon('check')} Salva</button><button class="btn ghost sm" onclick="cancelEditNote()">Annulla</button></div></div>`;
    }
-   const actions=own?`<div class="note-actions"><button class="btn ghost sm" onclick="editClubNote(${n.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteClubNote(${n.id})" title="Elimina">🗑</button></div>`:'';
+   const actions=own?`<div class="note-actions"><button class="btn ghost sm" onclick="editClubNote(${n.id})" aria-label="Modifica nota">${icon('edit')}</button><button class="btn danger sm" onclick="deleteClubNote(${n.id})" aria-label="Elimina nota">${icon('trash')}</button></div>`:'';
    const body=own
      ? `<p class="note-body" style="font-size:14px;line-height:1.6;margin-top:10px">${esc(sc.clean)}</p>`
-     : `<p class="note-body reach" onclick="this.classList.toggle('show');try{this.classList.contains('show')&&toast('Nota svelata','👁')}catch(e){}">${esc(sc.clean)}</p><div class="note-hint">👁 Tocca per leggere / nascondere</div>`;
+     : `<p class="note-body reach" onclick="this.classList.toggle('show')" aria-label="Mostra o nascondi nota">${esc(sc.clean)}</p><div class="note-hint">${icon('chevron')} Tocca per leggere o nascondere</div>`;
    return `<div class="note fade">${head}${body}${actions}</div>`;
  }).join('')+(more>0?`<button class="btn ghost" style="width:100%;justify-content:center;margin-top:10px" onclick="notesShown=${LIM+20};renderNotesList()">Mostra altre ${Math.min(20,more)} note (${more} rimaste)</button>`:'')+lockedNote;
 }
@@ -2195,22 +2214,34 @@ function setNoteScope(k){noteScope=k;
  const seg=$('#scopeSeg');if(seg)seg.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-s')===k));
  const show=(id,on)=>{const e=$(id);if(e)e.style.display=on?'':'none'};
  show('#scPage',k==='page');show('#scRange',k==='range');show('#scUpto',k==='upto');
+ const hint=$('#scopeHint');if(hint)hint.textContent=k==='page'?'La nota riguarda una sola pagina.':(k==='range'?'La nota riguarda più pagine.':'La nota è visibile a chi ha raggiunto almeno questo punto.');
 }
 function parseScope(text){const m=(text||'').match(/^\[\[(p|r|u)=([0-9\-]+)\]\]/);if(!m)return{label:null,clean:text||''};
  const clean=(text||'').slice(m[0].length).trim();const v=m[2];
  if(m[1]==='p')return{label:'pag. '+v,clean};
  if(m[1]==='r')return{label:'pagg. '+v.replace('-','–'),clean};
  return{label:'fino a pag. '+v,clean};}
+let _noteSending=false;
 async function addClubNote(clubId){
  const c=myClubs.find(x=>x.id===clubId);if(!c)return;
  const ta=$('#noteText');const txt=ta?ta.value.trim():'';if(!txt)return;
+ if(_noteSending)return;_noteSending=true;
+ const btn=$('#shareNoteBtn');const prevLabel=btn?btn.textContent:'';
+ if(btn){btn.disabled=true;btn.textContent='Condivido…';}
  const pos=bookPos(c.current_title);let unlock=pos,marker='';
  if(noteScope==='range'){let f=parseInt($('#npFrom')&&$('#npFrom').value)||1,t=parseInt($('#npTo')&&$('#npTo').value)||pos;
    if(f<1)f=1;if(t>pos)t=pos;if(f<1)f=1;if(f>t){const x=f;f=t;t=x}unlock=t;marker='[[r='+f+'-'+t+']]';}
  else if(noteScope==='upto'){unlock=pos;marker='[[u='+pos+']]';}
- else{let p=parseInt($('#npPage')&&$('#npPage').value)||pos;if(p<1){alert('La pagina deve essere almeno 1.');return}if(p>pos)p=pos;unlock=p;marker='[[p='+p+']]';}
- await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:unlock,text:marker+txt,shared:true});
- if(ta)ta.value='';await loadClubNotes(c);paintDiary(c);toast('Considerazione condivisa','📝');
+ else{let p=parseInt($('#npPage')&&$('#npPage').value)||pos;if(p<1){alert('La pagina deve essere almeno 1.');_noteSending=false;if(btn){btn.disabled=false;btn.textContent=prevLabel;}return}if(p>pos)p=pos;unlock=p;marker='[[p='+p+']]';}
+ try{
+   const {error}=await supa.from('notes').insert({user_id:authUser.id,club_id:clubId,book_title:c.current_title,position:unlock,text:marker+txt,shared:true});
+   if(error){alert('Non sono riuscito a condividere la nota. Riprova.');_noteSending=false;if(btn){btn.disabled=false;btn.textContent=prevLabel;}return;}
+   if(ta)ta.value='';await loadClubNotes(c);paintDiary(c);toast('Considerazione condivisa','✓');
+ }catch(e){
+   alert('Non sono riuscito a condividere la nota. Riprova.');
+   _noteSending=false;if(btn){btn.disabled=false;btn.textContent=prevLabel;}return;
+ }
+ _noteSending=false;
 }
 function editClubNote(id){editNoteId=id;renderNotesList();setTimeout(()=>{const t=$('#editNoteTa');if(t)t.focus()},30)}
 function cancelEditNote(){editNoteId=null;renderNotesList()}
@@ -2296,24 +2327,27 @@ function paintDiary(c){
  view.innerHTML+=`
 
   <div class="card pad diary-compose">
-   <label class="cmp-label">✍️ Scrivi una considerazione</label>
-   <textarea id="noteText" class="cmp-ta" rows="4" placeholder="Una riflessione, una domanda, una citazione…"></textarea>
+   <label class="cmp-label">${icon('edit')} Scrivi una considerazione</label>
+   <textarea id="noteText" class="cmp-ta" rows="4" placeholder="Una riflessione, una domanda o una citazione…"></textarea>
+   <div class="scope-lab">Visibilità della nota</div>
    <div class="scope-seg" id="scopeSeg">
-     <button type="button" class="active" data-s="page" onclick="setNoteScope('page')">📄 Una pagina</button>
-     <button type="button" data-s="range" onclick="setNoteScope('range')">📑 Più pagine</button>
-     <button type="button" data-s="upto" onclick="setNoteScope('upto')">📚 Fino a qui</button>
+     <button type="button" class="active" data-s="page" onclick="setNoteScope('page')">${icon('bookmark')} Pagina specifica</button>
+     <button type="button" data-s="range" onclick="setNoteScope('range')">${icon('library')} Intervallo di pagine</button>
+     <button type="button" data-s="upto" onclick="setNoteScope('upto')">${icon('book')} Fino a questa pagina</button>
    </div>
+   <div class="muted scope-hint" id="scopeHint">La nota riguarda una sola pagina.</div>
    <div class="scope-row">
      <div id="scPage" class="scope-in"><span class="muted">pagina</span><div class="pageval sm"><input id="npPage" type="number" min="1" max="${pos}" value="${pos}"></div></div>
      <div id="scRange" class="scope-in" style="display:none"><span class="muted">da</span><div class="pageval sm"><input id="npFrom" type="number" min="1" max="${pos}" value="1"></div><span class="muted">a</span><div class="pageval sm"><input id="npTo" type="number" min="1" max="${pos}" value="${pos}"></div></div>
-     <div id="scUpto" class="scope-in" style="display:none"><span class="muted">Considerazione generale fino a pag. <b>${pos}</b></span></div>
-     <button class="btn sm" style="margin-left:auto" onclick="addClubNote(${c.id})">Condividi</button>
+     <div id="scUpto" class="scope-in" style="display:none"><span class="muted">Visibile a chi ha raggiunto almeno pag. <b>${pos}</b></span></div>
+     <button class="btn sm" id="shareNoteBtn" style="margin-left:auto" onclick="addClubNote(${c.id})" aria-label="Condividi considerazione" disabled>Condividi</button>
    </div>
   </div>
 
-  <div class="diary-notes-head"><h3 class="serif">📝 Considerazioni del club</h3>${others.length?`<span class="pill">🔓 ${readable} · 🔒 ${others.length-readable}</span>`:''}</div>
+  <div class="diary-notes-head"><h3 class="serif">${icon('edit')} Considerazioni del club</h3>${others.length?`<span class="muted" style="font-size:11.5px">${readable} ${readable===1?'nota disponibile':'note disponibili'}${(others.length-readable)>0?` · ${others.length-readable} in attesa del tuo progresso`:''}</span>`:''}</div>
   <div id="notesList"></div>`;
  renderNotesList();
+ const ta0=$('#noteText');if(ta0)ta0.addEventListener('input',()=>{const b=$('#shareNoteBtn');if(b)b.disabled=!ta0.value.trim();});
  if(total)setTimeout(()=>diaryDragSetup(c.current_title,total,mn),50);
 }
 
@@ -2333,35 +2367,41 @@ function renderAiCloud(){
  const nextMeeting=clubBook?((myMeetings||[]).filter(m=>m.club_id===clubBook.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]||null):null;
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
-   <div style="font-size:32px">🤖</div>
+   <span class="icn-badge sky" style="flex:none">${icon('sparkles')}</span>
    <div style="flex:1">
-     <b style="font-family:'Fraunces';font-size:19px">Ciao ${nm}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13.5px;margin-top:5px;line-height:1.6">Preparo domande e spunti per gli incontri del club, spiego riferimenti e rispondo alle tue domande — sempre senza spoiler.</p>
+     <b style="font-family:'Fraunces';font-size:18px">Ciao ${esc(nm)}, sono Pàgina AI</b>
+     <p class="muted" style="font-size:13px;margin-top:4px;line-height:1.55">Ti aiuto con la libreria, i club e la lettura: uso il progresso che hai registrato per limitare gli spoiler nelle risposte.</p>
    </div>
  </div>
 
- <div class="sec-title">💬 Chiedi all'assistente</div>
- <div id="aiOut" class="ai-chat" style="margin-top:6px"></div>
+ <div class="sec-title">Chiedi all'assistente</div>
+ <div class="ai-chips" role="list">
+   <button class="ai-chip" onclick="aiAsk('Consigliami il prossimo libro da leggere')">${icon('sparkles')} Consigliami il prossimo libro</button>
+   <button class="ai-chip" onclick="aiAsk('Prepara qualche domanda di discussione per il club')">${icon('club')} Domande per il club</button>
+   <button class="ai-chip" onclick="aiAsk('Spiegami un riferimento del libro che sto leggendo')">${icon('book')} Spiegami un riferimento</button>
+   <button class="ai-chip" onclick="go('calendario')">${icon('calendar')} Aiutami col piano di lettura</button>
+ </div>
+ <div id="aiOut" class="ai-chat" style="margin-top:10px"></div>
  <div class="chatbox">
-   <input id="aiText" placeholder="Scrivi un messaggio… (es. spiegami il finale senza spoiler)" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
-   <button class="btn" onclick="aiAsk(document.getElementById('aiText').value)">Invia</button>
+   <input id="aiText" placeholder="Scrivi un messaggio…" aria-label="Scrivi un messaggio all'assistente" onkeydown="if(event.key==='Enter')aiAsk(this.value)">
+   <button id="aiSendBtn" class="btn" onclick="aiAsk(document.getElementById('aiText').value)" aria-label="Invia messaggio">${icon('send')}</button>
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-   <span>✨ Assistente AI · risponde in base alla tua libreria e ai tuoi gusti, senza spoiler.</span>
+   <span>Risponde in base alla tua libreria e ai tuoi gusti.</span>
    ${aiChat.length?'<a href="#" onclick="aiClear();return false" style="color:var(--plum);font-weight:600">Pulisci chat</a>':''}
  </div>
 
- <div class="sec-title" style="margin-top:24px">🎙️ ${inClub?'Prepara il prossimo incontro':'Spunti di lettura'}</div>
+ <div class="sec-title" style="margin-top:24px">${inClub?'Prepara il prossimo incontro':'Spunti di lettura'}</div>
  <div class="card pad" style="margin-bottom:18px">
    ${clubBooks.length>1?`<div class="field"><label>Per quale club</label><select id="aiClubSel" onchange="aiClubSel=+this.value;renderAiCloud()">${clubBooks.map(c=>`<option value="${c.id}" ${c.id===aiClubSel?'selected':''}>${esc(c.name)} · ${esc(c.current_title)}</option>`).join('')}</select></div>`:''}
    <p style="font-size:13.5px;line-height:1.6;margin-bottom:${discBook?'14px':'4px'}">
      ${discBook
        ? (inClub
-          ? `Preparo un kit di discussione pronto per <b>${esc(clubTitle)}</b>${nextMeeting?(' — incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}: domande, temi e spunti, senza spoiler.`
-          : `Non c'è un libro di club in corso, ma posso preparare spunti su <b>${esc(readTitle)}</b> che stai leggendo.`)
-       : `Quando un tuo club avvia la lettura di un libro, qui trovi il kit pronto per l'incontro. In alternativa, metti un libro "in lettura" nella Libreria.`}
+          ? `Domande, temi e spunti per <b>${esc(clubTitle)}</b>${nextMeeting?(' — incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}, senza spoiler oltre il tuo progresso.`
+          : `Nessun libro di club in corso: posso preparare spunti su <b>${esc(readTitle)}</b> che stai leggendo.`)
+       : `Quando un tuo club avvia la lettura di un libro, qui trovi il kit pronto. In alternativa, metti un libro "in lettura" nella Libreria.`}
    </p>
-   ${discBook?`<button class="btn" style="width:100%;justify-content:center" onclick="aiDiscuss('kit',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">🎙️ Prepara il kit per l'incontro</button>`:''}
+   ${discBook?`<button class="btn" style="width:100%;justify-content:center" onclick="aiDiscuss('kit',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">${icon('sparkles')} Genera il kit</button>`:''}
  </div>`;
  renderChat();
 }
@@ -3659,29 +3699,40 @@ function yearSummaryCard(readYr,YR){
  </div>`;
 }
 function renderIncontriCloud(){
- if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico gli incontri… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderIncontriCloud()});return}
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico gli incontri…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderIncontriCloud()});return}
  const up=upcomingMeetings();const next=up[0];
+ const isAnyAdmin=myClubs.some(c=>myRoles[c.id]==='admin'||c.owner===authUser.id);
  // Promemoria: incontro entro 48 ore
  const soon=up.find(m=>{const d=daysTo(m.date);return d>=0&&d<=2;});
  maybeNotifyMeeting(soon);
+
+ if(!up.length){
+   view.innerHTML=`<div class="card pad empty-state-card">
+     <span class="icn-badge sky">${icon('calendar')}</span>
+     <h3>Nessun incontro in programma</h3>
+     <p>${isAnyAdmin?'Crea il prossimo incontro del club e invita i membri.':'Il tuo club non ha ancora fissato un incontro.'}</p>
+     ${isAnyAdmin&&myClubs.length?`<button class="btn" style="margin-top:6px" onclick="openMeetingModal()">${icon('plus')} Crea incontro</button>`:''}
+   </div>`;
+   return;
+ }
+
  view.innerHTML=`
  ${soon?`<div class="card pad" style="margin-bottom:16px;border-left:4px solid var(--gold);background:linear-gradient(180deg,var(--gold-soft),transparent 70%)">
-   <div style="font-size:13.5px;line-height:1.5">⏰ <b>Promemoria:</b> ${daysTo(soon.date)===0?'oggi':(daysTo(soon.date)===1?'domani':'tra '+daysTo(soon.date)+' giorni')} hai l'incontro <b>${esc(soon.title||'Incontro')}</b>${soon.time?(' alle '+esc(soon.time)):''} (${esc(clubName(soon.club_id))}).</div>
+   <div style="font-size:13.5px;line-height:1.5;display:flex;align-items:center;gap:8px">${icon('alert')} <span><b>Promemoria:</b> ${daysTo(soon.date)===0?'oggi':(daysTo(soon.date)===1?'domani':'tra '+daysTo(soon.date)+' giorni')} hai l'incontro <b>${esc(soon.title||'Incontro')}</b>${soon.time?(' alle '+esc(soon.time)):''} (${esc(clubName(soon.club_id))}).</span></div>
  </div>`:''}
  <div class="row" style="margin-bottom:18px">
    <div class="card pad" style="flex:1;min-width:160px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:30px;color:var(--plum)">${up.length}</div><div class="muted" style="font-size:13px">In programma</div></div>
    <div class="card pad" style="flex:1;min-width:160px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:30px;color:var(--plum)">${next?Math.max(0,daysTo(next.date)):'–'}</div><div class="muted" style="font-size:13px">Giorni al prossimo</div></div>
-   <div class="card pad" style="flex:1;min-width:160px;text-align:center"><div class="n" style="font-family:'Fraunces';font-size:30px;color:var(--plum)">${myClubs.length}</div><div class="muted" style="font-size:13px">Club</div></div>
  </div>
- <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">📅 Prossimi incontri</h3>${myClubs.length?`<button class="btn sm" onclick="openMeetingModal()">＋ Nuovo incontro</button>`:''}</div>
+ <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:17px">Prossimi incontri</h3>${isAnyAdmin&&myClubs.length?`<button class="btn sm" onclick="openMeetingModal()">${icon('plus')} Nuovo incontro</button>`:''}</div>
  <div class="card pad">
-   ${up.length?up.map(m=>{const d=fmtDateParts(m.date);const canEdit=(m.created_by===authUser.id)||(myRoles[m.club_id]==='admin');return `<div class="event">
-     <div class="date"><b>${d.d}</b><small>${d.m}</small>${m.time?`<span class="etime">🕒 ${esc(m.time)}</span>`:''}</div>
+   ${up.map(m=>{const d=fmtDateParts(m.date);const canEdit=(m.created_by===authUser.id)||(myRoles[m.club_id]==='admin');return `<div class="event">
+     <div class="date"><b>${d.d}</b><small>${d.m}</small>${m.time?`<span class="etime">${esc(m.time)}</span>`:''}</div>
      <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(m.title||'Incontro')}</b>
        <div class="muted" style="font-size:13px;margin:4px 0 8px">${esc(clubName(m.club_id))}</div>
-       <div class="chips">${m.link&&safeUrl(m.link)?`<a class="pill sky" style="text-decoration:none" href="${esc(safeUrl(m.link))}" target="_blank" rel="noopener noreferrer">🎥 Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none" href="${mapsUrl(m.place)}" target="_blank" rel="noopener noreferrer">📍 ${esc(m.place)} ↗</a>`:''}</div></div>
-     ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" title="Elimina">🗑</button></div>`:''}
-   </div>`}).join(''):`<div class="srch-empty">Nessun incontro in programma.${myClubs.length?' Creane uno con "＋ Nuovo incontro".':' Unisciti a un club per organizzare gli incontri.'}</div>`}
+       <div class="chips">${m.link&&safeUrl(m.link)?`<a class="pill sky" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px" href="${esc(safeUrl(m.link))}" target="_blank" rel="noopener noreferrer">${icon('share')} Videochiamata</a>`:''}${m.place?`<a class="pill coral" style="text-decoration:none;display:inline-flex;align-items:center;gap:5px" href="${mapsUrl(m.place)}" target="_blank" rel="noopener noreferrer">${icon('globe')} ${esc(m.place)}</a>`:''}</div></div>
+     ${canEdit?`<div class="ev-actions"><button class="btn ghost sm" onclick="openMeetingModal(${m.id})" aria-label="Modifica incontro">${icon('edit')}</button><button class="btn danger sm" onclick="deleteMeeting(${m.id})" aria-label="Elimina incontro">${icon('trash')}</button></div>`:''}
+   </div>`}).join('')}
  </div>`;
 }
 function safeUrl(u){u=String(u||'').trim();if(!u)return'';if(/^https:\/\//i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
