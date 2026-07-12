@@ -256,12 +256,15 @@ async function shareBook(id){
  catch(e){toast('Condivisione non disponibile');}
 }
 function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
-function coverEl(i,t,a,badge,url){const su=safeImgUrl(url);return`<div class="cover" style="${coverStyle(i)}">${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div>`}
-function bookCard(b){const badge=b.status==='reading'?'📖':b.status==='read'?'✓':'🔖';
+function coverEl(i,t,a,badge,url,statusPair){const su=safeImgUrl(url);
+ const statusHtml=statusPair?`<div class="status-badge ${statusPair[1]}">${statusPair[0]}</div>`:'';
+ return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div>`}
+function bookCard(b){
+ const st=b.status==='reading'?['In lettura','reading']:b.status==='read'?['Letto','read']:['Da leggere','toread'];
  return`<div class="book" onclick="openBook(${b.id})">
-   ${coverEl(b.id,b.t,b.a,badge,b.coverUrl)}
+   ${coverEl(b.id,b.t,b.a,null,b.coverUrl,st)}
    <div class="ledge"></div>
-   <div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}${b.status==='reading'?`<div class="card-prog" title="${b.prog||0}% letto"><i style="width:${b.prog||0}%"></i></div>`:''}</div>
+   <div class="meta"><b class="clamp2">${esc(b.t)}</b><span class="clamp1">${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:(b.status==='read'?`<button class="rate-cta" onclick="event.stopPropagation();openBook(${b.id});setTimeout(scrollToRate,150)">Valuta</button>`:'')}${b.status==='reading'?`<div class="card-prog" title="${b.prog||0}% letto"><i style="width:${b.prog||0}%"></i></div>`:''}</div>
  </div>`}
 
 /* ============ NAV ============ */
@@ -326,6 +329,7 @@ const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:
 
 /* ===== STATISTICHE CENTRALIZZATE (fonte unica di verità per tutte le schermate) ===== */
 function fmtIt(n){try{return new Intl.NumberFormat('it-IT').format(n);}catch(e){return ''+n;}}
+function fmtItDecimal(n){try{return new Intl.NumberFormat('it-IT',{maximumFractionDigits:1}).format(n);}catch(e){return ''+n;}}
 const STATS={
  currentYear(){return new Date().getFullYear();},
  total(){return books.length;},
@@ -469,21 +473,21 @@ renders.libreria=()=>{
      list=list.filter(b=>libYear==='nodate'?!bookYear(b):bookYear(b)===+libYear);
    }
  }
- const tabMeta={all:['📚','Tutti'],reading:['📖','In lettura'],toread:['🔖','Da leggere'],read:['✅','Letti'],ai:['✨','Consigli']};
+ const tabMeta={all:['library','Tutti'],reading:['book','In lettura'],toread:['bookmark','Da leggere'],read:['check','Letti'],ai:['sparkles','Consigli']};
  // Ricerca nello scaffale: filtra per titolo, autore o genere (compare quando la libreria cresce)
  const showSearch=libTab!=='ai'&&books.length>=6;
  if(showSearch&&libFilter){
    const q=libFilter.toLowerCase();
    list=(list||[]).filter(b=>(b.t||'').toLowerCase().includes(q)||(b.a||'').toLowerCase().includes(q)||(b.g||'').toLowerCase().includes(q));
  }
- const searchBar=showSearch?`<div class="lib-search"><span class="lib-search-ic">🔎</span><input id="libFilterInput" placeholder="Cerca nella libreria: titolo, autore, genere…" value="${esc(libFilter||'')}" oninput="libFilter=this.value;refreshLibraryList()"><button class="lib-search-x" onclick="libFilter='';renders.libreria()" style="${libFilter?'':'display:none'}">✕</button></div>`:'';
+ const searchBar=showSearch?`<div class="lib-search"><span class="lib-search-ic">${icon('search')}</span><input id="libFilterInput" placeholder="Cerca per titolo, autore o genere" value="${esc(libFilter||'')}" oninput="libFilterDebounced(this.value)"><button class="lib-search-x" onclick="libFilter='';renders.libreria()" style="${libFilter?'':'display:none'}" aria-label="Cancella ricerca">${icon('close')}</button></div>`:'';
  view.innerHTML=`
  <div class="lib-head">
    <div class="lib-actions">
-     ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria pubblica':'Libreria privata'}">${profile&&profile.public_library?'🌐 Pubblica':'🔒 Privata'}</button>`:''}
+     ${mode==='cloud'?`<button class="lib-priv ${profile&&profile.public_library?'pub':''}" onclick="toggleLibraryPrivacy(this)" title="${profile&&profile.public_library?'Libreria condivisa: tocca per rendere privata':'Libreria privata: tocca per condividerla'}">${profile&&profile.public_library?icon('globe')+' Condivisa':icon('lock')+' Condividi libreria'}</button>`:''}
      <button class="btn" onclick="openAddBook()">＋ Aggiungi</button>
    </div>
-   <div class="lib-tabs">${tabs.map(t=>{const meta=tabMeta[t[0]]||['',t[1]];return `<button class="lib-tab ${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()"><span class="lib-tab-ic">${meta[0]}</span><span class="lib-tab-tx">${meta[1]}</span>${t[2]!=null?`<i class="lib-tabn">${t[2]}</i>`:''}</button>`}).join('')}</div>
+   <div class="lib-tabs">${tabs.map(t=>{const meta=tabMeta[t[0]]||['book',t[1]];return `<button class="lib-tab ${libTab===t[0]?'active':''}" onclick="libTab='${t[0]}';renders.libreria()"><span class="lib-tab-ic">${icon(meta[0])}</span><span class="lib-tab-tx">${meta[1]}</span>${t[2]!=null?`<i class="lib-tabn">${t[2]}</i>`:''}</button>`}).join('')}</div>
  </div>
  ${searchBar}
  ${yearBar}`+`
@@ -962,7 +966,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v112 (audit + estrazione styles.css, no logic change)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v113 (libreria editoriale, spoiler reale, meno cardificazione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3257,19 +3261,43 @@ function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">�
 function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni settimana una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
 function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
+ const hideText=!!p.read; // possibile spoiler: il testo non si vede finché non lo apri tu
  box.innerHTML='<div class="card pad" style="position:relative">'
   +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
    +'<span class="badge-tint sage" style="font-size:11.5px">'+esc(p.category)+'</span>'
    +'<span class="muted" style="font-size:12.5px">«'+esc(p.title)+'» · '+esc(p.author)+'</span>'
-   +(p.read?'<span class="badge-tint info" style="font-size:11px;display:inline-flex;align-items:center;gap:4px">'+icon('alert','spoiler-ic')+' possibili spoiler</span>':'')
   +'</div>'
-  +'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>'
-  +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-   +'<button class="btn sm" onclick="openBook('+p.bookId+')">Apri libro</button>'
+  +(hideText
+    ?'<div id="curioSpoilerWrap"><div class="spoiler-gate"><span class="badge-tint info" style="display:inline-flex;align-items:center;gap:4px">'+icon('alert','spoiler-ic')+' possibili spoiler</span>'
+      +'<button class="btn sm primary-outline" style="margin-top:10px" onclick="toggleCurioSpoiler(true)">Mostra curiosità</button></div>'
+      +'<p id="curioText" style="font-size:15px;line-height:1.6;margin:2px 0 14px;display:none">'+esc(p.text)+'</p></div>'
+    :'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>')
+  +'<div id="curioActions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center'+(hideText?';margin-top:10px;display:none':'')+'">'
+   +'<button class="btn sm" onclick="openBook('+p.bookId+')">Vedi nella libreria</button>'
    +'<button class="btn sm primary-outline" onclick="curioAnother()">Un\'altra</button>'
   +'</div>'
  +'</div>';
  if(isNew&&!curioOverride){const s=loadCurioState();s.seen=true;saveCurioState(s);}
+}
+function toggleCurioSpoiler(show){
+ const gate=document.querySelector('.spoiler-gate');
+ const txt=document.getElementById('curioText');
+ const actions=document.getElementById('curioActions');
+ if(!txt)return;
+ if(show){
+   if(gate)gate.style.display='none';
+   txt.style.display='';
+   if(actions){actions.style.display='flex';
+     if(!actions.querySelector('.hide-curio-btn')){
+       const b=document.createElement('button');b.className='btn ghost sm hide-curio-btn';b.textContent='Nascondi curiosità';
+       b.onclick=()=>toggleCurioSpoiler(false);actions.appendChild(b);
+     }
+   }
+ }else{
+   if(gate)gate.style.display='';
+   txt.style.display='none';
+   if(actions)actions.style.display='none';
+ }
 }
 async function renderCuriosity(){
  const box=$('#curioCard');if(!box)return;
@@ -3366,7 +3394,7 @@ function renderProfiloPage(){
      const col=isNone?GREY:palette[i%palette.length];
      const label=`${g[0]}, ${g[1]} ${g[1]===1?'libro':'libri'} su ${total}, ${pcts[i]} percento`;
      return `<div class="gb-row" role="listitem" aria-label="${esc(label)}">
-       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft)':''}">${isNone?icon('bookmark','gb-none-ic'):''}${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
+       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft)':''}">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
        <div class="gb-track" aria-hidden="true"><i style="width:${pcts[i]}%;background:${col}"></i></div>
      </div>`;}).join('')}</div>`
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
@@ -3465,6 +3493,11 @@ async function autoEnrichGenres(){
  _genreEnriching=false;
 }
 let libFilter='';
+let _libFilterT=null;
+function libFilterDebounced(v){
+ clearTimeout(_libFilterT);
+ _libFilterT=setTimeout(()=>{libFilter=v;refreshLibraryList()},220);
+}
 function refreshLibraryList(){
  // Aggiorna solo lo scaffale mentre si digita, senza ridisegnare l'input (mantiene il focus)
  const shelf=document.getElementById('libShelf');if(!shelf)return;
@@ -3597,14 +3630,14 @@ function yearSummaryCard(readYr,YR){
  const pages=STATS.pagesReadYear();
  const avg=STATS.monthlyAverage();
  return `<div class="card pad">
-   <div class="stat-strip" style="margin-bottom:0">
-     <div class="stat-cell"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
-     <div class="stat-cell"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
-     <div class="stat-cell"><div class="stat-n">${avg}</div><div class="stat-l">Media al mese</div></div>
+   <div class="stat-row-editorial">
+     <div class="sre-item"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
+     <div class="sre-item"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
+     <div class="sre-item"><div class="stat-n">${fmtItDecimal(avg)}</div><div class="stat-l">Media/mese</div></div>
    </div>
-   ${(topG||topAL)?`<div class="stat-strip" style="margin-top:10px">
-     ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
-     ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
+   ${(topG||topAL)?`<div class="sre-divider"></div><div class="stat-row-editorial">
+     ${topG?`<div class="sre-item wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
+     ${topAL?`<div class="sre-item wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
    </div>`:''}
  </div>`;
 }
