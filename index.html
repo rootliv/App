@@ -1001,7 +1001,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v117 (fix overflow diario, chip assistente rifinite)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v118 (notifiche: icone vere, riga cliccabile, letto/non letto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1513,11 +1513,16 @@ function pendingItems(){
  // Notifiche social già caricate (inviti accettati, nuovi follower)
  (socialNotifs||[]).forEach(n=>items.push(n));
  myClubs.forEach(c=>{
-   if(c.selection_mode==='voting')items.push({ic:'🗳️',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id});
-   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'🎲',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' è il tuo turno: scegli il libro.',go:'club',cid:c.id});
+   if(c.selection_mode==='voting')items.push({ic:'sparkles',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id,key:'vote-'+c.id});
+   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'sparkles',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' è il tuo turno: scegli il libro.',go:'club',cid:c.id,key:'rot-'+c.id});
  });
- upcomingMeetings().slice(0,2).forEach(m=>{const dd=daysTo(m.date);items.push({ic:'📅',bg:'#e1edf6',t:'Incontro '+(dd===0?'oggi':'tra '+dd+'g'),p:esc(m.title||'Incontro')+' · '+esc(clubName(m.club_id)),go:'incontri'})});
- myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'✍️',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario'}));
+ upcomingMeetings().slice(0,2).forEach(m=>{
+   const dd=daysTo(m.date);
+   const when=dd===0?'oggi':(dd===1?'domani':'tra '+dd+' giorni');
+   const dt=fmtDateParts(m.date);
+   items.push({ic:'calendar',bg:'#e1edf6',t:'Incontro '+when,p:esc(m.title||'Incontro')+' · '+dt.d+' '+dt.m+(m.time?(' · '+esc(m.time)):'')+' · '+esc(clubName(m.club_id)),go:'incontri',key:'meet-'+m.id});
+ });
+ myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'book',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario',key:'diario-'+c.id}));
  return items;
 }
 let socialNotifs=[];
@@ -1534,7 +1539,7 @@ async function loadSocialNotifs(){
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
      try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
-     rec.forEach(i=>out.push({ic:'✉️',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
+     rec.forEach(i=>out.push({ic:'club',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
    }
  }catch(e){}
  try{
@@ -1545,7 +1550,7 @@ async function loadSocialNotifs(){
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
      try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
-     inv.forEach(i=>out.push({ic:'✅',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
+     inv.forEach(i=>out.push({ic:'check',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
    }
  }catch(e){}
  try{
@@ -1554,7 +1559,7 @@ async function loadSocialNotifs(){
    if(fol&&fol.length){
      const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
      try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
-     fol.forEach(f=>out.push({ic:'👤',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
+     fol.forEach(f=>out.push({ic:'profile',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
    }
  }catch(e){}
  socialNotifs=out;
@@ -3921,21 +3926,46 @@ async function deleteMeeting(id){
  if(error){alert('Errore: '+error.message);return}
  await cloudLoadMeetings();go('incontri');
 }
+function readNotifKeys(){try{return new Set(JSON.parse(localStorage.getItem('pagina_notif_read_keys')||'[]'))}catch(e){return new Set()}}
+function markNotifKeyRead(key){try{const s=readNotifKeys();s.add(key);localStorage.setItem('pagina_notif_read_keys',JSON.stringify([...s]))}catch(e){}}
+function openNotifItem(key,cid,go){
+ markNotifKeyRead(key);
+ const row=document.querySelector('[data-notif-key="'+CSS.escape(key)+'"]');if(row)row.classList.remove('unread');
+ if(cid)clubSel=cid;
+ window.go(go);
+}
 function renderNotifCloud(){
- if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
  const items=pendingItems();
- markNotifsSeen(items); // aprendo la pagina, le novità diventano "lette"
+ markNotifsSeen(items); // aprendo la pagina, il PUNTINO della campanella si azzera (segnale aggregato)
+ const readKeys=readNotifKeys(); // stato letto/non letto per singola notifica (indipendente dal puntino)
  const curioOn=(function(){try{const s=loadCurioState();return (s.notifPref!==undefined)?!!s.notifPref:!!s.notif}catch(e){return false}})();
- const opts=[['📖 Promemoria di lettura',null],['📅 Incontro imminente',null],['📚 Nuovo libro scelto',null],['📝 Nuova nota disponibile',null],['🗳️ Votazione aperta',null],['✨ Curiosità settimanale','curio']];
+ const opts=[['Promemoria di lettura',null],['Incontro imminente',null],['Nuovo libro scelto',null],['Nuova nota disponibile',null],['Votazione aperta',null],['Curiosità settimanale','curio']];
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1.4;min-width:300px">
-     <h3 style="font-size:16px;margin-bottom:6px">🔔 Per te adesso</h3>
-     ${items.length?items.map(it=>`<div class="notif"><div class="ni" style="background:${it.bg}">${it.ic}</div><div style="flex:1"><b>${it.t}</b><p>${it.p}</p></div><button class="btn ghost sm" onclick="${it.cid?'clubSel='+it.cid+';':''}go('${it.go}')">Apri</button></div>`).join(''):'<div class="muted" style="font-size:13.5px;padding:8px 0">Nessuna novità per ora. ☕</div>'}
+     <h3 style="font-size:16px;margin-bottom:6px">Per te adesso</h3>
+     ${items.length?items.map(it=>{
+       const key=it.key||(it.t+it.p);
+       const unread=!readKeys.has(key);
+       return `<button type="button" class="notif ${unread?'unread':''}" data-notif-key="${esc(key)}" onclick="openNotifItem('${esc(key)}',${it.cid||'null'},'${it.go}')" aria-label="${unread?'Non letta: ':''}${esc(it.t)}. ${esc(it.p)}">
+         <span class="ni" style="background:${it.bg}">${icon(it.ic)}</span>
+         <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p></span>
+         ${unread?'<span class="notif-dot" aria-hidden="true"></span>':''}
+         <span class="notif-open">Apri</span>
+       </button>`;
+     }).join(''):'<div class="muted" style="font-size:13.5px;padding:8px 0">Nessuna novità per ora.</div>'}
    </div>
    <div class="card pad" style="flex:1;min-width:260px">
-     <h3 style="font-size:16px;margin-bottom:6px">⚙️ Cosa vuoi ricevere</h3>
-     ${opts.map(([o,key])=>`<div class="set-row"><div>${o}</div><div class="toggle ${key==='curio'?(curioOn?'on':''):'on'}" onclick="${key==='curio'?'toggleCurioNotif(this)':'this.classList.toggle(\'on\')'}"></div></div>`).join('')}
+     <h3 style="font-size:16px;margin-bottom:6px">Cosa vuoi ricevere</h3>
+     ${opts.map(([o,key])=>{
+       const on=key==='curio'?curioOn:true;
+       const id='ntf-'+(key||o.replace(/\s+/g,''));
+       return `<div class="set-row">
+         <label for="${id}" style="flex:1;cursor:pointer">${esc(o)}</label>
+         <button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(o)}" class="toggle ${on?'on':''}" onclick="${key==='curio'?'toggleCurioNotif(this)':"this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"}"></button>
+       </div>`;
+     }).join('')}
    </div>
  </div>`;
 }

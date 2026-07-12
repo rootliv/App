@@ -414,17 +414,25 @@ input[type=range]{accent-color:var(--coral)}
 .leaflet-popup-content-wrapper{border-radius:14px}
 
 /* ===== NOTIFICATIONS ===== */
-.notif{display:flex;gap:14px;padding:15px 0;border-bottom:1px solid var(--line)}
-.notif:last-child{border:none}
-.notif .ni{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:19px;flex:none}
+.notif{display:flex;align-items:flex-start;gap:14px;padding:15px 0;border-bottom:1px solid var(--line);
+  width:100%;background:none;border-left:none;border-right:none;border-top:none;font-family:inherit;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none}
+.notif:last-child{border-bottom:none}
+.notif:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+.notif.unread{background:linear-gradient(90deg,var(--primary-muted),transparent 40%)}
+.notif .ni{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none}
+.notif .ni .icn{width:19px;height:19px}
 [data-theme="dark"] .notif .ni{filter:saturate(.7) brightness(.72)}
 .notif b{font-size:14px}
 .notif p{font-size:13px;color:var(--ink-soft);margin-top:2px}
 .notif time{font-size:11.5px;color:var(--ink-faint);white-space:nowrap}
-.toggle{position:relative;width:48px;height:27px;background:#dcd0bf;border-radius:20px;cursor:pointer;transition:.2s;flex:none}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--coral);flex:none;margin-top:6px}
+.notif-open{font-size:12px;font-weight:600;color:var(--primary);flex:none;align-self:center}
+.toggle{position:relative;width:48px;height:27px;background:#dcd0bf;border-radius:20px;cursor:pointer;transition:.2s;flex:none;border:none;padding:0;-webkit-appearance:none;appearance:none}
+.toggle::before{content:"";position:absolute;inset:-9px}
 .toggle.on{background:var(--sage)}
 .toggle::after{content:"";position:absolute;top:3px;left:3px;width:21px;height:21px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 2px 4px rgba(0,0,0,.2)}
 .toggle.on::after{left:24px}
+.toggle:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
 .set-row:last-child{border:none}
 
