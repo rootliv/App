@@ -2114,7 +2114,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v110 (profilo: senza genere non corsivo, classifica mancanti, contrasto barre)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v111 (Fase 1 sicurezza: profili privati, RPC sicure)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2646,7 +2646,7 @@ async function loadSocialNotifs(){
      const cids=[...new Set(rec.map(i=>i.club_id))];const uids=[...new Set(rec.map(i=>i.inviter_id))];
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      rec.forEach(i=>out.push({ic:'✉️',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
    }
  }catch(e){}
@@ -2657,7 +2657,7 @@ async function loadSocialNotifs(){
      const cids=[...new Set(inv.map(i=>i.club_id))];const uids=[...new Set(inv.map(i=>i.invitee_id))];
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      inv.forEach(i=>out.push({ic:'✅',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
    }
  }catch(e){}
@@ -2666,7 +2666,7 @@ async function loadSocialNotifs(){
    const {data:fol}=await supa.from('follows').select('follower_id,created_at').eq('followed_id',authUser.id).order('created_at',{ascending:false}).limit(20);
    if(fol&&fol.length){
      const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
-     try{const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      fol.forEach(f=>out.push({ic:'👤',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
    }
  }catch(e){}
@@ -2675,9 +2675,9 @@ async function loadSocialNotifs(){
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
  const ids=(mem||[]).map(m=>m.user_id);if(!ids.length)return [];
- const {data:profs}=await supa.from('profiles').select('id,name,username,data').in('id',ids);
+ const {data:profs}=await supa.from('public_profiles').select('id,name,username,avatar').in('id',ids);
  const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
- return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||'',avatar:(pm[m.user_id]&&pm[m.user_id].data&&pm[m.user_id].data.avatar)||''}));
+ return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||'',avatar:(pm[m.user_id]&&pm[m.user_id].avatar)||''}));
 }
 function ini2(n){return ((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase()}
 function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}
@@ -3125,7 +3125,7 @@ async function loadAndRenderProposals(clubId){
  const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
  const myVote=(votes||[]).find(v=>v.user_id===authUser.id);
  const ids=[...new Set((props||[]).map(p=>p.user_id))];const pm={};
- if(ids.length){const {data:pr}=await supa.from('profiles').select('id,name').in('id',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
+ if(ids.length){const {data:pr}=await supa.from('public_profiles').select('id,name').in('id',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
  if(!props||!props.length){el.innerHTML='<div class="muted" style="font-size:13px">Ancora nessuna proposta. Proponi tu il primo libro!</div>';return}
  const total=(votes||[]).length;
  el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;const own=p.user_id===authUser.id;
@@ -3291,7 +3291,7 @@ async function loadClubNotes(c){
  }catch(e){lockedAhead=0}
  cloudNotes=visible; cloudNotesLocked=lockedAhead;
  const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
- if(ids.length){const {data:profs}=await supa.from('profiles').select('id,name,username,data').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
+ if(ids.length){const {data:profs}=await supa.from('public_profiles').select('id,name,username,avatar').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
 }
 let cloudNotesLocked=0;
 function renderNotesList(){
@@ -3307,7 +3307,7 @@ function renderNotesList(){
    const own=n.user_id===authUser.id;
    const when=fmtNoteDate(n.created_at);
    const sc=parseScope(n.text);const lab=sc.label||('pag. '+n.position);
-   const av=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].data&&noteAuthors[n.user_id].data.avatar)||'';
+   const av=(noteAuthors[n.user_id]&&noteAuthors[n.user_id].avatar)||'';
    const head=`<div class="nh"><div class="av" style="background:${pal(nm.length)[0]}">${avFill(nm,av)}</div><b>${esc(nm)}${own?' (tu)':''}</b><span class="pill">${lab}</span>${when?`<time class="note-when">${when}</time>`:''}</div>`;
    if(editNoteId===n.id&&own){
      return `<div class="note">${head}<textarea id="editNoteTa" rows="3" style="margin-top:8px">${esc(sc.clean)}</textarea>
@@ -3826,8 +3826,8 @@ async function renderLettoriCloud(){
  <div id="invitesBox"></div>
  <div class="card pad" style="margin-top:18px">
    <h3 style="font-size:16px;margin-bottom:6px">🔎 Trova nuovi lettori</h3>
-   <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username o email e inizia a seguire. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
-   <div class="usearch"><span class="usearch-ic">🔎</span><input id="userSearch" placeholder="Cerca per username o email…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)"></div>
+   <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username e inizia a seguire. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
+   <div class="usearch"><span class="usearch-ic">🔎</span><input id="userSearch" placeholder="Cerca per username…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)"></div>
    <div id="userResults" class="uresults"></div>
  </div>`;
  loadFollowing();renderFollowingList();renderMyInvites();
@@ -3845,7 +3845,7 @@ async function renderFollowingList(){
    const ids=(data||[]).map(r=>r.followed_id);
    myFollowing=ids;
    if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
-   const {data:profs}=await supa.from('profiles').select('id,name,username,public_library').in('id',ids);
+   const {data:profs}=await supa.from('public_profiles').select('id,name,username,public_library').in('id',ids);
    box.innerHTML=(profs||[]).map(u=>`<div class="user-row">
      <div class="user-av">${ini2(u.name||u.username||'?')}</div>
      <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
@@ -3878,15 +3878,11 @@ async function doSearchUsers(q){
  const qq=esc2(q);
  if(!qq){box.innerHTML='';return}
  try{
-   // cerca in parallelo su username/nome e su email, poi unisce
-   const base=()=>supa.from('profiles').select('id,name,username,email,public_library').neq('id',authUser.id).limit(12);
-   const [r1,r2]=await Promise.all([
-     base().or(`username.ilike.%${qq}%,name.ilike.%${qq}%`),
-     q.includes('@')||/[a-z0-9._-]+@?/i.test(qq) ? base().ilike('email','%'+qq+'%') : Promise.resolve({data:[]})
-   ]);
-   const seen=new Set();const data=[];
-   [...(r1.data||[]),...(r2.data||[])].forEach(u=>{if(!seen.has(u.id)){seen.add(u.id);data.push(u);}});
-   if(!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
+   // Ricerca solo per username/nome: la vista public_profiles non espone l'email,
+   // e cercare persone per email (dato privato) è di per sé un rischio di privacy.
+   const {data}=await supa.from('public_profiles').select('id,name,username,avatar,public_library')
+     .neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
    box.innerHTML=data.slice(0,12).map(u=>{
      const following=myFollowing.includes(u.id);
      return `<div class="user-row">
@@ -3930,7 +3926,7 @@ async function openInviteHub(clubId){
  $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita a ${esc(c.name||'club')}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <label class="hub-lab">🔎 Cerca e invita una persona</label>
-    <div class="usearch"><span class="usearch-ic">🔎</span><input id="inviteSearch" placeholder="Username o email…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
+    <div class="usearch"><span class="usearch-ic">🔎</span><input id="inviteSearch" placeholder="Username…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
     <div id="inviteResults" class="uresults"></div>
     <hr style="margin:20px 0 18px">
     <label class="hub-lab">🔗 Condividi il link d'invito</label>
@@ -3956,14 +3952,9 @@ async function doSearchInvitees(clubId,q){
  const qq=(q||'').replace(/[%,()]/g,' ').trim();
  if(!qq){box.innerHTML='';return}
  try{
-   const base=()=>supa.from('profiles').select('id,name,username,email').neq('id',authUser.id).limit(12);
-   const [r1,r2]=await Promise.all([
-     base().or(`username.ilike.%${qq}%,name.ilike.%${qq}%`),
-     q.includes('@') ? base().ilike('email','%'+qq+'%') : Promise.resolve({data:[]})
-   ]);
-   const seen=new Set();const data=[];
-   [...(r1.data||[]),...(r2.data||[])].forEach(u=>{if(!seen.has(u.id)){seen.add(u.id);data.push(u);}});
-   if(!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
+   const {data}=await supa.from('public_profiles').select('id,name,username')
+     .neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+   if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
    box.innerHTML=data.slice(0,12).map(u=>{
      let btn;
      if(_clubMemberIds.includes(u.id))btn='<span class="inv-state ok">✓ Già membro</span>';
@@ -4054,7 +4045,7 @@ async function renderMyInvites(){
  try{const cids=[...new Set(invites.map(i=>i.club_id))];
    const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>clubNames[c.id]=c.name);
    const iids=[...new Set(invites.map(i=>i.inviter_id))];
-   const {data:pr}=await supa.from('profiles').select('id,name,username').in('id',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.name||p.username);
+   const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.name||p.username);
  }catch(e){}
  box.innerHTML=`<div class="card pad" style="margin-top:18px;border-left:4px solid var(--gold)">
    <h3 style="font-size:16px;margin-bottom:12px">✉️ Inviti ai club</h3>
@@ -4155,8 +4146,8 @@ function checkUsername(){
  _userOk=false;hint.textContent='Controllo disponibilità…';hint.style.color='';
  _userChkTimer=setTimeout(async()=>{
    try{
-     const {data:taken}=await supa.from('profiles').select('id').ilike('username',v).neq('id',authUser.id).limit(1);
-     if(taken&&taken.length){_userOk=false;hint.textContent='✗ Già preso, prova un altro.';hint.style.color='var(--coral)';}
+     const {data:taken}=await supa.rpc('is_username_taken',{p_username:v,p_exclude_id:authUser.id});
+     if(taken){_userOk=false;hint.textContent='✗ Già preso, prova un altro.';hint.style.color='var(--coral)';}
      else{_userOk=true;hint.textContent='✓ Disponibile!';hint.style.color='var(--sage)';}
    }catch(e){_userOk=true;hint.textContent='Non ho potuto verificare ora: lo controllo al salvataggio.';hint.style.color='';}
  },450);
@@ -4170,8 +4161,8 @@ async function saveProfile(){
  if(uname!==currentU){
    if(uname&&!/^[a-zA-Z0-9_]{3,20}$/.test(uname)){alert('Username non valido: 3-20 caratteri, solo lettere, numeri o _.');return}
    if(uname){
-     try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',uname).neq('id',authUser.id).limit(1);
-       if(taken&&taken.length){alert('Questo username è già stato preso. Scegline un altro.');return}
+     try{const {data:taken}=await supa.rpc('is_username_taken',{p_username:uname,p_exclude_id:authUser.id});
+       if(taken){alert('Questo username è già stato preso. Scegline un altro.');return}
      }catch(e){}
    }
  }
@@ -5112,8 +5103,8 @@ async function register(){
  if(pwIssues.length)return showErr(pwIssues[0]);
  if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
  authBusy('#formReg .btn','Creo l\'account…');
- try{const {data:taken}=await supa.from('profiles').select('id').ilike('username',username).limit(1);
-   if(taken&&taken.length)return showErr('Questo username è già stato preso. Scegline un altro.');
+ try{const {data:taken}=await supa.rpc('is_username_taken',{p_username:username});
+   if(taken)return showErr('Questo username è già stato preso. Scegline un altro.');
  }catch(e){}
  // Nessun nome richiesto in fase di registrazione: usiamo lo username come nome iniziale,
  // modificabile in seguito dal profilo.
@@ -5132,15 +5123,16 @@ async function login(){
  if(!idRaw)return showErr('Inserisci email o username.');
  if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
  authBusy('#formLogin .btn','Accedo…');
+ const GENERIC='Credenziali non valide. Controlla email/username e password.';
  let email=idRaw;
  if(!idRaw.includes('@')){
    try{const {data,error}=await supa.rpc('email_for_login',{login:idRaw});
-     if(error||!data)return showErr('Nessun account trovato con questo username.');
+     if(error||!data)return showErr(GENERIC); // stesso messaggio: username inesistente o rate-limit non si distinguono dall'esterno
      email=data;
-   }catch(e){return showErr('Nessun account trovato con questo username.')}
+   }catch(e){return showErr(GENERIC)}
  }
  const {data,error}=await supa.auth.signInWithPassword({email:email.toLowerCase(),password:pass});
- if(error)return showErr('Email/username o password non corretti.');
+ if(error)return showErr(GENERIC);
  authUser=data.user;mode='cloud';
  await loadProfile();
  try{await cloudLoadBooks()}catch(e){}
