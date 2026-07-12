@@ -957,14 +957,24 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .goal-substats b{color:var(--ink);font-weight:700}
 .gs-sep{width:1px;height:14px;background:var(--line)}
 .quick-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
-.qs-cell{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent}
+.qs-cell{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent}
 .qs-cell:active{transform:scale(.97);background:var(--hover)}
-.qs-cell .icn{width:18px;height:18px;color:var(--ink-soft)}
+.qs-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none}
+.qs-cell .icn{width:17px;height:17px}
+.qs-cell:nth-child(1) .qs-ic{background:#e3f1e8}.qs-cell:nth-child(1) .icn{color:#2f8168}
+.qs-cell:nth-child(2) .qs-ic{background:#f6ecd6}.qs-cell:nth-child(2) .icn{color:#b0812f}
+.qs-cell:nth-child(3) .qs-ic{background:#e2ebf5}.qs-cell:nth-child(3) .icn{color:#4a6fa5}
 .qs-n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--ink)}
 .qs-l{font-size:10.5px;color:var(--ink-soft);font-weight:600}
 .empty-state-card{text-align:center;padding:36px 22px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .empty-state-card.small{padding:24px 20px}
-.empty-state-card .icn{width:32px;height:32px;color:var(--ink-faint);margin-bottom:4px}
+.empty-state-card .icn-badge{width:52px;height:52px;border-radius:50%;background:var(--gold-soft);display:grid;place-items:center;margin-bottom:6px}
+.empty-state-card .icn{width:24px;height:24px;color:var(--gold)}
+.icn-badge{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
+.icn-badge.sage{background:#e3f1e8}.icn-badge.sage .icn{color:#2f8168}
+.icn-badge.gold{background:var(--gold-soft)}.icn-badge.gold .icn{color:var(--gold)}
+.icn-badge.sky{background:#e2ebf5}.icn-badge.sky .icn{color:#4a6fa5}
+.icn-badge.mauve{background:#ede4f0}.icn-badge.mauve .icn{color:#8a5a9e}
 .empty-state-card h3{font-size:16px;margin:0}
 .empty-state-card p{font-size:13px;color:var(--ink-soft);margin:0;max-width:320px;line-height:1.5}
 .me-book-v2{margin-bottom:12px}
@@ -996,7 +1006,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .author-av{width:38px;height:38px;border-radius:50%;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
 .author-tag{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
 .empty-mini{display:flex;gap:14px;align-items:flex-start;padding:6px 0}
-.empty-mini .icn{width:30px;height:30px;color:var(--ink-faint);flex:none;margin-top:2px}
+.empty-mini .icn-badge{margin-top:2px}
 .empty-mini b{font-size:14px}
 .empty-mini p{font-size:12.5px;color:var(--ink-soft);margin:3px 0 0;line-height:1.5}
 .me-edit .icn{width:15px;height:15px}
@@ -2039,7 +2049,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v107 (Home riscritta secondo spec: continua a leggere, obiettivo, anno)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v108 (colore mirato: badge tondi colorati per le icone)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4450,7 +4460,7 @@ function renderProfiloPage(){
        <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft);font-style:italic':''}">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
        <div class="gb-track" aria-hidden="true"><i style="width:${pcts[i]}%;background:${col}"></i></div>
      </div>`;}).join('')}</div>`
-   :`<div class="empty-mini">${icon('book')}<div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
+   :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
 
  <div class="sec-title">Autori preferiti</div>
@@ -4459,7 +4469,7 @@ function renderProfiloPage(){
      ${manualAuthors.map(a=>authorRow(a,null,'Scelto da te')).join('')}
      ${derivedAuthors.slice(0,8).map(a=>authorRow(a[0],a[1],'Dalle tue letture')).join('')}
    </div>`
-   :`<div class="empty-mini">${icon('profile')}<div><b>Non hai ancora indicato autori preferiti</b><p>Selezionali per ricevere consigli più pertinenti.</p><button class="btn sm" style="margin-top:10px" onclick="openEditProfile()">Scegli autori</button></div></div>`}
+   :`<div class="empty-mini"><span class="icn-badge mauve">${icon('profile')}</span><div><b>Non hai ancora indicato autori preferiti</b><p>Selezionali per ricevere consigli più pertinenti.</p><button class="btn sm" style="margin-top:10px" onclick="openEditProfile()">Scegli autori</button></div></div>`}
  </div>`;
 }
 function authorRow(name,count,tag){
@@ -4587,9 +4597,9 @@ function renderHomeCloud(){
 
  <!-- Statistiche rapide, cliccabili solo se portano a una destinazione reale -->
  <div class="quick-stats">
-   <button class="qs-cell" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria">${icon('book')}<span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
-   <button class="qs-cell" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria">${icon('bookmark')}<span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
-   <button class="qs-cell" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club">${icon('club')}<span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
+   <button class="qs-cell" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic">${icon('book')}</span><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
+   <button class="qs-cell" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic">${icon('bookmark')}</span><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
+   <button class="qs-cell" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
  <!-- 3) IL TUO ANNO DI LETTURA -->
@@ -4616,7 +4626,7 @@ function homeErrorState(){
 function continueReadingCard(reading){
  if(!reading.length){
    return `<div class="card pad empty-state-card">
-     ${icon('book')}
+     <span class="icn-badge sage">${icon('book')}</span>
      <h3>Nessun libro in lettura</h3>
      <p>Aggiungi un libro o scegline uno dalla tua libreria.</p>
      <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px">
@@ -4650,7 +4660,7 @@ function continueReadingCard(reading){
 /* ===== OBIETTIVO ANNUALE ===== */
 function goalBlock(goal,read,goalPct,goalPctBar,YR){
  if(!goal){
-   return `<div class="empty-mini" style="padding-bottom:14px">${icon('target')}<div><b>Imposta il tuo obiettivo di lettura</b><p>Scegli quanti libri vuoi leggere nel ${YR}.</p><button class="btn sm" style="margin-top:10px" onclick="editGoal()">Imposta obiettivo</button></div></div>`;
+   return `<div class="empty-mini" style="padding-bottom:14px"><span class="icn-badge gold">${icon('target')}</span><div><b>Imposta il tuo obiettivo di lettura</b><p>Scegli quanti libri vuoi leggere nel ${YR}.</p><button class="btn sm" style="margin-top:10px" onclick="editGoal()">Imposta obiettivo</button></div></div>`;
  }
  const label=`Obiettivo annuale, ${read} libri completati su ${goal}, ${goalPct} percento`;
  let statusLine;
@@ -4668,7 +4678,7 @@ function goalBlock(goal,read,goalPct,goalPctBar,YR){
 function yearSummaryCard(readYr,YR){
  if(!readYr.length){
    return `<div class="card pad empty-state-card small">
-     ${icon('sparkles')}
+     <span class="icn-badge sky">${icon('sparkles')}</span>
      <h3>Nessun libro completato nel ${YR}</h3>
      <p>I tuoi generi e autori dell'anno compariranno qui.</p>
    </div>`;
