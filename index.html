@@ -30,11 +30,13 @@
 <link rel="stylesheet" href="styles.css">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
+var THEME_ICON_MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>';
 function toggleTheme(){var d=document.documentElement;var dark=d.getAttribute('data-theme')==='dark';
   if(dark){d.removeAttribute('data-theme');try{localStorage.setItem('pagina_theme','light')}catch(e){}}
   else{d.setAttribute('data-theme','dark');try{localStorage.setItem('pagina_theme','dark')}catch(e){}}
-  var b=document.getElementById('themeBtn');if(b)b.textContent=d.getAttribute('data-theme')==='dark'?'☀️':'🌙';}
-window.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeBtn');if(b)b.textContent=document.documentElement.getAttribute('data-theme')==='dark'?'☀️':'🌙';});
+  var b=document.getElementById('themeBtn');if(b)b.innerHTML=d.getAttribute('data-theme')==='dark'?THEME_ICON_SUN:THEME_ICON_MOON;}
+window.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeBtn');if(b)b.innerHTML=document.documentElement.getAttribute('data-theme')==='dark'?THEME_ICON_SUN:THEME_ICON_MOON;});
 </script>
 </head>
 <body>
@@ -125,7 +127,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="av" id="meAv">EM</div>
         <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
-      <button id="themeBtn" onclick="toggleTheme()" title="Tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:16px;padding:4px">🌙</button>
+      <button id="themeBtn" onclick="toggleTheme()" aria-label="Cambia tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:grid;place-items:center"></button>
       <button onclick="logout()" title="Esci" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:17px;padding:4px">⎋</button>
     </div>
   </aside>
@@ -322,9 +324,17 @@ const ICONS={
  sort:'<path d="M7 4v16M7 20l-3-3M7 4l3 3"/><path d="M17 20V4M17 4l3 3M17 20l-3-3"/>',
  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
  trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"/><path d="M12 12v4M9 20h6M10 16h4"/>',
- alert:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>'
+ alert:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>',
+ settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10c.1.7.6 1.3 1.5 1.5H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+ trash:'<path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/>',
+ logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
+/* Ombra/bordo dell'header sticky solo mentre si scorre, non un'ombra fissa. */
+window.addEventListener('scroll',()=>{
+ const tb=document.querySelector('.topbar');if(!tb)return;
+ tb.classList.toggle('is-scrolled',window.scrollY>4);
+},{passive:true});
 const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:'sparkles',incontri:'calendar',diario:'book',lettori:'club',notifiche:'bell'};
 
 /* ===== STATISTICHE CENTRALIZZATE (fonte unica di verità per tutte le schermate) ===== */
@@ -966,7 +976,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v113 (libreria editoriale, spoiler reale, meno cardificazione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v114 (header sticky, tema+club senza emoji, riepilogo generi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1682,17 +1692,18 @@ async function removeAvatar(){
  applyMyAvatar();closeModal();if(current==='profilo')renderHomeCloud();
 }
 function renderClubCloud(){
- if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club… ☁️</div></div>';
-   cloudLoadClubs().then(()=>{clubsLoaded=true;if(!clubSel&&myClubs[0])clubSel=myClubs[0].id;renderClubCloud()}).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel caricamento dei club.</div></div>'});return}
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club…</div></div>';
+   cloudLoadClubs().then(()=>{clubsLoaded=true;if(!clubSel&&myClubs[0])clubSel=myClubs[0].id;renderClubCloud()}).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">'+icon('alert')+' Errore nel caricamento dei club.</div></div>'});return}
  if(!myClubs.length){
    view.innerHTML=`<div class="card pad" style="text-align:center;padding:50px 20px">
-     <div style="font-size:46px">👥</div>
+     <span class="icn-badge sky" style="margin:0 auto 8px">${icon('club')}</span>
      <h2 style="font-size:22px;margin:10px 0 6px">Nessun club, per ora</h2>
      <div class="muted" style="max-width:430px;margin:0 auto 18px">Crea il tuo club del libro e invita gli amici con un codice, oppure unisciti a un club esistente.</div>
-     <button class="btn" onclick="openClubModalFresh()">＋ Crea o unisciti a un club</button>
+     <button class="btn" onclick="openClubModalFresh()">${icon('plus')} Crea o unisciti a un club</button>
    </div>`;return}
  const c=myClubs.find(x=>x.id===clubSel)||myClubs[0];clubSel=c.id;
  const role=myRoles[c.id]||'membro';
+ const isAdmin=role==='admin'||c.owner===authUser.id;
  const nextMeet=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]||null;
  view.innerHTML=`
   <div class="club-strip">
@@ -1714,44 +1725,50 @@ function renderClubCloud(){
    </div>
    <div class="club-desc-row">
      <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span class="club-desc-empty">Aggiungi una descrizione</span>'}</p>
-     <button class="club-desc-edit" onclick="editClubDesc(${c.id})" title="Modifica descrizione">✏️</button>
+     <button class="club-desc-edit" onclick="editClubDesc(${c.id})" aria-label="Modifica descrizione del club">${icon('edit')}<span>Modifica</span></button>
    </div>
    <div class="avstack" id="clubAvs" onclick="openInviteHub(${c.id})" style="cursor:pointer" title="Membri e inviti"></div>
   </div>
 
   <div class="panel feat" style="margin-top:2px">
-     <div class="panel-title">📖 Libro del mese</div>
+     <div class="panel-title">${icon('book')} Libro del mese</div>
      <div id="selPanel"><div class="muted" style="font-size:13px">Carico…</div></div>
-     ${c.current_title?`<button class="btn" style="margin-top:16px;width:100%;justify-content:center" onclick="go('diario')">✍️ Apri il diario condiviso</button>`:''}
+     ${c.current_title?`<button class="btn" style="margin-top:16px;width:100%;justify-content:center" onclick="go('diario')">${icon('edit')} Apri il diario condiviso</button>`:''}
   </div>
 
   <div class="panel" style="margin-top:16px">
-   <div class="panel-title">📅 Prossimo incontro</div>
+   <div class="panel-title">${icon('calendar')} Prossimo incontro</div>
    ${nextMeet?`<div class="meet-row" onclick="clubSel=${c.id};go('incontri')">
      <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
      <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.place?' · '+esc(nextMeet.place):''}</div></div>
      <span class="meet-go">›</span>
-   </div>`:`<div class="muted" style="font-size:13px;margin-bottom:12px">Nessun incontro fissato per questo club.</div>
-     <button class="btn sm" onclick="clubSel=${c.id};go('incontri')">📅 Fissa un incontro</button>`}
+   </div>`:(isAdmin
+     ?`<div class="muted" style="font-size:13px;margin-bottom:12px">Nessun incontro fissato per questo club.</div>
+     <button class="btn sm" onclick="clubSel=${c.id};go('incontri')">${icon('calendar')} Fissa un incontro</button>`
+     :`<div class="muted" style="font-size:13px">Nessun incontro programmato.</div>`)}
   </div>
 
   <div class="panel" style="margin-top:16px">
-   <div class="panel-title">👥 Membri</div>
-   <div id="clubMembers" class="member-grid"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
+   <div class="panel-title">${icon('club')} Membri</div>
+   <div id="clubMembers" class="member-list"><div class="muted" style="font-size:13px">Carico i membri…</div></div>
   </div>
 
   <div class="panel" style="margin-top:16px">
    ${c.owner===authUser.id
-     ? `<details class="club-set"><summary>⚙️ Impostazioni club</summary>
+     ? `<details class="club-set"><summary>${icon('settings')} Impostazioni club</summary>
           <div class="muted" style="font-size:12.5px;margin:12px 0 14px;line-height:1.55">Solo l'amministratore può eliminare il club. L'azione è <b>definitiva</b>: rimuove anche membri, proposte, incontri e note collegate.</div>
-          <button class="btn danger sm" onclick="deleteClub(${c.id})">🗑 Elimina club</button>
+          <button class="btn danger sm" onclick="deleteClub(${c.id})">${icon('trash')} Elimina club</button>
         </details>`
-     : `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="muted" style="font-size:13px">Vuoi lasciare questo club?</span><button class="btn ghost sm" onclick="leaveClub(${c.id})">🚪 Esci dal club</button></div>`}
+     : `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span class="muted" style="font-size:13px">Vuoi lasciare questo club?</span><button class="btn ghost sm danger-text" onclick="leaveClub(${c.id})">${icon('logout')} Esci dal club</button></div>`}
   </div>`;
  loadMembers(c.id).then(list=>{
    const mEl=$('#clubMembers');
-   if(mEl)mEl.innerHTML=list.length?list.map(m=>`<div class="member-chip"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
-     <div style="min-width:0"><b>${esc(m.name)}${m.id===authUser.id?' (tu)':''}</b><small>${m.username?'@'+esc(m.username)+' · ':''}${esc(m.role)}</small></div></div>`).join(''):'<div class="muted">Nessun membro.</div>';
+   if(mEl)mEl.innerHTML=list.length?list.map(m=>{
+     const roleLabel=m.role==='admin'?'Admin':'Membro';
+     return `<div class="member-row"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
+     <div style="min-width:0;flex:1"><b>${esc(m.name)}${m.id===authUser.id?' (tu)':''}</b><div class="muted" style="font-size:11.5px">${m.username?'@'+esc(m.username)+' · ':''}${roleLabel}</div></div>
+     ${m.role==='admin'?'<span class="role-dot" aria-hidden="true"></span>':''}</div>`;
+   }).join(''):'<div class="muted">Nessun membro.</div>';
    const av=$('#clubAvs');
    if(av)av.innerHTML=list.slice(0,6).map(m=>`<span class="av" title="${esc(m.name)}" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</span>`).join('')+(list.length>6?`<span class="av more">+${list.length-6}</span>`:'')+`<span class="avlabel">${list.length} ${list.length===1?'membro':'membri'} · <b>invita ›</b></span>`;
    const sEl=$('#selPanel');if(sEl)sEl.innerHTML=selectionPanelHTML(c,role,list);
@@ -3384,10 +3401,10 @@ function renderProfiloPage(){
  <div class="card pad">
    ${total>0?`
    <div class="genre-summary-row">
-     <div class="muted" style="font-size:11.5px">${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} letti</div>
+     <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total}`:`Tutti i ${total} libri sono classificati`}</div>
      ${dist.total-dist.classified>0
        ?`<button class="link-btn sm" onclick="openClassifyMissing()" aria-label="Classifica i ${dist.total-dist.classified} libri senza genere">Classifica i ${dist.total-dist.classified} mancanti</button>`
-       :(dist.classified>0?`<span class="muted" style="font-size:11px">Tutti i libri sono classificati</span>`:'')}
+       :''}
    </div>
    <div class="genre-bars" role="list">${genreRows.map((g,i)=>{
      const isNone=g[0]==='Senza genere';
@@ -3633,7 +3650,7 @@ function yearSummaryCard(readYr,YR){
    <div class="stat-row-editorial">
      <div class="sre-item"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
      <div class="sre-item"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
-     <div class="sre-item"><div class="stat-n">${fmtItDecimal(avg)}</div><div class="stat-l">Media/mese</div></div>
+     <div class="sre-item"><div class="stat-n">${fmtItDecimal(avg)}</div><div class="stat-l">Media/mese nel ${YR}</div></div>
    </div>
    ${(topG||topAL)?`<div class="sre-divider"></div><div class="stat-row-editorial">
      ${topG?`<div class="sre-item wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
