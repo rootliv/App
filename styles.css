@@ -278,7 +278,9 @@ input[type=range]{accent-color:var(--coral)}
 .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;outline:none;background:var(--surface);transition:.15s}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
 .chipsel{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:9px}
-.chipopt{font-family:inherit;font-size:12.5px;font-weight:600;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:7px 13px;cursor:pointer;transition:.15s}
+.chipopt{font-family:inherit;font-size:12.5px;font-weight:600;border:1.5px solid var(--line);background:var(--surface);color:var(--ink-soft);border-radius:20px;padding:7px 13px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;gap:5px}
+.chip-check{display:inline-flex;width:13px;height:13px}
+.chip-check .icn{width:13px;height:13px}
 .chipopt:hover{border-color:var(--coral);color:var(--plum)}
 .chipopt.on{background:var(--brand-solid);color:#fff;border-color:var(--brand-solid)}
 /* Gruppo "non graditi": lo stato selezionato è rosso tenue con una ✕, così si distingue a
@@ -415,9 +417,9 @@ input[type=range]{accent-color:var(--coral)}
 
 /* ===== NOTIFICATIONS ===== */
 .notif{display:flex;align-items:flex-start;gap:14px;padding:15px 0;border:none;border-bottom:1px solid var(--line);
-  width:100%;background:none;font-family:inherit;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none}
+  width:100%;background:none;font-family:inherit;text-align:left;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none;box-shadow:none;-webkit-tap-highlight-color:transparent}
 .notif:last-child{border-bottom:none}
-.notif:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
+.notif:focus-visible{outline:none;box-shadow:inset 3px 0 0 var(--primary);background:var(--primary-muted)}
 .notif.unread{background:linear-gradient(90deg,var(--primary-muted),transparent 40%)}
 .notif .ni{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none}
 .notif .ni .icn{width:19px;height:19px}
@@ -1067,7 +1069,8 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .link-btn:active{opacity:.65;transform:scale(.97)}
 .link-btn:focus-visible{outline:2px solid var(--brand-solid);outline-offset:2px;border-radius:8px}
 .link-btn:disabled{opacity:.4;cursor:not-allowed}
-.genre-summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;min-height:44px}
+.genre-summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.genre-summary-row:has(.link-btn){min-height:44px}
 .link-btn.sm{font-size:12px;min-height:44px;min-width:44px;padding:4px 10px}
 .genre-bars{display:flex;flex-direction:column;gap:14px}
 .gb-row{display:flex;flex-direction:column;gap:6px}

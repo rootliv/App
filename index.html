@@ -429,6 +429,7 @@ function toggleSidebar(show){
  const open=typeof show==='boolean'?show:!sb.classList.contains('show');
  sb.classList.toggle('show',open);
  document.body.classList.toggle('sidebar-open',open);
+ if(open&&typeof topClose==='function')topClose(); // niente risultati di ricerca a intravedersi dietro il menu
  // Scrim cliccabile: toccando fuori dal menu (sull'area scura) si chiude.
  let scrim=document.getElementById('sidebarScrim');
  if(open){
@@ -760,6 +761,7 @@ function fixMapSize(m){
  requestAnimationFrame(kick);
  setTimeout(kick,120);
  setTimeout(kick,400);
+ setTimeout(kick,800); // rete di sicurezza extra: cattura eventuali layout ancora instabili (transizioni, tastiera, ecc.)
 }
 function initMap(){
  if(mapObj){mapObj.remove();mapObj=null}
@@ -2711,7 +2713,7 @@ function renderMappaCloud(){
    <div class="muted" style="font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px">${icon('sparkles')} ${noPlace.length} ${noPlace.length===1?'libro senza luogo reale':'libri senza luogo reale'} — ambientazione immaginaria o non specificata:</div>
    <div class="chips">${noPlace.map(l=>`<span class="pill gold">${esc(l.title)}</span>`).join('')}</div>
  </div>`:''}`;
- setTimeout(()=>initMapCloud(locs),60);
+ setTimeout(()=>initMapCloud(locs),430);
 }
 function focusMapCountry(country){
  if(!mapObj)return;
@@ -3060,7 +3062,7 @@ function renderChips(key){
  const el=$('#cg_'+key);if(!el)return;
  const isNo=(key==='disliked');
  const all=[...new Set((PROFILE_SUGGEST[key]||[]).concat(editSel[key]))];
- el.innerHTML=all.map(v=>{const on=editSel[key].includes(v);return `<button type="button" class="chipopt${isNo?' no':''}${on?' on':''}" data-v="${esc(v)}" onclick="toggleChip('${key}',this)">${esc(v)}${on?(isNo?' ✕':' ✓'):''}</button>`}).join('');
+ el.innerHTML=all.map(v=>{const on=editSel[key].includes(v);return `<button type="button" class="chipopt${isNo?' no':''}${on?' on':''}" data-v="${esc(v)}" onclick="toggleChip('${key}',this)">${esc(v)}${on?`<span class="chip-check">${icon(isNo?'close':'check')}</span>`:''}</button>`}).join('');
 }
 function toggleChip(key,btn){const v=btn.dataset.v;const i=editSel[key].indexOf(v);if(i>=0)editSel[key].splice(i,1);else editSel[key].push(v);renderChips(key)}
 function addCustom(key){const inp=$('#ca_'+key);const v=(inp.value||'').trim();if(!v)return;if(!editSel[key].includes(v))editSel[key].push(v);inp.value='';renderChips(key)}
