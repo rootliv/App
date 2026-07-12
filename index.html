@@ -950,6 +950,24 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .add-st b{display:block;font-size:14.5px;color:var(--ink)}
 .add-st small{color:var(--ink-soft);font-size:12px}
 .donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.goal-card-v2{padding-bottom:16px}
+.goal-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.goal-substats{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+.goal-substats b{color:var(--ink);font-weight:700}
+.gs-sep{width:1px;height:14px;background:var(--line)}
+.quick-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+.qs-cell{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent}
+.qs-cell:active{transform:scale(.97);background:var(--hover)}
+.qs-cell .icn{width:18px;height:18px;color:var(--ink-soft)}
+.qs-n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--ink)}
+.qs-l{font-size:10.5px;color:var(--ink-soft);font-weight:600}
+.empty-state-card{text-align:center;padding:36px 22px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.empty-state-card.small{padding:24px 20px}
+.empty-state-card .icn{width:32px;height:32px;color:var(--ink-faint);margin-bottom:4px}
+.empty-state-card h3{font-size:16px;margin:0}
+.empty-state-card p{font-size:13px;color:var(--ink-soft);margin:0;max-width:320px;line-height:1.5}
+.me-book-v2{margin-bottom:12px}
 .clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;word-break:break-word}
 .lib-last-card{margin-bottom:calc(72px + env(safe-area-inset-bottom) + 16px)}
 .me-hero.compact{padding:14px 16px}
@@ -1396,7 +1414,27 @@ const STATS={
  pagesRead(){return this.read().reduce((s,b)=>s+(+b.pg||0),0)
    + this.reading().reduce((s,b)=>s+Math.round((+b.pg||0)*(+b.prog||0)/100),0);},
  goal(){return (profile&&profile.data&&+profile.data.goal)||0;},
- goalPct(){const g=this.goal();return g?Math.min(100,Math.round(this.readThisYear().length/g*100)):0;},
+ // percentuale REALE dell'obiettivo (può superare 100, usata per i testi);
+ // goalPctClamped è quella da usare SOLO per disegnare la barra (mai oltre 100).
+ goalPct(){const g=this.goal();return g?Math.round(this.readThisYear().length/g*100):0;},
+ goalPctClamped(){return Math.min(100,this.goalPct());},
+ // avanzamento di un libro: pagina corrente / pagine totali, validato tra 0 e 100, senza NaN/Infinity
+ readingProgress(b){
+   if(!b)return {pct:0,cur:0,tot:0,hasTotal:false};
+   const tot=+b.pg||0;
+   let cur=Math.round(tot*(+b.prog||0)/100);
+   if(!tot)return {pct:0,cur:0,tot:0,hasTotal:false};
+   cur=Math.max(0,Math.min(cur,tot)); // clamp 0..tot
+   const pct=Math.max(0,Math.min(100,Math.round(cur/tot*100)));
+   return {pct,cur,tot,hasTotal:true};
+ },
+ pagesReadYear(){
+   return this.readThisYear().reduce((s,b)=>s+(+b.pg||0),0);
+ },
+ monthlyAverage(){
+   const n=this.readThisYear().length;const m=new Date().getMonth()+1;
+   return m>0?Math.round((n/m)*10)/10:0;
+ },
  // conteggi generi/autori normalizzati
  classifiedRead(){return this.read().filter(b=>normGenre(b.g));},
  unclassifiedRead(){return this.read().filter(b=>!normGenre(b.g));},
@@ -2001,7 +2039,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v106 (FIX campanella rotta, autori pari merito nascosti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v107 (Home riscritta secondo spec: continua a leggere, obiettivo, anno)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3138,7 +3176,17 @@ function syncReadingPos(title,pos){
  },350);
 }
 function clubBookPages(c){const b=books.find(x=>normKey(x.t)===normKey(c.current_title||''));return (b&&b.pg)||0}
-function fmtNoteDate(s){try{const d=new Date(s);if(isNaN(d))return'';return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'})}catch(e){return''}}
+function fmtNoteDate(s){try{
+ const d=new Date(s);if(isNaN(d))return'';
+ const now=new Date();
+ const dOnly=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+ const nOnly=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+ const days=Math.round((nOnly-dOnly)/86400000);
+ if(days===0)return'oggi';
+ if(days===1)return'ieri';
+ if(days>1&&days<7)return days+' giorni fa';
+ return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+}catch(e){return''}}
 async function loadClubNotes(c){
  // Sicurezza anti-spoiler: NON scarichiamo il testo delle note altrui che superano la
  // pagina di lettura dell'utente. Prima leggiamo la nostra posizione, poi chiediamo:
@@ -4509,66 +4557,137 @@ function refreshLibraryList(){
    :`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:40px">🔍</div><h2 style="font-size:19px;margin:10px 0 6px">Nessun libro trovato</h2><div class="muted" style="font-size:13px">Nessun risultato per «${esc(libFilter)}».</div></div>`;
 }
 function renderHomeCloud(){
- if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()});return}
+ if(!clubsLoaded){view.innerHTML=homeSkeleton();cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()}).catch(()=>{view.innerHTML=homeErrorState()});return}
  const p=profile||{};const d=p.data||{};
- const YR=new Date().getFullYear();
- const reading=books.filter(b=>b.status==='reading');
- const toread=books.filter(b=>b.status==='toread').length;
- const readThisYear=books.filter(b=>b.status==='read'&&bookYear(b)===YR);
- const read=readThisYear.length; // obiettivo e contatore = anno corrente
- const items=pendingItems();
- const nm=(p.name||'Lettore').split(' ')[0];
- const goal=+d.goal||0;
- const yr=p.created_at?new Date(p.created_at).getFullYear():YR;
- const av=safeImgUrl(d.avatar);
- const goalPct=goal?Math.min(100,Math.round(read/goal*100)):0;
- // generi e autori dell'anno corrente (dai libri letti quest'anno)
- const yrGenres=topCount(readThisYear.map(b=>b.g).filter(Boolean),6);
- const yrAuthors=topCount(readThisYear.map(b=>b.a).filter(Boolean),6);
+ const YR=STATS.currentYear();
+ const reading=STATS.reading();
+ const toread=STATS.toread().length;
+ const readYr=STATS.readThisYear();
+ const readYrN=readYr.length;
+ const readTotal=STATS.read().length;
+ const goal=STATS.goal();
+ const goalPct=STATS.goalPct();
+ const goalPctBar=STATS.goalPctClamped();
+
  view.innerHTML=`
- <!-- OBIETTIVO ANNO CORRENTE + STATISTICHE -->
- <div class="card me-panel">
-   <div class="me-goal-full">
-     <div class="me-metric-lab">OBIETTIVO ${YR} <button class="goal-edit" onclick="editGoal()" title="Modifica obiettivo">✏️</button></div>
-     ${goal?`<div style="display:flex;align-items:baseline;gap:6px"><span class="me-metric-n gold">${read}</span><span class="me-metric-u">/ ${goal} libri quest'anno</span></div>
-       <div class="bar" style="height:8px;margin-top:9px"><i style="width:${goalPct}%"></i></div>
-       <div class="muted" style="font-size:11.5px;margin-top:6px">${read>=goal?'Obiettivo raggiunto! 🎉':(goal-read)+' libri al traguardo'}</div>`
-       :`<a href="#" onclick="editGoal();return false" class="me-metric-set">Imposta un obiettivo →</a>`}
-   </div>
-   <div class="me-panel-stats">
-     <div class="me-stat" onclick="libYear=${YR};libTab='read';go('libreria')"><div class="ms-ic">📚</div><div class="ms-n">${read}</div><div class="ms-l">letti nel ${YR}</div></div>
-     <div class="me-stat" onclick="libTab='reading';go('libreria')"><div class="ms-ic">📖</div><div class="ms-n">${reading.length}</div><div class="ms-l">in lettura</div></div>
-     <div class="me-stat" onclick="libTab='toread';go('libreria')"><div class="ms-ic">🔖</div><div class="ms-n">${toread}</div><div class="ms-l">da leggere</div></div>
-     <div class="me-stat" onclick="go('club')"><div class="ms-ic">👥</div><div class="ms-n">${myClubs.length}</div><div class="ms-l">club</div></div>
+ <!-- 1) CONTINUA A LEGGERE — sezione più importante -->
+ <div class="sec-title">Continua a leggere</div>
+ ${continueReadingCard(reading)}
+
+ <!-- 2) OBIETTIVO ANNUALE -->
+ <div class="sec-title">Obiettivo ${YR}</div>
+ <div class="card pad goal-card-v2">
+   ${goalBlock(goal,readYrN,goalPct,goalPctBar,YR)}
+   <div class="goal-substats">
+     <div class="gs-item"><b>${readYrN}</b> completati nel ${YR}</div>
+     <div class="gs-sep"></div>
+     <div class="gs-item"><b>${readTotal}</b> letti complessivamente</div>
    </div>
  </div>
 
- <!-- CONTINUA A LEGGERE -->
- ${reading.length?`<div class="sec-title">📖 Continua a leggere</div>
- <div class="me-reading">${reading.map(b=>`<div class="card pad me-book" onclick="openBook(${b.id})">
-   <div style="width:52px;flex:none">${coverEl(b.id,b.t,'',null,b.coverUrl)}</div>
-   <div style="flex:1;min-width:0"><b style="font-family:'Fraunces';font-size:15px">${esc(b.t)}</b><div class="muted" style="font-size:12px;margin:1px 0 8px">${esc(b.a)}</div>
-     <div class="bar" style="height:7px"><i style="width:${b.prog||0}%"></i></div>
-     <div class="muted" style="font-size:11px;margin-top:4px">${b.pg?('pag. '+Math.round(b.pg*(b.prog||0)/100)+' di '+b.pg):((b.prog||0)+'%')}</div>
-   </div></div>`).join('')}</div>`:''}
-
- <!-- GENERI E AUTORI DELL'ANNO (dai libri letti quest'anno) -->
- <div class="sec-title">📗 Cosa hai letto nel ${YR}</div>
- <div class="card pad">
-   <h4 style="font-size:13px;margin:0 0 8px;color:var(--ink-soft)">Generi dell'anno</h4>
-   <div class="chips">${yrGenres.length?yrGenres.map(x=>`<span class="pill">${esc(x[0])} <b style="opacity:.6">${x[1]}</b></span>`).join(''):'<span class="muted" style="font-size:13px">Ancora nessun libro completato nel '+YR+'.</span>'}</div>
-   <h4 style="font-size:13px;margin:16px 0 8px;color:var(--ink-soft)">Autori dell'anno</h4>
-   <div class="chips">${yrAuthors.length?yrAuthors.map(x=>`<span class="pill">${esc(x[0])}</span>`).join(''):'<span class="muted" style="font-size:13px">—</span>'}</div>
+ <!-- Statistiche rapide, cliccabili solo se portano a una destinazione reale -->
+ <div class="quick-stats">
+   <button class="qs-cell" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria">${icon('book')}<span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
+   <button class="qs-cell" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria">${icon('bookmark')}<span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
+   <button class="qs-cell" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club">${icon('club')}<span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
- <!-- CURIOSITÀ -->
- <div class="sec-title">📚 Curiosità della settimana</div>
+ <!-- 3) IL TUO ANNO DI LETTURA -->
+ <div class="sec-title">Il tuo anno di lettura</div>
+ ${yearSummaryCard(readYr,YR)}
+
+ <!-- 4) CURIOSITÀ DELLA SETTIMANA -->
+ <div class="sec-title">Curiosità della settimana</div>
  <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->
- <div id="invitesBox"></div>`;
+ <div id="invitesBox" class="lib-last-card"></div>`;
  curioOverride=0;renderCuriosity();
  if(mode==='cloud'){loadFollowing();renderMyInvites();}
+}
+function homeSkeleton(){
+ return `<div class="sec-title">Continua a leggere</div><div class="card pad" style="display:flex;gap:16px"><div class="skel skel-cover" style="width:70px"></div><div style="flex:1"><div class="skel skel-line"></div><div class="skel skel-line sm"></div><div class="skel skel-line sm" style="width:60%"></div></div></div>
+ <div class="sec-title">Obiettivo</div><div class="card pad">${Array(3).fill('<div class="skel skel-line"></div>').join('')}</div>`;
+}
+function homeErrorState(){
+ return `<div class="card pad" style="text-align:center;padding:40px 20px">${icon('close')}<h2 style="font-size:18px;margin:12px 0 6px">Non è stato possibile caricare i dati</h2><button class="btn" onclick="clubsLoaded=false;go('home')">Riprova</button></div>`;
+}
+/* ===== CONTINUA A LEGGERE ===== */
+function continueReadingCard(reading){
+ if(!reading.length){
+   return `<div class="card pad empty-state-card">
+     ${icon('book')}
+     <h3>Nessun libro in lettura</h3>
+     <p>Aggiungi un libro o scegline uno dalla tua libreria.</p>
+     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px">
+       <button class="btn" onclick="libTab='toread';go('libreria')">Scegli dalla libreria</button>
+       <button class="btn ghost" onclick="openAddBook()">Aggiungi libro</button>
+     </div>
+   </div>`;
+ }
+ return `<div class="me-reading">${reading.map(b=>{
+   const pr=STATS.readingProgress(b);
+   const when=b.updatedAt?fmtNoteDate(b.updatedAt):null;
+   const label=`${b.t}, ${pr.hasTotal?('pagina '+pr.cur+' di '+pr.tot):'avanzamento'}, ${pr.pct} percento completato`;
+   return `<div class="card pad me-book-v2">
+     <div style="display:flex;gap:14px">
+       <div style="width:64px;flex:none">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
+       <div style="flex:1;min-width:0">
+         <b class="clamp2" style="font-family:'Fraunces';font-size:16px;display:block">${esc(b.t)}</b>
+         <div class="muted clamp1" style="font-size:12.5px;margin:2px 0 10px">${b.a?esc(b.a):'Autore sconosciuto'}</div>
+         <div class="bar" style="height:7px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
+         <div class="muted" style="font-size:11.5px;margin-top:6px" aria-hidden="true">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}${pr.cur===0?' · Non ancora iniziato':''}</div>
+         ${when?`<div class="muted" style="font-size:10.5px;margin-top:2px;opacity:.75">Ultimo aggiornamento: ${when}</div>`:''}
+       </div>
+     </div>
+     <div style="display:flex;gap:8px;margin-top:12px">
+       <button class="btn sm" style="flex:1;justify-content:center" onclick="openBook(${b.id})">Riprendi</button>
+       <button class="btn ghost sm" style="flex:1;justify-content:center" onclick="openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">Aggiorna pagina</button>
+     </div>
+   </div>`;
+ }).join('')}</div>`;
+}
+/* ===== OBIETTIVO ANNUALE ===== */
+function goalBlock(goal,read,goalPct,goalPctBar,YR){
+ if(!goal){
+   return `<div class="empty-mini" style="padding-bottom:14px">${icon('target')}<div><b>Imposta il tuo obiettivo di lettura</b><p>Scegli quanti libri vuoi leggere nel ${YR}.</p><button class="btn sm" style="margin-top:10px" onclick="editGoal()">Imposta obiettivo</button></div></div>`;
+ }
+ const label=`Obiettivo annuale, ${read} libri completati su ${goal}, ${goalPct} percento`;
+ let statusLine;
+ if(read>goal)statusLine=`Hai superato il tuo obiettivo di ${goal} libri`;
+ else if(read===goal)statusLine='Obiettivo raggiunto';
+ else statusLine=`Ti mancano ${goal-read} ${goal-read===1?'libro':'libri'}`;
+ return `<div class="goal-top">
+     <div><span class="me-metric-n gold">${read}</span><span class="me-metric-u"> di ${goal} libri</span></div>
+     <button class="goal-edit" onclick="editGoal()" aria-label="Modifica obiettivo">${icon('edit')}</button>
+   </div>
+   <div class="bar" style="height:8px;margin-top:9px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,goalPct)}" aria-label="${esc(label)}"><i style="width:${goalPctBar}%"></i></div>
+   <div class="muted" style="font-size:12px;margin-top:7px" aria-hidden="true">${goalPct}% completato${read>goal?' 🎉':(read===goal?' 🎉':'')} · ${statusLine}</div>`;
+}
+/* ===== IL TUO ANNO DI LETTURA ===== */
+function yearSummaryCard(readYr,YR){
+ if(!readYr.length){
+   return `<div class="card pad empty-state-card small">
+     ${icon('sparkles')}
+     <h3>Nessun libro completato nel ${YR}</h3>
+     <p>I tuoi generi e autori dell'anno compariranno qui.</p>
+   </div>`;
+ }
+ const topG=STATS.topGenre('year');
+ const topAL=STATS.topAuthorsLabel('year');
+ const pages=STATS.pagesReadYear();
+ const avg=STATS.monthlyAverage();
+ return `<div class="card pad">
+   <div class="stat-strip" style="margin-bottom:0">
+     <div class="stat-cell"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
+     <div class="stat-cell"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
+     <div class="stat-cell"><div class="stat-n">${avg}</div><div class="stat-l">Media al mese</div></div>
+   </div>
+   ${(topG||topAL)?`<div class="stat-strip" style="margin-top:10px">
+     ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
+     ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
+   </div>`:''}
+ </div>`;
 }
 function renderIncontriCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico gli incontri… ☁️</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderIncontriCloud()});return}
@@ -4959,7 +5078,7 @@ async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localSto
 /* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
 function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
-   finishedYear:r.finished_year||null,
+   finishedYear:r.finished_year||null,updatedAt:r.updated_at||null,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
  const {data,error}=await supa.from('books').select('*').eq('user_id',authUser.id).order('id');
