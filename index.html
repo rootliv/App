@@ -177,6 +177,8 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .btn.ghost:hover{border-color:var(--coral);background:var(--hover)}
 .btn.sm{padding:8px 15px;font-size:12.5px}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--surface2);color:var(--plum);border:1px solid var(--line)}
+.pill-btn{font-family:inherit;cursor:pointer;min-height:32px}
+.pill-btn:active{background:var(--hover)}
 .pill.green{background:var(--sage-soft);color:#3a6a48;border-color:transparent}
 .pill.sky{background:#e1edf6;color:var(--sky);border-color:transparent}
 .pill.gold{background:var(--gold-soft);color:#8a6b18;border-color:transparent}
@@ -1021,10 +1023,13 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .link-btn:active{opacity:.65;transform:scale(.97)}
 .link-btn:focus-visible{outline:2px solid var(--brand-solid);outline-offset:2px;border-radius:8px}
 .link-btn:disabled{opacity:.4;cursor:not-allowed}
+.genre-summary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;min-height:44px}
+.link-btn.sm{font-size:12px;min-height:44px;min-width:44px;padding:4px 10px}
 .genre-bars{display:flex;flex-direction:column;gap:14px}
 .gb-row{display:flex;flex-direction:column;gap:6px}
 .gb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .gb-name{font-weight:600;font-size:14px;color:var(--ink)}
+.gb-none-ic{width:13px;height:13px;vertical-align:-2px;margin-right:5px;color:var(--ink-faint)}
 .gb-meta{font-size:12px;color:var(--ink-soft);white-space:nowrap}
 .gb-track{height:9px;border-radius:5px;background:var(--surface2);overflow:hidden}
 .gb-track i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
@@ -1350,6 +1355,36 @@ let books=JSON.parse(JSON.stringify(seedBooks));
 const $=s=>document.querySelector(s);
 const view=$('#view');
 function book(id){return books.find(b=>b.id===id)}
+function editBookGenre(id){
+ const b=book(id);if(!b)return;
+ const common=['Narrativa','Romanzo','Romanzo storico','Fantascienza','Fantasy','Giallo','Thriller','Horror','Rosa','Distopia','Avventura','Biografia','Autobiografia','Memoir','Saggistica','Poesia','Teatro','Racconti','Classico'];
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>Genere del libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
+      <div style="width:48px;flex:none">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
+      <div style="min-width:0"><b style="font-family:'Fraunces';font-size:15px">${esc(b.t)}</b><div class="muted" style="font-size:12.5px">${esc(b.a||'')}</div></div>
+    </div>
+    <div class="chips" style="margin-bottom:14px">${common.map(g=>`<button class="pill ${g===b.g?'green':''}" onclick="saveBookGenre(${id},'${g.replace(/'/g,"\\'")}')">${g}</button>`).join('')}</div>
+    <div class="field"><label>Oppure scrivi un genere</label><input id="genreCustom" placeholder="Es. Romanzo epistolare" value="${b.g&&!common.includes(b.g)?esc(b.g):''}" onkeydown="if(event.key==='Enter')saveBookGenre(${id},this.value)"></div>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:6px" onclick="saveBookGenre(${id},document.getElementById('genreCustom').value)">Salva genere</button>
+  </div>`;
+ openOverlay();
+}
+async function saveBookGenre(id,g){
+ g=(g||'').trim();if(!g)return;
+ const b=book(id);if(!b)return;
+ b.g=g;
+ if(mode==='cloud'&&supa){try{await supa.from('books').update({genre:g}).eq('id',id)}catch(e){}}
+ else save();
+ closeModal();toast('Genere aggiornato: '+g,'📚');
+ refreshView();
+}
+function openClassifyMissing(){
+ const missing=STATS.unclassifiedRead();
+ if(!missing.length){toast('Tutti i libri sono già classificati','✓');return;}
+ editBookGenre(missing[0].id);
+}
 function ini(n){return n.split(' ').map(x=>x[0]).join('')}
 function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
  return`<div class="buy">
@@ -1874,7 +1909,7 @@ function openBook(id){
       ${b.originalTitle&&normKey(b.originalTitle)!==normKey(b.t)?`<div class="muted" style="font-size:12.5px;margin-top:3px">Titolo originale: <i>${esc(b.originalTitle)}</i></div>`:''}
       <div class="chips">
         <span class="pill ${st[1]}">${st[0]}</span>
-        ${b.g?`<span class="pill">${b.g}</span>`:''}
+        <button class="pill pill-btn" onclick="editBookGenre(${b.id})" aria-label="${b.g?'Modifica il genere: '+b.g:'Assegna un genere a questo libro'}">${b.g?esc(b.g):'+ Aggiungi genere'}</button>
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
@@ -2079,7 +2114,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v109 (revisione cromatica controllata secondo token semantici)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v110 (profilo: senza genere non corsivo, classifica mancanti, contrasto barre)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4450,8 +4485,8 @@ function renderProfiloPage(){
  // Distribuzione generi sui libri LETTI: include "Senza genere", percentuali sul totale reale
  const dist=STATS.genreDistribution();
  const genreRows=dist.rows;const pcts=dist.pcts;const total=dist.total;
- const palette=['#2f8168','#c79a3c','#4a6fa5','#b0654f','#7a5a9e','#4a8a7a','#9e5a7a','#5a7a4a'];
- const GREY='#b0aa9c'; // colore neutro per "Senza genere" — mai l'unico indizio: c'è anche il testo
+ const palette=['#22705a','#a5761f','#3a6690','#9c4f3f','#6b4d84','#3d7a68','#8a4d70','#4d6b3d'];
+ const GREY='#8c8576'; // "Senza genere": grigio caldo più contrastato, mai l'unico indizio — c'è sempre il testo
  // Autori derivati (2+ letti) + manuali
  const derivedAuthors=STATS.authorStats('all').filter(a=>a[1]>1&&!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase()));
  // Statistiche riepilogo
@@ -4481,13 +4516,18 @@ function renderProfiloPage(){
  <div class="sec-head"><div class="sec-title">I tuoi generi</div><button class="link-btn" onclick="openEditProfile()" aria-label="Modifica i generi del tuo profilo">Modifica generi</button></div>
  <div class="card pad">
    ${total>0?`
-   <div class="muted" style="font-size:11.5px;margin-bottom:14px">${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} letti</div>
+   <div class="genre-summary-row">
+     <div class="muted" style="font-size:11.5px">${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} letti</div>
+     ${dist.total-dist.classified>0
+       ?`<button class="link-btn sm" onclick="openClassifyMissing()" aria-label="Classifica i ${dist.total-dist.classified} libri senza genere">Classifica i ${dist.total-dist.classified} mancanti</button>`
+       :(dist.classified>0?`<span class="muted" style="font-size:11px">Tutti i libri sono classificati</span>`:'')}
+   </div>
    <div class="genre-bars" role="list">${genreRows.map((g,i)=>{
      const isNone=g[0]==='Senza genere';
      const col=isNone?GREY:palette[i%palette.length];
      const label=`${g[0]}, ${g[1]} ${g[1]===1?'libro':'libri'} su ${total}, ${pcts[i]} percento`;
      return `<div class="gb-row" role="listitem" aria-label="${esc(label)}">
-       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft);font-style:italic':''}">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
+       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft)':''}">${isNone?icon('bookmark','gb-none-ic'):''}${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
        <div class="gb-track" aria-hidden="true"><i style="width:${pcts[i]}%;background:${col}"></i></div>
      </div>`;}).join('')}</div>`
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
