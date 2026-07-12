@@ -157,7 +157,8 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:11px 17px;width:260px;color:var(--ink-faint);box-shadow:var(--shadow-sm);transition:.2s}
 .search:focus-within{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
 .search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink)}
-.bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;font-size:18px;display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
+.bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;color:var(--ink);display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
+.bell .icn{width:20px;height:20px}
 .bell:hover{transform:translateY(-2px);border-color:var(--coral-soft)}
 .bell .dot{display:none;position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
 .view{padding:14px 38px 110px;max-width:1200px}
@@ -949,6 +950,8 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .add-st b{display:block;font-size:14.5px;color:var(--ink)}
 .add-st small{color:var(--ink-soft);font-size:12px}
 .donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.3;word-break:break-word}
+.lib-last-card{margin-bottom:calc(72px + env(safe-area-inset-bottom) + 16px)}
 .me-hero.compact{padding:14px 16px}
 .stat-strip{display:flex;gap:10px;margin-bottom:12px}
 .stat-cell{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:13px 12px;text-align:center}
@@ -958,7 +961,10 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .stat-v{font-family:'Fraunces',serif;font-size:16px;font-weight:600;color:var(--brand-solid);margin-top:3px}
 .sec-head{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px}
 .sec-head .sec-title{margin:0}
-.link-btn{background:none;border:none;color:var(--brand-solid);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:4px 6px}
+.link-btn{background:none;border:none;color:var(--brand-solid);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;padding:6px 10px}
+.link-btn:active{opacity:.65;transform:scale(.97)}
+.link-btn:focus-visible{outline:2px solid var(--brand-solid);outline-offset:2px;border-radius:8px}
+.link-btn:disabled{opacity:.4;cursor:not-allowed}
 .genre-bars{display:flex;flex-direction:column;gap:14px}
 .gb-row{display:flex;flex-direction:column;gap:6px}
 .gb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
@@ -1228,7 +1234,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="search"><span>🔎</span><input id="topSearch" placeholder="Vai a… sezione o libro" autocomplete="off" oninput="topSearchInput(this.value)" onkeydown="if(event.key==='Enter')topSearchGo();if(event.key==='Escape')topClose()" onblur="setTimeout(topClose,180)"></div>
         <div id="topSearchRes" class="topsearch-res" style="display:none"></div>
       </div>
-      <button class="bell" onclick="go('notifiche')">🔔<span class="dot"></span></button>
+      <button class="bell" id="bellBtn" onclick="go('notifiche')" aria-label="Notifiche">${icon('bell')}<span class="dot"></span></button>
     </header>
     <div class="view fade" id="view"></div>
   </main>
@@ -1379,6 +1385,7 @@ function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" 
 const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:'sparkles',incontri:'calendar',diario:'book',lettori:'club',notifiche:'bell'};
 
 /* ===== STATISTICHE CENTRALIZZATE (fonte unica di verità per tutte le schermate) ===== */
+function fmtIt(n){try{return new Intl.NumberFormat('it-IT').format(n);}catch(e){return ''+n;}}
 const STATS={
  currentYear(){return new Date().getFullYear();},
  total(){return books.length;},
@@ -1391,12 +1398,36 @@ const STATS={
  goal(){return (profile&&profile.data&&+profile.data.goal)||0;},
  goalPct(){const g=this.goal();return g?Math.min(100,Math.round(this.readThisYear().length/g*100)):0;},
  // conteggi generi/autori normalizzati
+ classifiedRead(){return this.read().filter(b=>normGenre(b.g));},
+ unclassifiedRead(){return this.read().filter(b=>!normGenre(b.g));},
+ // distribuzione generi sui LIBRI LETTI, includendo "Senza genere", percentuali sul totale letti
+ genreDistribution(){
+   const read=this.read();const total=read.length;
+   const tally={};
+   read.forEach(b=>{const g=normGenre(b.g);if(g)tally[g]=(tally[g]||0)+1;});
+   let rows=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+   const noGenre=this.unclassifiedRead().length;
+   if(noGenre>0)rows.push(['Senza genere',noGenre]);
+   const pcts=largestRemainder(rows.map(r=>r[1]),total);
+   return {rows,pcts,total,classified:this.classifiedRead().length};
+ },
  genreStats(scope){const src=(scope==='year')?this.readThisYear():books;
    return topCount(src.map(b=>normGenre(b.g)).filter(Boolean),12);},
  authorStats(scope){const src=(scope==='year')?this.readThisYear():this.read();
    return topCount(src.map(b=>b.a).filter(Boolean),12);},
  topGenre(scope){const g=this.genreStats(scope);return g.length?g[0][0]:null;},
- topAuthor(scope){const a=this.authorStats(scope);return a.length?a[0][0]:null;}
+ topAuthor(scope){const a=this.authorStats(scope);return a.length?a[0][0]:null;},
+ // Gestisce l'ex-aequo: restituisce {label, names} — se un solo massimo, un nome;
+ // se più autori a pari merito, elenco con "e altri N".
+ topAuthorsLabel(scope){
+   const a=this.authorStats(scope);
+   if(!a.length)return null;
+   const max=a[0][1];
+   const tied=a.filter(x=>x[1]===max);
+   if(tied.length===1)return {label:'Autore più letto',text:tied[0][0]};
+   if(tied.length===2)return {label:'Autori più letti',text:tied[0][0]+' e '+tied[1][0]};
+   return {label:'Autori più letti',text:tied[0][0]+' e altri '+(tied.length-1)};
+ }
 };
 
 function buildNav(){
@@ -1967,7 +1998,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v104 (stats centralizzate, generi a barre, profilo ridisegnato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v105 (profilo: senza genere, ex-aequo autori, a11y, localizzazione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4325,20 +4356,16 @@ function renderProfiloPage(){
  const YR=STATS.currentYear();
  const manualGenres=(d.genres||[]);
  const manualAuthors=(d.authors||[]);
- // Generi normalizzati da tutta la libreria + preferenze manuali (peso extra)
- const tally={};
- books.forEach(b=>{const g=normGenre(b.g);if(g)tally[g]=(tally[g]||0)+1;});
- manualGenres.forEach(g=>{const k=normGenre(g)||g.trim();if(k)tally[k]=(tally[k]||0)+1;});
- let genreRows=Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,8);
- const total=genreRows.reduce((s,g)=>s+g[1],0);
- // percentuali con arrotondamento coerente (somma = 100)
- const pcts=largestRemainder(genreRows.map(g=>g[1]),total);
+ // Distribuzione generi sui libri LETTI: include "Senza genere", percentuali sul totale reale
+ const dist=STATS.genreDistribution();
+ const genreRows=dist.rows;const pcts=dist.pcts;const total=dist.total;
  const palette=['#2f8168','#c79a3c','#4a6fa5','#b0654f','#7a5a9e','#4a8a7a','#9e5a7a','#5a7a4a'];
+ const GREY='#b0aa9c'; // colore neutro per "Senza genere" — mai l'unico indizio: c'è anche il testo
  // Autori derivati (2+ letti) + manuali
  const derivedAuthors=STATS.authorStats('all').filter(a=>a[1]>1&&!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase()));
  // Statistiche riepilogo
  const nRead=STATS.read().length, nYr=STATS.readThisYear().length, pages=STATS.pagesRead();
- const topG=STATS.topGenre('all'), topA=STATS.topAuthor('all');
+ const topG=STATS.topGenre('all'), topAL=STATS.topAuthorsLabel('all');
 
  view.innerHTML=`
  <div class="me-hero compact">
@@ -4353,25 +4380,30 @@ function renderProfiloPage(){
  <div class="stat-strip">
    <div class="stat-cell"><div class="stat-n">${nRead}</div><div class="stat-l">Letti in totale</div></div>
    <div class="stat-cell"><div class="stat-n">${nYr}</div><div class="stat-l">Letti nel ${YR}</div></div>
-   <div class="stat-cell"><div class="stat-n">${pages>999?(Math.round(pages/100)/10)+'k':pages}</div><div class="stat-l">Pagine lette</div></div>
+   <div class="stat-cell"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
  </div>
- ${(topG||topA)?`<div class="stat-strip">
-   ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v">${esc(topG)}</div></div>`:''}
-   ${topA?`<div class="stat-cell wide"><div class="stat-l">Autore più letto</div><div class="stat-v">${esc(topA)}</div></div>`:''}
+ ${(topG||topAL)?`<div class="stat-strip">
+   ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
+   ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
  </div>`:''}
 
- <div class="sec-head"><div class="sec-title">I tuoi generi</div><button class="link-btn" onclick="openEditProfile()">Modifica generi</button></div>
+ <div class="sec-head"><div class="sec-title">I tuoi generi</div><button class="link-btn" onclick="openEditProfile()" aria-label="Modifica i generi del tuo profilo">Modifica generi</button></div>
  <div class="card pad">
-   ${total>0?`<div class="genre-bars">${genreRows.map((g,i)=>`
-     <div class="gb-row">
-       <div class="gb-top"><span class="gb-name">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
-       <div class="gb-track"><i style="width:${pcts[i]}%;background:${palette[i%palette.length]}"></i></div>
-     </div>`).join('')}</div>`
+   ${total>0?`
+   <div class="muted" style="font-size:11.5px;margin-bottom:14px">${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} letti</div>
+   <div class="genre-bars" role="list">${genreRows.map((g,i)=>{
+     const isNone=g[0]==='Senza genere';
+     const col=isNone?GREY:palette[i%palette.length];
+     const label=`${g[0]}, ${g[1]} ${g[1]===1?'libro':'libri'} su ${total}, ${pcts[i]} percento`;
+     return `<div class="gb-row" role="listitem" aria-label="${esc(label)}">
+       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft);font-style:italic':''}">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
+       <div class="gb-track" aria-hidden="true"><i style="width:${pcts[i]}%;background:${col}"></i></div>
+     </div>`;}).join('')}</div>`
    :`<div class="empty-mini">${icon('book')}<div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
 
  <div class="sec-title">Autori preferiti</div>
- <div class="card pad">
+ <div class="card pad lib-last-card">
    ${(manualAuthors.length||derivedAuthors.length)?`<div class="author-list">
      ${manualAuthors.map(a=>authorRow(a,null,'Scelto da te')).join('')}
      ${derivedAuthors.slice(0,8).map(a=>authorRow(a[0],a[1],'Dalle tue letture')).join('')}
@@ -4714,6 +4746,8 @@ function updateBellDot(){
    const seen=localStorage.getItem('pagina_notif_seen')||'';
    const has=items.length>0 && notifSig(items)!==seen;
    const dot=document.querySelector('.bell .dot');if(dot)dot.style.display=has?'block':'none';
+   const btn=document.getElementById('bellBtn');
+   if(btn)btn.setAttribute('aria-label',has?('Notifiche, '+items.length+' non lette'):'Notifiche');
  }catch(e){}
 }
 function markNotifsSeen(items){
