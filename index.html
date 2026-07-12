@@ -418,9 +418,13 @@ input[type=range]{accent-color:var(--coral)}
   background:var(--glass);backdrop-filter:blur(12px);border-top:1px solid var(--line);
   padding:8px 6px calc(8px + env(safe-area-inset-bottom));justify-content:space-around}
 .botnav button{border:none;background:none;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;
-  font-size:10px;font-weight:600;color:var(--ink-faint);padding:5px 9px;border-radius:12px;cursor:pointer}
-.botnav button .ic{font-size:20px}
-.botnav button.active{color:var(--plum)}
+  font-size:10.5px;font-weight:600;color:var(--ink-soft);padding:6px 9px 5px;border-radius:12px;cursor:pointer;position:relative;min-width:44px;min-height:44px;justify-content:center;-webkit-tap-highlight-color:transparent}
+.botnav button .ic{display:grid;place-items:center}
+.botnav button .ic .icn{width:23px;height:23px}
+.botnav button.active{color:var(--brand-solid)}
+.botnav button.active .icn{stroke-width:2}
+.botnav button.active::after{content:"";position:absolute;top:1px;width:5px;height:5px;border-radius:50%;background:var(--brand-solid)}
+.icn{width:20px;height:20px;flex:none;vertical-align:middle}
 .mtog{display:none}
 /* Hamburger: sfondo verde brand + icona bianca, così è ben visibile in entrambi i temi
    (nel tema scuro, con sfondo neutro ereditato da .bell, risultava quasi invisibile). */
@@ -860,7 +864,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 
 /* MOBILE bottom-nav coerente */
 .botnav{background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
-.botnav button.active{color:var(--plum)}
+.botnav button.active{color:var(--brand-solid)}
 @media(max-width:900px){
   .sidebar{border-radius:0}
 }
@@ -1315,6 +1319,38 @@ function topSearchInput(q){
 }
 function topSearchGo(){const box=$('#topSearchRes');if(!box)return;const f=box.querySelector('.ts-item');if(f)f.click();}
 function topClose(){const box=$('#topSearchRes');if(box)box.style.display='none';const i=$('#topSearch');if(i)i.value='';}
+/* ===== ICONE SVG (set coerente, stroke 1.75, 24x24) — riutilizzabili ovunque ===== */
+const ICONS={
+ home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/>',
+ profile:'<circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/>',
+ library:'<path d="M4 5h6v14H4z"/><path d="M10 5h6v14h-6z"/><path d="m16 5 4 .7-2.3 13.8-3.9-.7"/>',
+ club:'<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M16 5.2A3.2 3.2 0 0 1 16 11"/><path d="M18 15.2c2.3.6 4 2.5 4 4.8"/>',
+ sparkles:'<path d="M12 3l1.8 4.9L18.7 9l-4.9 1.8L12 15l-1.8-4.2L5.3 9l4.9-1.1z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>',
+ bell:'<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+ menu:'<path d="M4 7h16M4 12h16M4 17h16"/>',
+ calendar:'<rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/>',
+ search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ edit:'<path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/>',
+ check:'<path d="M20 6 9 17l-5-5"/>',
+ book:'<path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 0 2 2h12"/>',
+ bookmark:'<path d="M6 3h12v18l-6-4-6 4z"/>',
+ close:'<path d="M6 6l12 12M18 6 6 18"/>',
+ chevron:'<path d="m9 6 6 6-6 6"/>',
+ share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>',
+ lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+ globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"/>',
+ link:'<path d="M9 15l6-6"/><path d="M10.5 6.5 12 5a4 4 0 0 1 6 6l-1.5 1.5"/><path d="M13.5 17.5 12 19a4 4 0 0 1-6-6l1.5-1.5"/>',
+ star:'<path d="m12 3 2.7 5.9 6.3.6-4.8 4.2 1.5 6.3L12 17.3 6.3 20.2l1.5-6.3L3 9.7l6.3-.6z"/>',
+ grid:'<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>',
+ list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.3"/><circle cx="3.5" cy="12" r="1.3"/><circle cx="3.5" cy="18" r="1.3"/>',
+ sort:'<path d="M7 4v16M7 20l-3-3M7 4l3 3"/><path d="M17 20V4M17 4l3 3M17 20l-3-3"/>',
+ target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
+ trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"/><path d="M12 12v4M9 20h6M10 16h4"/>'
+};
+function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
+const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:'sparkles',incontri:'calendar',diario:'book',lettori:'club',notifiche:'bell'};
+
 function buildNav(){
  let html='',last='';
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
@@ -1322,7 +1358,7 @@ function buildNav(){
  $('#nav').innerHTML=html;
  const main=['home','profilo','libreria','club','ai'];
  $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
-   return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${p.ic}</span>${p.label.split(' ')[0]}</button>`}).join('');
+   return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${icon(NAV_ICON[id]||'book')}</span>${p.label.split(' ')[0]}</button>`}).join('');
 }
 let current='home';
 /* Apre/chiude il menu mobile e nasconde la bottom-nav mentre è aperto (altrimenti, avendo uno
@@ -1883,7 +1919,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v102 (ricerca libreria, hub invito dai membri, diario in libro del mese)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v103 (icone SVG + tab bar ridisegnata - blocco 1)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
