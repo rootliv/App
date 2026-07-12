@@ -1003,7 +1003,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v121 (FIX drawer bulletproof, paesi tradotti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v122 (FIX RADICE: aggiornamento SW forzato, no piu stuck su vecchia versione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4345,10 +4345,28 @@ function obGo(what){
 })();
 
 /* ---- PWA: registra il service worker (installabilità + ripiego offline).
-   Strategia network-first (vedi sw.js): l'app resta sempre aggiornata. ---- */
+   Strategia network-first (vedi sw.js): l'app resta sempre aggiornata.
+   Nota importante: registrare il SW non basta a farlo aggiornare in tempi rapidi —
+   soprattutto su iOS, l'app installata può restare "agganciata" a una versione vecchia
+   per molto tempo se non si forza esplicitamente un controllo. Qui: bypassiamo la cache
+   HTTP nel controllo del file sw.js stesso, forziamo un controllo attivo ogni volta che
+   l'app torna in primo piano, e ricarichiamo automaticamente la pagina (una sola volta)
+   non appena una versione nuova del SW prende il controllo, così l'utente vede subito
+   l'aggiornamento senza dover chiudere/riaprire manualmente più volte. ---- */
 if('serviceWorker' in navigator){
+ let _swReloaded=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+   if(_swReloaded)return;_swReloaded=true;
+   location.reload();
+ });
  window.addEventListener('load',()=>{
-   navigator.serviceWorker.register('sw.js').catch(()=>{/* non bloccare l'app se fallisce */});
+   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+     if(!reg)return;
+     try{reg.update()}catch(e){}
+     // Ogni volta che l'app torna visibile (riaperta dalla home, cambio tab), controlla di nuovo.
+     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{reg.update()}catch(e){}}});
+     window.addEventListener('focus',()=>{try{reg.update()}catch(e){}});
+   }).catch(()=>{/* non bloccare l'app se fallisce */});
  });
 }
 
