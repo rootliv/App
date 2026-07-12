@@ -1003,7 +1003,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v120 (menu, profilo, notifiche, mappa rifiniti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v121 (FIX drawer bulletproof, paesi tradotti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2706,7 +2706,7 @@ function renderMappaCloud(){
  ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
  <div class="card pad">
    <div class="place-list">${countryRows.map(([country,items])=>`<div class="place-row" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')">
-     <span style="flex:1">${esc(country)}</span><span class="muted">${items.length} ${items.length===1?'libro':'libri'}</span>
+     <span style="flex:1">${esc(normCountry(country))}</span><span class="muted">${items.length} ${items.length===1?'libro':'libri'}</span>
    </div>`).join('')}</div>
  </div>`:''}
  ${noPlace.length?`<div class="card pad" style="margin-top:16px">
@@ -2721,6 +2721,29 @@ function focusMapCountry(country){
  if(!pts.length)return;
  try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.4));}catch(e){}
 }
+// Photon (komoot.io) restituisce i nomi paese in inglese: li traduciamo per la UI in italiano.
+// Copre i paesi più comuni; se un paese non è in elenco, resta il nome originale (mai inventato).
+const COUNTRY_IT={
+ 'united states':'Stati Uniti','united states of america':'Stati Uniti','usa':'Stati Uniti',
+ 'united kingdom':'Regno Unito','great britain':'Regno Unito',
+ 'japan':'Giappone','china':'Cina','south korea':'Corea del Sud','north korea':'Corea del Nord',
+ 'germany':'Germania','france':'Francia','spain':'Spagna','portugal':'Portogallo',
+ 'netherlands':'Paesi Bassi','belgium':'Belgio','switzerland':'Svizzera','austria':'Austria',
+ 'sweden':'Svezia','norway':'Norvegia','denmark':'Danimarca','finland':'Finlandia','iceland':'Islanda',
+ 'poland':'Polonia','czech republic':'Repubblica Ceca','czechia':'Repubblica Ceca','hungary':'Ungheria',
+ 'greece':'Grecia','turkey':'Turchia','russia':'Russia','ukraine':'Ucraina',
+ 'ireland':'Irlanda','scotland':'Scozia',
+ 'canada':'Canada','mexico':'Messico','brazil':'Brasile','argentina':'Argentina','chile':'Cile',
+ 'colombia':'Colombia','peru':'Perù','cuba':'Cuba',
+ 'india':'India','pakistan':'Pakistan','indonesia':'Indonesia','thailand':'Tailandia','vietnam':'Vietnam',
+ 'philippines':'Filippine','malaysia':'Malesia','singapore':'Singapore',
+ 'egypt':'Egitto','morocco':'Marocco','algeria':'Algeria','tunisia':'Tunisia','nigeria':'Nigeria',
+ 'south africa':'Sudafrica','kenya':'Kenya','ethiopia':'Etiopia',
+ 'australia':'Australia','new zealand':'Nuova Zelanda',
+ 'israel':'Israele','iran':'Iran','iraq':'Iraq','saudi arabia':'Arabia Saudita','afghanistan':'Afghanistan',
+ 'italy':'Italia','albania':'Albania','croatia':'Croazia','serbia':'Serbia','romania':'Romania','bulgaria':'Bulgaria'
+};
+function normCountry(c){if(!c)return '';const it=COUNTRY_IT[c.trim().toLowerCase()];return it||c;}
 function initMapCloud(locs){
  if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
  if(typeof L==='undefined')return;
@@ -2736,7 +2759,7 @@ function initMapCloud(locs){
  pts.forEach(l=>{const key=l.lat.toFixed(2)+','+l.lng.toFixed(2);(groups[key]=groups[key]||[]).push(l);});
  Object.values(groups).forEach(g=>{
    const first=g[0];
-   const popup='<b>'+esc(first.place||first.country||'')+'</b><br>'+g.map(l=>esc(l.title)+(l.author?(' — '+esc(l.author)):'')).join('<br>');
+   const popup='<b>'+esc(first.place||normCountry(first.country)||'')+'</b><br>'+g.map(l=>esc(l.title)+(l.author?(' — '+esc(l.author)):'')).join('<br>');
    L.marker([first.lat,first.lng],{icon:mkIcon(g.length)}).addTo(mapObj).bindPopup(popup);
  });
  fixMapSize(mapObj);
