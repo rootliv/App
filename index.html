@@ -157,7 +157,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:30px;padding:11px 17px;width:260px;color:var(--ink-faint);box-shadow:var(--shadow-sm);transition:.2s}
 .search:focus-within{border-color:var(--coral);box-shadow:0 0 0 4px var(--coral-soft)}
 .search input{border:none;background:none;outline:none;font-family:inherit;font-size:13.5px;width:100%;color:var(--ink)}
-.bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;color:var(--ink);display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
+.bell{position:relative;width:46px;height:46px;border-radius:16px;background:var(--surface);border:1px solid var(--line);cursor:pointer;color:var(--primary);display:grid;place-items:center;box-shadow:var(--shadow-sm);transition:.18s}
 .bell .icn{width:20px;height:20px}
 .bell:hover{transform:translateY(-2px);border-color:var(--coral-soft)}
 .bell .dot{display:none;position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
@@ -420,11 +420,11 @@ input[type=range]{accent-color:var(--coral)}
   padding:8px 6px calc(8px + env(safe-area-inset-bottom));justify-content:space-around}
 .botnav button{border:none;background:none;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;
   font-size:10.5px;font-weight:600;color:var(--ink-soft);padding:6px 9px 5px;border-radius:12px;cursor:pointer;position:relative;min-width:44px;min-height:44px;justify-content:center;-webkit-tap-highlight-color:transparent}
-.botnav button .ic{display:grid;place-items:center}
+.botnav button .ic{display:grid;place-items:center;padding:3px 14px;transition:background .15s}
 .botnav button .ic .icn{width:23px;height:23px}
-.botnav button.active{color:var(--brand-solid)}
+.botnav button.active{color:var(--primary)}
 .botnav button.active .icn{stroke-width:2}
-.botnav button.active::after{content:"";position:absolute;top:1px;width:5px;height:5px;border-radius:50%;background:var(--brand-solid)}
+.botnav button.active .ic{background:var(--primary-muted);border-radius:10px}
 .icn{width:20px;height:20px;flex:none;vertical-align:middle}
 .mtog{display:none}
 /* Hamburger: sfondo verde brand + icona bianca, così è ben visibile in entrambi i temi
@@ -783,6 +783,14 @@ input[type=range]{accent-color:var(--coral)}
   --shadow:0 10px 30px -12px rgba(40,32,20,.18);
   --shadow-lg:0 34px 70px -20px rgba(40,32,20,.30);
   --r:20px; --r-sm:14px;
+  /* ===== TOKEN SEMANTICI (Home + coerenza con Profilo/Libreria) ===== */
+  --primary:var(--brand-solid); --primary-muted:var(--sage-soft);
+  --progress:var(--gold); --progress-muted:#f3e9d3;
+  --info:var(--sky); --info-muted:#e2ebf5;
+  --surface-elevated:var(--surface); --surface-tinted:var(--sage-soft);
+  --text-primary:var(--ink); --text-secondary:var(--ink-soft);
+  --track:var(--surface2);
+  --success:var(--brand-solid); --warning:var(--sky);
 }
 [data-theme="dark"]{
   /* Blocco effettivo del tema scuro (sovrascrive quello sopra perché successivo):
@@ -802,6 +810,14 @@ input[type=range]{accent-color:var(--coral)}
   --shadow-sm:0 1px 2px rgba(0,0,0,.35);
   --shadow:0 14px 36px -14px rgba(0,0,0,.5);
   --shadow-lg:0 36px 80px -22px rgba(0,0,0,.62);
+  /* ===== TOKEN SEMANTICI (dark) — superfici tinte più scure/desature per restare leggibili ===== */
+  --primary:var(--brand-solid); --primary-muted:var(--sage-soft);
+  --progress:var(--gold); --progress-muted:#3a3324;
+  --info:var(--sky); --info-muted:#26313d;
+  --surface-elevated:var(--surface2); --surface-tinted:var(--sage-soft);
+  --text-primary:var(--ink); --text-secondary:var(--ink-soft);
+  --track:var(--surface2);
+  --success:var(--brand-solid); --warning:var(--sky);
 }
 /* tipografia: gerarchia più netta */
 h1,h2,h3,.serif{letter-spacing:-.02em}
@@ -865,7 +881,7 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 
 /* MOBILE bottom-nav coerente */
 .botnav{background:var(--glass);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
-.botnav button.active{color:var(--brand-solid)}
+.botnav button.active{color:var(--primary)}
 @media(max-width:900px){
   .sidebar{border-radius:0}
 }
@@ -950,24 +966,36 @@ h1,h2,h3,.serif{letter-spacing:-.02em}
 .add-st b{display:block;font-size:14.5px;color:var(--ink)}
 .add-st small{color:var(--ink-soft);font-size:12px}
 .donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+/* Revisione cromatica Home: barra lettura verde su track salvia chiaro */
+.bar-reading{background:var(--primary-muted)}
+.bar-reading i{background:var(--primary)}
+.badge-tint{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:9px;margin-left:4px;vertical-align:middle}
+.badge-tint.sage{background:var(--primary-muted);color:var(--primary)}
+.badge-tint.info{background:var(--info-muted);color:var(--info)}
+.badge-tint.gold{background:var(--progress-muted);color:var(--progress)}
+.bar-goal{background:var(--progress-muted)}
+.bar-goal i{background:var(--progress)}
+.primary-outline{background:var(--surface);color:var(--primary);border:1.5px solid var(--primary)!important;box-shadow:none}
+.primary-outline:active{background:var(--primary-muted)}
+.spoiler-ic{width:12px;height:12px}
 .clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.goal-card-v2{padding-bottom:16px}
+.goal-card-v2{padding-bottom:16px;background:linear-gradient(180deg,var(--progress-muted) 0%,var(--surface) 65%)}
 .goal-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .goal-substats{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
 .goal-substats b{color:var(--ink);font-weight:700}
 .gs-sep{width:1px;height:14px;background:var(--line)}
 .quick-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
-.qs-cell{display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent}
-.qs-cell:active{transform:scale(.97);background:var(--hover)}
-.qs-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none}
+.qs-cell{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent;box-shadow:none;transition:.12s}
+.qs-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.55)}
 .qs-cell .icn{width:17px;height:17px}
-.qs-cell:nth-child(1) .qs-ic{background:#e3f1e8}.qs-cell:nth-child(1) .icn{color:#2f8168}
-.qs-cell:nth-child(2) .qs-ic{background:#f6ecd6}.qs-cell:nth-child(2) .icn{color:#b0812f}
-.qs-cell:nth-child(3) .qs-ic{background:#e2ebf5}.qs-cell:nth-child(3) .icn{color:#4a6fa5}
+.qs-cell.tint-sage{background:var(--primary-muted)}.qs-cell.tint-sage .icn{color:var(--primary)}.qs-cell.tint-sage:active{background:#c9e3d2}
+.qs-cell.tint-gold{background:var(--progress-muted)}.qs-cell.tint-gold .icn{color:var(--progress)}.qs-cell.tint-gold:active{background:#ead9b0}
+.qs-cell.tint-info{background:var(--info-muted)}.qs-cell.tint-info .icn{color:var(--info)}.qs-cell.tint-info:active{background:#cddaeb}
+.qs-cell:active{transform:scale(.97)}
 .qs-n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--ink)}
 .qs-l{font-size:10.5px;color:var(--ink-soft);font-weight:600}
 .empty-state-card{text-align:center;padding:36px 22px;display:flex;flex-direction:column;align-items:center;gap:8px}
-.empty-state-card.small{padding:24px 20px}
+.empty-state-card.small{padding:24px 20px;background:linear-gradient(180deg,var(--primary-muted) 0%,var(--surface) 75%);border-color:var(--primary-muted)}
 .empty-state-card .icn-badge{width:52px;height:52px;border-radius:50%;background:var(--gold-soft);display:grid;place-items:center;margin-bottom:6px}
 .empty-state-card .icn{width:24px;height:24px;color:var(--gold)}
 .icn-badge{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;flex:none}
@@ -1252,7 +1280,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
   <!-- MAIN -->
   <main class="main">
     <header class="topbar">
-      <button class="bell mtog" onclick="toggleSidebar()">☰</button>
+      <button class="bell mtog" id="mtogBtn" onclick="toggleSidebar()" aria-label="Apri menu"><span id="mtogIcon"></span></button>
       <div>
         <h2 id="pageTitle">Home</h2>
         <div class="sub" id="pageSub">Il tuo angolo di lettura</div>
@@ -1407,7 +1435,8 @@ const ICONS={
  list:'<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1.3"/><circle cx="3.5" cy="12" r="1.3"/><circle cx="3.5" cy="18" r="1.3"/>',
  sort:'<path d="M7 4v16M7 20l-3-3M7 4l3 3"/><path d="M17 20V4M17 4l3 3M17 20l-3-3"/>',
  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/>',
- trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"/><path d="M12 12v4M9 20h6M10 16h4"/>'
+ trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"/><path d="M12 12v4M9 20h6M10 16h4"/>',
+ alert:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 9.5v4.5"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:'sparkles',incontri:'calendar',diario:'book',lettori:'club',notifiche:'bell'};
@@ -1482,6 +1511,7 @@ const STATS={
 
 function buildNav(){
  const bi=document.getElementById('bellIcon');if(bi)bi.innerHTML=icon('bell');
+ const mi=document.getElementById('mtogIcon');if(mi)mi.innerHTML=icon('menu');
  let html='',last='';
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
    html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${p.ic}</span>${p.label}</button>`});
@@ -2049,7 +2079,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v108 (colore mirato: badge tondi colorati per le icone)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v109 (revisione cromatica controllata secondo token semantici)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4355,14 +4385,14 @@ function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
  box.innerHTML='<div class="card pad" style="position:relative">'
   +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
-   +'<span class="pill '+curioPillColor(p.category)+'">'+esc(p.category)+'</span>'
+   +'<span class="badge-tint sage" style="font-size:11.5px">'+esc(p.category)+'</span>'
    +'<span class="muted" style="font-size:12.5px">«'+esc(p.title)+'» · '+esc(p.author)+'</span>'
-   +(p.read?'<span class="pill sky" style="font-size:11px">⚠️ possibili spoiler</span>':'')
+   +(p.read?'<span class="badge-tint info" style="font-size:11px;display:inline-flex;align-items:center;gap:4px">'+icon('alert','spoiler-ic')+' possibili spoiler</span>':'')
   +'</div>'
   +'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>'
   +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-   +'<button class="btn sm" onclick="openBook('+p.bookId+')">📖 Apri libro</button>'
-   +'<button class="btn ghost sm" onclick="curioAnother()">🔄 Un\'altra</button>'
+   +'<button class="btn sm" onclick="openBook('+p.bookId+')">Apri libro</button>'
+   +'<button class="btn sm primary-outline" onclick="curioAnother()">Un\'altra</button>'
   +'</div>'
  +'</div>';
  if(isNew&&!curioOverride){const s=loadCurioState();s.seen=true;saveCurioState(s);}
@@ -4597,9 +4627,9 @@ function renderHomeCloud(){
 
  <!-- Statistiche rapide, cliccabili solo se portano a una destinazione reale -->
  <div class="quick-stats">
-   <button class="qs-cell" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic">${icon('book')}</span><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
-   <button class="qs-cell" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic">${icon('bookmark')}</span><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
-   <button class="qs-cell" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
+   <button class="qs-cell tint-sage" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic">${icon('book')}</span><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
+   <button class="qs-cell tint-gold" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic">${icon('bookmark')}</span><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
+   <button class="qs-cell tint-info" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
  <!-- 3) IL TUO ANNO DI LETTURA -->
@@ -4645,14 +4675,14 @@ function continueReadingCard(reading){
        <div style="flex:1;min-width:0">
          <b class="clamp2" style="font-family:'Fraunces';font-size:16px;display:block">${esc(b.t)}</b>
          <div class="muted clamp1" style="font-size:12.5px;margin:2px 0 10px">${b.a?esc(b.a):'Autore sconosciuto'}</div>
-         <div class="bar" style="height:7px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
-         <div class="muted" style="font-size:11.5px;margin-top:6px" aria-hidden="true">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}${pr.cur===0?' · Non ancora iniziato':''}</div>
+         <div class="bar bar-reading" style="height:7px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
+         <div class="muted" style="font-size:11.5px;margin-top:6px" aria-hidden="true">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}${pr.cur===0?' <span class="badge-tint sage">Non ancora iniziato</span>':''}</div>
          ${when?`<div class="muted" style="font-size:10.5px;margin-top:2px;opacity:.75">Ultimo aggiornamento: ${when}</div>`:''}
        </div>
      </div>
      <div style="display:flex;gap:8px;margin-top:12px">
        <button class="btn sm" style="flex:1;justify-content:center" onclick="openBook(${b.id})">Riprendi</button>
-       <button class="btn ghost sm" style="flex:1;justify-content:center" onclick="openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">Aggiorna pagina</button>
+       <button class="btn sm primary-outline" style="flex:1;justify-content:center" onclick="openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">Aggiorna pagina</button>
      </div>
    </div>`;
  }).join('')}</div>`;
@@ -4671,14 +4701,14 @@ function goalBlock(goal,read,goalPct,goalPctBar,YR){
      <div><span class="me-metric-n gold">${read}</span><span class="me-metric-u"> di ${goal} libri</span></div>
      <button class="goal-edit" onclick="editGoal()" aria-label="Modifica obiettivo">${icon('edit')}</button>
    </div>
-   <div class="bar" style="height:8px;margin-top:9px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,goalPct)}" aria-label="${esc(label)}"><i style="width:${goalPctBar}%"></i></div>
-   <div class="muted" style="font-size:12px;margin-top:7px" aria-hidden="true">${goalPct}% completato${read>goal?' 🎉':(read===goal?' 🎉':'')} · ${statusLine}</div>`;
+   <div class="bar bar-goal" style="height:8px;margin-top:9px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,goalPct)}" aria-label="${esc(label)}"><i style="width:${goalPctBar}%"></i></div>
+   <div class="muted" style="font-size:12px;margin-top:7px" aria-hidden="true">${goalPct}% completato · ${statusLine}${(read>=goal)?' <span class="badge-tint gold">Obiettivo raggiunto</span>':''}</div>`;
 }
 /* ===== IL TUO ANNO DI LETTURA ===== */
 function yearSummaryCard(readYr,YR){
  if(!readYr.length){
    return `<div class="card pad empty-state-card small">
-     <span class="icn-badge sky">${icon('sparkles')}</span>
+     <span class="icn-badge gold">${icon('sparkles')}</span>
      <h3>Nessun libro completato nel ${YR}</h3>
      <p>I tuoi generi e autori dell'anno compariranno qui.</p>
    </div>`;
