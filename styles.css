@@ -163,7 +163,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .pill.coral{background:var(--coral-soft);color:#b45f33;border-color:transparent}
 .muted{color:var(--ink-soft)}
 .faint{color:var(--ink-faint)}
-.sec-title{font-family:'Fraunces',serif;font-size:21px;font-weight:600;letter-spacing:-.01em;margin:34px 0 16px;display:flex;align-items:center;gap:11px}
+.sec-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;margin:20px 0 11px;display:flex;align-items:center;gap:10px}
 .sec-title::before{content:"";width:5px;height:22px;border-radius:4px;background:var(--brand-grad);flex:none}
 .sec-title:first-child{margin-top:6px}
 hr{border:none;border-top:1px solid var(--line);margin:20px 0}
@@ -509,7 +509,7 @@ input[type=range]{accent-color:var(--coral)}
 /* ===== MOBILE FINE-TUNING ===== */
 @media(max-width:560px){
   .view{padding:8px 12px 100px}
-  .pad{padding:18px}
+  .pad{padding:15px}
   .hero{padding:24px 20px}
   .hero h1{font-size:24px}
   .hero .eyebrow{font-size:10px}
@@ -986,8 +986,8 @@ body.sidebar-open .topsearch-res{display:none!important}
   .topbar{padding:14px 16px 10px}
   .topbar h2{font-size:20px}
   .search{display:none}
-  .pad{padding:18px}
-  .sec-title{font-size:18px;margin:24px 0 12px}
+  .pad{padding:15px}
+  .sec-title{font-size:17px;margin:16px 0 9px}
   .club-banner{padding:20px}
   .club-banner h2{font-size:24px}
   .diary-head{gap:14px}
