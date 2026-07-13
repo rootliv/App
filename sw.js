@@ -14,7 +14,7 @@
    riceva sempre l'ultima versione pubblicata.
    Nota: la Cache Storage viene svuotata e rinominata ad ogni cambio di CACHE_VERSION. */
 
-const CACHE_VERSION = 'pagina-v39';
+const CACHE_VERSION = 'pagina-v40';
 const OFFLINE_URLS = ['./', './index.html', './styles.css', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {

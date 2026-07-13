@@ -1009,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v129 (notifiche ridisegnate, follow/membri fix, paesi eleganti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v130 (curiosita riposizionata dopo Continua a leggere)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3751,11 +3751,17 @@ function renderHomeCloud(){
  const nextMeet=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
 
  view.innerHTML=`
- <!-- 1) CONTINUA A LEGGERE — sezione più importante -->
+ <!-- 1) CONTINUA A LEGGERE — la cosa più importante: cosa sto leggendo ora -->
  <div class="sec-title">Continua a leggere</div>
  ${continueReadingCard(reading)}
 
- <!-- 2) OBIETTIVO ANNUALE -->
+ <!-- 2) CURIOSITÀ DELLA SETTIMANA — spunto leggero, legato al libro appena visto:
+      posizionata qui, subito dopo il libro attivo, quando si è più ricettivi, invece che
+      sepolta in fondo dove non la vedeva nessuno. -->
+ <div class="sec-title">Curiosità della settimana</div>
+ <div id="curioCard"></div>
+
+ <!-- 3) OBIETTIVO ANNUALE -->
  <div class="sec-title">Obiettivo ${YR}</div>
  <div class="card pad goal-card-v2">
    ${goalBlock(goal,readYrN,goalPct,goalPctBar,YR)}
@@ -3773,17 +3779,13 @@ function renderHomeCloud(){
    <button class="qs-cell tint-info" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
- <!-- 3) PROSSIMO INCONTRO (solo se esiste) -->
+ <!-- 4) PROSSIMO INCONTRO (solo se esiste) -->
  ${nextMeet?`<div class="sec-title">Prossimo incontro</div>
  <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
    <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
    <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
    <span class="meet-go">›</span>
  </div>`:''}
-
- <!-- 4) CURIOSITÀ DELLA SETTIMANA -->
- <div class="sec-title">Curiosità della settimana</div>
- <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->
  <div id="invitesBox" class="lib-last-card"></div>`;
