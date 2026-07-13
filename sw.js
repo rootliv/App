@@ -1,11 +1,20 @@
-/* Service worker di Pàgina — strategia NETWORK-FIRST.
+/* Service worker di Pàgina — strategia NETWORK-FIRST con bypass FORZATO della cache HTTP.
    Scopo principale: rendere l'app installabile come PWA (icona sulla home, apertura
-   standalone). La cache è usata SOLO come ripiego offline: ogni richiesta prova prima
-   la rete, così l'utente riceve sempre la versione più aggiornata del sito (coerente
-   con i meta anti-cache già presenti in index.html).
-   Nota: la cache viene svuotata e rinominata ad ogni cambio di CACHE_VERSION. */
+   standalone). La Cache Storage (Cache API) è usata SOLO come ripiego offline.
 
-const CACHE_VERSION = 'pagina-v34';
+   IMPORTANTE — lezione imparata: un semplice fetch(req) NON garantisce una richiesta di
+   rete davvero fresca. Il browser (e in mezzo, a volte, la rete dati/il proxy del gestore
+   telefonico) può comunque soddisfare quella fetch con una risposta HTTP già in cache,
+   perché fetch() di per sé rispetta le regole di cache HTTP standard salvo indicazione
+   contraria. I meta tag "Cache-Control"/"Pragma" in index.html NON bastano: i browser
+   moderni li ignorano in gran parte per le pagine di navigazione — servirebbe un vero
+   header HTTP dal server, cosa che GitHub Pages non permette di configurare. Per questo
+   qui si forza esplicitamente {cache:'no-store'} su ogni richiesta di rete: bypassa
+   qualunque cache HTTP intermedia (browser, rete mobile, CDN) e garantisce che l'utente
+   riceva sempre l'ultima versione pubblicata.
+   Nota: la Cache Storage viene svuotata e rinominata ad ogni cambio di CACHE_VERSION. */
+
+const CACHE_VERSION = 'pagina-v35';
 const OFFLINE_URLS = ['./', './index.html', './styles.css', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -29,8 +38,11 @@ self.addEventListener('fetch', (event) => {
   // passano dritte alla rete senza toccare la cache.
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
+  // Richiesta "fresca" forzata: no-store ignora qualunque cache HTTP nel percorso.
+  const freshReq = new Request(req.url, { cache: 'no-store', credentials: req.credentials, mode: 'same-origin' });
+
   event.respondWith(
-    fetch(req)
+    fetch(freshReq)
       .then((res) => {
         // aggiorna la copia offline in background
         const copy = res.clone();
