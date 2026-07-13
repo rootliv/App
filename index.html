@@ -123,12 +123,14 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div onclick="toggleSidebar(false);go('profilo')" title="Vai al profilo" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
+      <div class="side-foot-user" onclick="toggleSidebar(false);go('profilo')" title="Vai al profilo">
         <div class="av" id="meAv">EM</div>
-        <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
+        <div class="side-foot-id"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
-      <button id="themeBtn" onclick="toggleTheme()" aria-label="Cambia tema chiaro/scuro" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:grid;place-items:center"></button>
-      <button onclick="logout()" aria-label="Esci dall'account" style="background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:grid;place-items:center"><span id="sbLogoutIcon"></span></button>
+      <div class="side-foot-actions">
+        <button id="themeBtn" onclick="toggleTheme()" aria-label="Cambia tema chiaro/scuro" class="side-foot-btn"></button>
+        <button onclick="logout()" aria-label="Esci dall'account" class="side-foot-btn"><span id="sbLogoutIcon"></span></button>
+      </div>
     </div>
   </aside>
 
@@ -1007,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v127 (fallback public_profiles, drawer non coperto, dark contrasti, home riorg)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v128 (footer drawer leggibile, brand discreto, dark tinte pulite)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
