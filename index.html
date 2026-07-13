@@ -13,7 +13,7 @@
      inline in tutta la pagina; rimuoverlo richiederebbe una riscrittura estesa dell'architettura
      (vedi report di sicurezza per i dettagli). object-src, frame-ancestors e base-uri sono comunque
      bloccati, e connect-src limita l'esfiltrazione dei dati alle sole API note dell'app. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://ogcgfemadhtzzhdjkjda.supabase.co https://www.googleapis.com https://openlibrary.org https://covers.openlibrary.org https://query.wikidata.org https://it.wikipedia.org https://photon.komoot.io https://*.basemaps.cartocdn.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://ogcgfemadhtzzhdjkjda.supabase.co https://www.googleapis.com https://openlibrary.org https://covers.openlibrary.org https://query.wikidata.org https://www.wikidata.org https://it.wikipedia.org https://en.wikipedia.org https://photon.komoot.io https://*.basemaps.cartocdn.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>Pàgina · Club del libro & libreria virtuale</title>
 <!-- PWA: consente di installare l'app sulla schermata home con icona e apertura standalone -->
 <link rel="manifest" href="manifest.json">
@@ -1003,7 +1003,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v123 (curiosita orfane, dark map, no Modifica in profilo, autore stat)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v124 (FIX CSP bloccava wikidata/en.wikipedia, Svizzera multilingua)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2743,7 +2743,22 @@ const COUNTRY_IT={
  'israel':'Israele','iran':'Iran','iraq':'Iraq','saudi arabia':'Arabia Saudita','afghanistan':'Afghanistan',
  'italy':'Italia','albania':'Albania','croatia':'Croazia','serbia':'Serbia','romania':'Romania','bulgaria':'Bulgaria'
 };
-function normCountry(c){if(!c)return '';const it=COUNTRY_IT[c.trim().toLowerCase()];return it||c;}
+function normCountry(c){
+ if(!c)return '';
+ const raw=c.trim();
+ const direct=COUNTRY_IT[raw.toLowerCase()];
+ if(direct)return direct;
+ // OSM restituisce alcuni paesi multilingua con tutte le varianti unite da "/"
+ // (es. Svizzera: "Schweiz/Suisse/Svizzera/Svizra"). Proviamo ogni parte:
+ // se una combacia con una nostra chiave, o è già essa stessa un nome italiano noto, usiamo quella.
+ if(raw.includes('/')){
+   const parts=raw.split('/').map(p=>p.trim());
+   for(const p of parts){const hit=COUNTRY_IT[p.toLowerCase()];if(hit)return hit;}
+   const itNames=new Set(Object.values(COUNTRY_IT).map(v=>v.toLowerCase()));
+   for(const p of parts){if(itNames.has(p.toLowerCase()))return p;}
+ }
+ return raw;
+}
 function initMapCloud(locs){
  if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
  if(typeof L==='undefined')return;
