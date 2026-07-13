@@ -1009,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v133 (home ridisegnata su mockup: icone titoli, ordine, obiettivo inline)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v134 (profilo: motto, icone per genere, elimina account rifinito)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1413,6 +1413,26 @@ function confirmReadAdd(i){
  const sel=document.getElementById('addReadYear');
  const fy=sel&&sel.value?(+sel.value||null):null;
  quickAdd(i,'read',fy);
+}
+function editMotto(){
+ const cur=(profile&&profile.data&&profile.data.motto)||'';
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>La tua frase</b><button class="icon-close" onclick="closeModal()" aria-label="Chiudi">${icon('close')}</button></div>
+  <div class="modal-body">
+    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Una frase che ti rappresenta come lettore</label>
+    <textarea id="mottoInput" rows="2" maxlength="80" placeholder="Es. Leggo per capire, ricordo per crescere." style="width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:14px;resize:none;background:var(--surface);color:var(--ink)">${esc(cur)}</textarea>
+    <div class="muted" style="font-size:11px;margin:6px 2px 16px">Massimo 80 caratteri.</div>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveMotto()">${icon('check')} Salva</button>
+  </div>`;
+ openOverlay();
+ setTimeout(()=>{const el=$('#mottoInput');if(el)el.focus()},80);
+}
+async function saveMotto(){
+ const v=((document.getElementById('mottoInput')||{}).value||'').trim().slice(0,80);
+ if(!profile.data)profile.data={};profile.data.motto=v;
+ if(mode==='cloud'&&supa){try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}}
+ else save();
+ closeModal();renderProfiloPage();
 }
 function editGoal(){
  const cur=(profile&&profile.data&&+profile.data.goal)||0;
@@ -3582,6 +3602,20 @@ function topCount(arr,lim){
 }
 let libYear='all'; // filtro anno libreria: 'all' | numero | 'nodate'
 /* ===== PAGINA PROFILO: ritratto del lettore su TUTTA la libreria ===== */
+// Icona rappresentativa per ciascun genere (fallback: libro). Nomi in italiano minuscolo.
+const GENRE_ICON={
+ 'giallo':'search','thriller':'search','noir':'search','poliziesco':'search','mistero':'search',
+ 'romanzo':'book','narrativa':'book','classici':'book','letteratura':'book',
+ 'autobiografia':'profile','biografia':'profile','memoir':'profile',
+ 'fantasy':'sparkles','fantascienza':'sparkles','fantastico':'sparkles','distopia':'sparkles',
+ 'storico':'calendar','storia':'calendar',
+ 'horror':'alert','orrore':'alert',
+ 'poesia':'edit','saggio':'edit','saggistica':'edit',
+ 'romantico':'star','rosa':'star','realismo magico':'star',
+ 'avventura':'globe','viaggio':'globe','viaggi':'globe',
+ 'fumetto':'grid','graphic novel':'grid'
+};
+function genreIcon(name){const k=(name||'').trim().toLowerCase();return GENRE_ICON[k]||'book';}
 function renderProfiloPage(){
  if(!clubsLoaded){view.innerHTML=profileSkeleton();cloudLoadClubs().then(()=>{clubsLoaded=true;renderProfiloPage()});return}
  autoEnrichGenres();
@@ -3608,6 +3642,11 @@ function renderProfiloPage(){
    <div class="me-id">
      <div class="me-name">${esc(p.name)||'Lettore'}</div>
      <div class="me-sub">${(p.username&&p.name&&p.name.toLowerCase()!==p.username.toLowerCase())?'@'+esc(p.username)+' · ':''}Iscritto dal ${yr}</div>
+     <div class="me-motto" onclick="editMotto()" title="Modifica la tua frase">
+       <span class="me-motto-ic">${icon('book')}</span>
+       <span class="me-motto-tx">${d.motto?esc(d.motto):'<span class=\'me-motto-empty\'>Aggiungi una frase che ti rappresenta</span>'}</span>
+       <span class="me-motto-edit">${icon('edit')}</span>
+     </div>
    </div>
  </div>
 
@@ -3633,13 +3672,16 @@ function renderProfiloPage(){
      const isNone=g[0]==='Senza genere';
      const col=isNone?GREY:palette[i%palette.length];
      const label=`${g[0]}, ${g[1]} ${g[1]===1?'libro':'libri'} su ${total}, ${pcts[i]} percento`;
-     return `<div class="gb-row" role="listitem" aria-label="${esc(label)}">
-       <div class="gb-top" aria-hidden="true"><span class="gb-name" style="${isNone?'color:var(--ink-soft)':''}">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
-       <div class="gb-track" aria-hidden="true"><i style="width:${pcts[i]}%;background:${col}"></i></div>
+     return `<div class="gb-row2" role="listitem" aria-label="${esc(label)}">
+       <span class="gb-icon" style="background:${col}" aria-hidden="true">${icon(isNone?'bookmark':genreIcon(g[0]))}</span>
+       <div class="gb-main" aria-hidden="true">
+         <div class="gb-top"><span class="gb-name">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
+         <div class="gb-track"><i style="width:${pcts[i]}%;background:${col}"></i></div>
+       </div>
      </div>`;}).join('')}</div>`
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
- ${mode==='cloud'?`<div style="text-align:center;margin-top:22px"><button class="linklike-danger" style="font-size:11.5px" onclick="openEditProfile();setTimeout(()=>{const z=document.querySelector('.ep-danger-zone');if(z)z.scrollIntoView({block:'center'})},80)">Elimina account</button></div>`:''}`;
+ ${mode==='cloud'?`<div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid var(--line)"><button class="linklike-danger" style="font-size:12.5px" onclick="openEditProfile();setTimeout(()=>{const z=document.querySelector('.ep-danger-zone');if(z)z.scrollIntoView({block:'center'})},80)">Elimina account</button></div>`:''}`;
 }
 function authorRow(name,count,tag){
  return `<div class="author-row"><div class="author-av">${ini2(name)}</div>
