@@ -1009,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v128 (footer drawer leggibile, brand discreto, dark tinte pulite)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v129 (notifiche ridisegnate, follow/membri fix, paesi eleganti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1592,9 +1592,13 @@ async function loadSocialNotifs(){
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
  const ids=(mem||[]).map(m=>m.user_id);if(!ids.length)return [];
- const {data:profs}=await pubProfiles('id,name,username,avatar',ids);
+ const profs=await pubProfiles('id,name,username,avatar',ids);
  const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
- return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||'',avatar:(pm[m.user_id]&&pm[m.user_id].avatar)||''}));
+ return (mem||[]).map(m=>{const p=pm[m.user_id]||{};
+   return {id:m.user_id,role:m.role,
+     name:p.username||p.name||'lettore',
+     username:p.username||'',
+     avatar:p.avatar||''};});
 }
 function ini2(n){return ((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase()}
 function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}
@@ -1820,8 +1824,8 @@ function renderClubCloud(){
    const mEl=$('#clubMembers');
    if(mEl)mEl.innerHTML=list.length?list.map(m=>{
      const roleLabel=m.role==='admin'?'Admin':'Membro';
-     return `<div class="member-row"><div class="av" style="background:${pal(m.name.length)[0]}">${avFill(m.name,m.avatar)}</div>
-     <div style="min-width:0;flex:1"><b>${esc(m.name)}${m.id===authUser.id?' (tu)':''}</b><div class="muted" style="font-size:11.5px">${m.username?'@'+esc(m.username)+' · ':''}${roleLabel}</div></div>
+     return `<div class="member-row"><div class="av" style="background:${pal((m.name||'?').length)[0]}">${avFill(m.username||m.name,m.avatar)}</div>
+     <div style="min-width:0;flex:1"><b>@${esc(m.username||m.name||'lettore')}${m.id===authUser.id?' (tu)':''}</b><div class="muted" style="font-size:11.5px">${roleLabel}</div></div>
      ${m.role==='admin'?'<span class="role-dot" aria-hidden="true"></span>':''}</div>`;
    }).join(''):'<div class="muted">Nessun membro.</div>';
    const av=$('#clubAvs');
@@ -2728,9 +2732,11 @@ function renderMappaCloud(){
  <div id="detectLive" aria-live="polite" class="sr-only"></div>
  ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
  <div class="card pad">
-   <div class="place-list">${countryRows.map(([country,items])=>`<div class="place-row" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')">
-     <span style="flex:1">${esc(normCountry(country))}</span><span class="muted">${items.length} ${items.length===1?'libro':'libri'}</span>
-   </div>`).join('')}</div>
+   <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')">
+     <span class="place-flag">${flag||icon('globe')}</span>
+     <div class="place-main"><div class="place-name">${esc(nm)}</div><div class="place-bar"><i style="width:${pctW}%"></i></div></div>
+     <span class="place-count">${items.length}</span>
+   </div>`}).join('')})()}</div>
  </div>`:''}
  ${noPlace.length?`<div class="card pad" style="margin-top:16px">
    <div class="muted" style="font-size:12.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px">${icon('sparkles')} ${noPlace.length} ${noPlace.length===1?'libro senza luogo reale':'libri senza luogo reale'} — ambientazione immaginaria o non specificata:</div>
@@ -2766,6 +2772,28 @@ const COUNTRY_IT={
  'israel':'Israele','iran':'Iran','iraq':'Iraq','saudi arabia':'Arabia Saudita','afghanistan':'Afghanistan',
  'italy':'Italia','albania':'Albania','croatia':'Croazia','serbia':'Serbia','romania':'Romania','bulgaria':'Bulgaria'
 };
+// Bandierina emoji dal nome paese: mappa i paesi noti al loro codice ISO a 2 lettere e
+// lo converte nei simboli "regional indicator" che compongono l'emoji bandiera. Se il
+// paese non è mappato, ritorna stringa vuota (chi chiama userà un'icona generica).
+const COUNTRY_ISO={
+ 'italia':'IT','stati uniti':'US','giappone':'JP','regno unito':'GB','francia':'FR','germania':'DE',
+ 'spagna':'ES','portogallo':'PT','svizzera':'CH','austria':'AT','paesi bassi':'NL','belgio':'BE',
+ 'svezia':'SE','norvegia':'NO','danimarca':'DK','finlandia':'FI','islanda':'IS','irlanda':'IE',
+ 'grecia':'GR','turchia':'TR','russia':'RU','ucraina':'UA','polonia':'PL','repubblica ceca':'CZ',
+ 'ungheria':'HU','romania':'RO','bulgaria':'BG','croazia':'HR','serbia':'RS','albania':'AL',
+ 'canada':'CA','messico':'MX','brasile':'BR','argentina':'AR','cile':'CL','colombia':'CO','perù':'PE','cuba':'CU',
+ 'cina':'CN','corea del sud':'KR','corea del nord':'KP','india':'IN','pakistan':'PK','indonesia':'ID',
+ 'tailandia':'TH','vietnam':'VN','filippine':'PH','malesia':'MY','singapore':'SG',
+ 'egitto':'EG','marocco':'MA','algeria':'DZ','tunisia':'TN','nigeria':'NG','sudafrica':'ZA','kenya':'KE','etiopia':'ET',
+ 'australia':'AU','nuova zelanda':'NZ','israele':'IL','iran':'IR','iraq':'IQ','arabia saudita':'SA','afghanistan':'AF'
+};
+function countryFlag(rawCountry,italianName){
+ const key=(italianName||'').toLowerCase();
+ let iso=COUNTRY_ISO[key];
+ if(!iso){const k2=(rawCountry||'').toLowerCase();iso=COUNTRY_ISO[k2];}
+ if(!iso||iso.length!==2)return '';
+ return String.fromCodePoint(...[...iso.toUpperCase()].map(c=>0x1F1E6+(c.charCodeAt(0)-65)));
+}
 function normCountry(c){
  if(!c)return '';
  const raw=c.trim();
@@ -2870,12 +2898,12 @@ async function renderFollowingList(){
    const ids=(data||[]).map(r=>r.followed_id);
    myFollowing=ids;
    if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
-   const {data:profs}=await pubProfiles('id,name,username,public_library',ids);
+   const profs=await pubProfiles('id,name,username,public_library',ids);
    box.innerHTML=(profs||[]).map(u=>`<div class="user-row">
-     <div class="user-av">${ini2(u.name||u.username||'?')}</div>
-     <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
-       <b>${esc(u.name||u.username)}</b>
-       <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 libreria visibile':'· 🔒 privata'}</div>
+     <div class="user-av">${avFill(u.name||u.username||'?',u.avatar)}</div>
+     <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.username||u.name||'').replace(/'/g,''))}')">
+       <b>@${esc(u.username||u.name||'lettore')}</b>
+       <div class="muted" style="font-size:12px">${u.public_library?'libreria visibile':'libreria privata'}</div>
      </div>
      <button class="btn ghost sm" onclick="unfollowFromList('${u.id}',this)">Smetti</button>
    </div>`).join('');
@@ -4021,7 +4049,7 @@ function renderNotifCloud(){
        const key=it.key||(it.t+it.p);
        const unread=!readKeys.has(key);
        return `<button type="button" class="notif ${unread?'unread':''}" data-notif-key="${esc(key)}" onclick="openNotifItem('${esc(key)}',${it.cid||'null'},'${it.go}')" aria-label="${unread?'Non letta: ':''}${esc(it.t)}. ${esc(it.p)}">
-         <span class="ni" style="background:${it.bg}">${icon(it.ic)}</span>
+         <span class="ni">${icon(it.ic)}</span>
          <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p></span>
          ${unread?'<span class="notif-dot" aria-hidden="true"></span>':''}
          <span class="notif-open">Apri</span>
