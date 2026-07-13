@@ -1007,7 +1007,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v126 (FIX desktop-nav persa, footer profilo, autori manuali rimossi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v127 (fallback public_profiles, drawer non coperto, dark contrasti, home riorg)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1534,6 +1534,23 @@ function pendingItems(){
 let socialNotifs=[];
 /* Carica notifiche "sociali": inviti che HO mandato e sono stati accettati, e nuovi follower.
    Confronta con ciò che ho già visto (localStorage) per non ripeterle all'infinito. */
+// Legge i profili pubblici. Usa la vista sicura public_profiles se esiste; se il DB
+// risponde con errore (es. migration di sicurezza non ancora applicata), ripiega sulla
+// tabella profiles limitandosi comunque alle sole colonne non sensibili. Così l'app
+// resta funzionante anche prima che la migration venga lanciata, senza mai chiedere l'email.
+let _pubProfBroken=false;
+async function pubProfiles(cols,ids){
+ const safeCols=cols||'id,name,username';
+ if(!_pubProfBroken){
+   const {data,error}=await supa.from('public_profiles').select(safeCols).in('id',ids);
+   if(!error)return data||[];
+   _pubProfBroken=true; // la vista non c'è: non riproviamo ogni volta, passiamo al fallback
+ }
+ // Fallback: profiles ha l'avatar dentro il jsonb "data", quindi lo mappiamo a mano.
+ const fbCols=safeCols.replace(/\bavatar\b/,'data');
+ const {data}=await supa.from('profiles').select(fbCols).in('id',ids);
+ return (data||[]).map(p=>{if(p&&p.data&&typeof p.data==='object'){p.avatar=p.data.avatar||'';}return p;});
+}
 async function loadSocialNotifs(){
  if(mode!=='cloud'||!supa){socialNotifs=[];return;}
  const out=[];
@@ -1544,7 +1561,7 @@ async function loadSocialNotifs(){
      const cids=[...new Set(rec.map(i=>i.club_id))];const uids=[...new Set(rec.map(i=>i.inviter_id))];
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      rec.forEach(i=>out.push({ic:'club',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
    }
  }catch(e){}
@@ -1555,7 +1572,7 @@ async function loadSocialNotifs(){
      const cids=[...new Set(inv.map(i=>i.club_id))];const uids=[...new Set(inv.map(i=>i.invitee_id))];
      const cmap={},umap={};
      try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      inv.forEach(i=>out.push({ic:'check',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
    }
  }catch(e){}
@@ -1564,7 +1581,7 @@ async function loadSocialNotifs(){
    const {data:fol}=await supa.from('follows').select('follower_id,created_at').eq('followed_id',authUser.id).order('created_at',{ascending:false}).limit(20);
    if(fol&&fol.length){
      const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
-     try{const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
+     try{const {data:pr}=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.name||p.username);}catch(e){}
      fol.forEach(f=>out.push({ic:'profile',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
    }
  }catch(e){}
@@ -1573,7 +1590,7 @@ async function loadSocialNotifs(){
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
  const ids=(mem||[]).map(m=>m.user_id);if(!ids.length)return [];
- const {data:profs}=await supa.from('public_profiles').select('id,name,username,avatar').in('id',ids);
+ const {data:profs}=await pubProfiles('id,name,username,avatar',ids);
  const pm={};(profs||[]).forEach(p=>pm[p.id]=p);
  return (mem||[]).map(m=>({id:m.user_id,role:m.role,name:(pm[m.user_id]&&pm[m.user_id].name)||'Lettore',username:(pm[m.user_id]&&pm[m.user_id].username)||'',avatar:(pm[m.user_id]&&pm[m.user_id].avatar)||''}));
 }
@@ -2030,7 +2047,7 @@ async function loadAndRenderProposals(clubId){
  const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
  const myVote=(votes||[]).find(v=>v.user_id===authUser.id);
  const ids=[...new Set((props||[]).map(p=>p.user_id))];const pm={};
- if(ids.length){const {data:pr}=await supa.from('public_profiles').select('id,name').in('id',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
+ if(ids.length){const {data:pr}=await pubProfiles('id,name',ids);(pr||[]).forEach(p=>pm[p.id]=p.name)}
  if(!props||!props.length){el.innerHTML='<div class="muted" style="font-size:13px">Ancora nessuna proposta. Proponi tu il primo libro!</div>';return}
  const total=(votes||[]).length;
  el.innerHTML=props.map(p=>{const n=counts[p.id]||0;const mine=myVote&&myVote.proposal_id===p.id;const own=p.user_id===authUser.id;
@@ -2197,7 +2214,7 @@ async function loadClubNotes(c){
  }catch(e){lockedAhead=0}
  cloudNotes=visible; cloudNotesLocked=lockedAhead; cloudNotesLockedMinPos=lockedMinPos;
  const ids=[...new Set(cloudNotes.map(n=>n.user_id))];noteAuthors={};
- if(ids.length){const {data:profs}=await supa.from('public_profiles').select('id,name,username,avatar').in('id',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
+ if(ids.length){const {data:profs}=await pubProfiles('id,name,username,avatar',ids);(profs||[]).forEach(p=>noteAuthors[p.id]=p)}
 }
 let cloudNotesLocked=0;
 let cloudNotesLockedMinPos=null;
@@ -2851,7 +2868,7 @@ async function renderFollowingList(){
    const ids=(data||[]).map(r=>r.followed_id);
    myFollowing=ids;
    if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
-   const {data:profs}=await supa.from('public_profiles').select('id,name,username,public_library').in('id',ids);
+   const {data:profs}=await pubProfiles('id,name,username,public_library',ids);
    box.innerHTML=(profs||[]).map(u=>`<div class="user-row">
      <div class="user-av">${ini2(u.name||u.username||'?')}</div>
      <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
@@ -2886,8 +2903,13 @@ async function doSearchUsers(q){
  try{
    // Ricerca solo per username/nome: la vista public_profiles non espone l'email,
    // e cercare persone per email (dato privato) è di per sé un rischio di privacy.
-   const {data}=await supa.from('public_profiles').select('id,name,username,avatar,public_library')
+   let data;
+   const q1=await supa.from(_pubProfBroken?'profiles':'public_profiles').select(_pubProfBroken?'id,name,username,public_library':'id,name,username,avatar,public_library')
      .neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+   if(q1.error&&!_pubProfBroken){_pubProfBroken=true;
+     const q2=await supa.from('profiles').select('id,name,username,public_library').neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+     data=q2.data;
+   }else data=q1.data;
    if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato per “'+esc(q)+'”.</div>';return}
    box.innerHTML=data.slice(0,12).map(u=>{
      const following=myFollowing.includes(u.id);
@@ -2958,8 +2980,13 @@ async function doSearchInvitees(clubId,q){
  const qq=(q||'').replace(/[%,()]/g,' ').trim();
  if(!qq){box.innerHTML='';return}
  try{
-   const {data}=await supa.from('public_profiles').select('id,name,username')
+   let data;
+   const q1=await supa.from(_pubProfBroken?'profiles':'public_profiles').select('id,name,username')
      .neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+   if(q1.error&&!_pubProfBroken){_pubProfBroken=true;
+     const q2=await supa.from('profiles').select('id,name,username').neq('id',authUser.id).or(`username.ilike.%${qq}%,name.ilike.%${qq}%`).limit(12);
+     data=q2.data;
+   }else data=q1.data;
    if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
    box.innerHTML=data.slice(0,12).map(u=>{
      let btn;
@@ -3051,7 +3078,7 @@ async function renderMyInvites(){
  try{const cids=[...new Set(invites.map(i=>i.club_id))];
    const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>clubNames[c.id]=c.name);
    const iids=[...new Set(invites.map(i=>i.inviter_id))];
-   const {data:pr}=await supa.from('public_profiles').select('id,name,username').in('id',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.name||p.username);
+   const {data:pr}=await pubProfiles('id,name,username',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.name||p.username);
  }catch(e){}
  box.innerHTML=`<div class="card pad" style="margin-top:18px;border-left:4px solid var(--gold)">
    <h3 style="font-size:16px;margin-bottom:12px">✉️ Inviti ai club</h3>
@@ -3691,6 +3718,8 @@ function renderHomeCloud(){
  const goalPct=STATS.goalPct();
  const goalPctBar=STATS.goalPctClamped();
 
+ const nextMeet=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
+
  view.innerHTML=`
  <!-- 1) CONTINUA A LEGGERE — sezione più importante -->
  <div class="sec-title">Continua a leggere</div>
@@ -3714,9 +3743,13 @@ function renderHomeCloud(){
    <button class="qs-cell tint-info" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
- <!-- 3) IL TUO ANNO DI LETTURA -->
- <div class="sec-title">Il tuo anno di lettura</div>
- ${yearSummaryCard(readYr,YR)}
+ <!-- 3) PROSSIMO INCONTRO (solo se esiste) -->
+ ${nextMeet?`<div class="sec-title">Prossimo incontro</div>
+ <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
+   <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
+   <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
+   <span class="meet-go">›</span>
+ </div>`:''}
 
  <!-- 4) CURIOSITÀ DELLA SETTIMANA -->
  <div class="sec-title">Curiosità della settimana</div>
