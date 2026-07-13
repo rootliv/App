@@ -1009,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v131 (home compatta: meno spazi morti, piu contenuto per vista)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v132 (rimosse substat obiettivo dalla home)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3765,11 +3765,6 @@ function renderHomeCloud(){
  <div class="sec-title">Obiettivo ${YR}</div>
  <div class="card pad goal-card-v2">
    ${goalBlock(goal,readYrN,goalPct,goalPctBar,YR)}
-   <div class="goal-substats">
-     <div class="gs-item"><b>${readYrN}</b> completati nel ${YR}</div>
-     <div class="gs-sep"></div>
-     <div class="gs-item"><b>${readTotal}</b> letti complessivamente</div>
-   </div>
  </div>
 
  <!-- Statistiche rapide, cliccabili solo se portano a una destinazione reale -->
