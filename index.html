@@ -123,7 +123,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div onclick="toggleSidebar(false);openEditProfile()" title="Impostazioni account" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
+      <div onclick="toggleSidebar(false);go('profilo')" title="Vai al profilo" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">
         <div class="av" id="meAv">EM</div>
         <div style="flex:1;min-width:0"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
@@ -423,8 +423,12 @@ function buildNav(){
  const ci=document.getElementById('sbCloseIcon');if(ci)ci.innerHTML=icon('close');
  const li=document.getElementById('sbLogoutIcon');if(li)li.innerHTML=icon('logout');
  let html='',last='';
- pages.filter(p=>!p.inBotNav).forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
-   html+=`<button data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${icon(p.ic)}</span>${p.label}</button>`});
+ // Tutte le voci compaiono nel drawer: su desktop la bottom-nav è nascosta, quindi le
+ // sezioni principali (Home/Profilo/Libreria/Club/Assistente) devono restare raggiungibili
+ // da qui. Solo sotto i 900px (dove la bottom-nav è visibile davvero) la classe .dup-botnav
+ // le nasconde via CSS, evitando la duplicazione senza mai renderle irraggiungibili.
+ pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
+   html+=`<button class="${p.inBotNav?'dup-botnav':''}" data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${icon(p.ic)}</span>${p.label}</button>`});
  $('#nav').innerHTML=html;
  const main=['home','profilo','libreria','club','ai'];
  $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
@@ -1003,7 +1007,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v125 (FIX RADICE 2: SW forza no-store, bypassa cache HTTP reale)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v126 (FIX desktop-nav persa, footer profilo, autori manuali rimossi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3108,8 +3112,7 @@ function openEditProfile(){
  const d=(profile&&profile.data)||{};
  editSel={genres:(d.genres||[]).slice(),authors:(d.authors||[]).slice(),loved:(d.loved||[]).slice(),disliked:(d.disliked||[]).slice()};
  const groups=[
-   ['genres','Generi preferiti','Che tipo di storie ami leggere','Aggiungi un genere…',false],
-   ['authors','Autori preferiti','Le firme che segui','Aggiungi un autore…',false]
+   ['genres','Generi preferiti','Che tipo di storie ami leggere','Aggiungi un genere…',false]
  ];
  $('#modal').innerHTML=`
   <div class="modal-top"><b>Modifica profilo</b><button class="icon-close" onclick="closeModal()" aria-label="Chiudi modifica profilo">${icon('close')}</button></div>
@@ -3549,7 +3552,6 @@ function renderProfiloPage(){
  <div class="stat-strip">
    <div class="stat-cell"><div class="stat-n">${nRead}</div><div class="stat-l">Letti in totale</div></div>
    <div class="stat-cell"><div class="stat-n">${nYr}</div><div class="stat-l">Letti nel ${YR}</div></div>
-   <div class="stat-cell"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
  </div>
  ${(topG||topAL)?`<div class="stat-strip">
    ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
@@ -3557,7 +3559,7 @@ function renderProfiloPage(){
  </div>`:''}
 
  <div class="sec-head"><div class="sec-title">I tuoi generi</div><button class="link-btn" onclick="openEditProfile()" aria-label="Modifica i generi del tuo profilo">Modifica generi</button></div>
- <div class="card pad">
+ <div class="card pad lib-last-card">
    ${total>0?`
    <div class="genre-summary-row">
      <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total}`:(total===1?'Il tuo libro è classificato':`Tutti i ${total} libri sono classificati`)}</div>
@@ -3575,15 +3577,7 @@ function renderProfiloPage(){
      </div>`;}).join('')}</div>`
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
-
- <div class="sec-title">Autori preferiti</div>
- <div class="card pad lib-last-card">
-   ${(manualAuthors.length||derivedAuthors.length)?`<div class="author-list">
-     ${manualAuthors.map(a=>authorRow(a,null,'Scelto da te')).join('')}
-     ${derivedAuthors.slice(0,8).map(a=>authorRow(a[0],a[1],'Dalle tue letture')).join('')}
-   </div>`
-   :`<div class="empty-mini"><span class="icn-badge mauve">${icon('profile')}</span><div><b>Non hai ancora indicato autori preferiti</b><p>Selezionali per ricevere consigli più pertinenti.</p><button class="btn sm" style="margin-top:10px" onclick="openEditProfile()">Scegli autori</button></div></div>`}
- </div>`;
+ ${mode==='cloud'?`<div style="text-align:center;margin-top:22px"><button class="linklike-danger" style="font-size:11.5px" onclick="openEditProfile();setTimeout(()=>{const z=document.querySelector('.ep-danger-zone');if(z)z.scrollIntoView({block:'center'})},80)">Elimina account</button></div>`:''}`;
 }
 function authorRow(name,count,tag){
  return `<div class="author-row"><div class="author-av">${ini2(name)}</div>
@@ -3808,7 +3802,6 @@ function yearSummaryCard(readYr,YR){
  return `<div class="card pad">
    <div class="stat-row-editorial">
      <div class="sre-item"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
-     <div class="sre-item"><div class="stat-n">${fmtIt(pages)}</div><div class="stat-l">Pagine lette</div></div>
      <div class="sre-item"><div class="stat-n">${fmtItDecimal(avg)}</div><div class="stat-l">Media/mese nel ${YR}</div></div>
    </div>
    ${(topG||topAL)?`<div class="sre-divider"></div><div class="stat-row-editorial">
