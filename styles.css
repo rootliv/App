@@ -164,6 +164,11 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .muted{color:var(--ink-soft)}
 .faint{color:var(--ink-faint)}
 .sec-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;margin:20px 0 11px;display:flex;align-items:center;gap:10px}
+.sec-head-ic{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px}
+.sec-title-ic{display:flex;align-items:center;gap:10px;font-family:'Fraunces',serif;font-size:19px;font-weight:600;letter-spacing:-.01em;min-width:0}
+.sec-title-ic .icn{width:20px;height:20px;color:var(--primary);flex:none}
+.sec-head-ic .link-btn{flex:none;white-space:nowrap}
+.sec-head-ic:first-child{margin-top:6px}
 .sec-title::before{content:"";width:5px;height:22px;border-radius:4px;background:var(--brand-grad);flex:none}
 .sec-title:first-child{margin-top:6px}
 hr{border:none;border-top:1px solid var(--line);margin:20px 0}
@@ -988,6 +993,9 @@ body.sidebar-open .topsearch-res{display:none!important}
   .search{display:none}
   .pad{padding:15px}
   .sec-title{font-size:17px;margin:16px 0 9px}
+  .sec-head-ic{margin:16px 0 9px}
+  .sec-title-ic{font-size:17px}
+  .sec-title-ic .icn{width:18px;height:18px}
   .club-banner{padding:20px}
   .club-banner h2{font-size:24px}
   .diary-head{gap:14px}
@@ -1055,10 +1063,15 @@ body.sidebar-open .topsearch-res{display:none!important}
 .bar-goal i{background:var(--progress)}
 .primary-outline{background:var(--surface);color:var(--primary);border:1.5px solid var(--primary)!important;box-shadow:none}
 .primary-outline:active{background:var(--primary-muted)}
+.curio-body{display:flex;gap:12px;align-items:center}
 .spoiler-ic{width:12px;height:12px}
 .spoiler-gate{padding:14px 0 4px}
 .clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .goal-card-v2{padding-bottom:16px;background:linear-gradient(180deg,var(--progress-muted) 0%,var(--surface) 65%)}
+.goal-inline{display:flex;align-items:center;gap:16px}
+.goal-num{flex:none;white-space:nowrap}
+.goal-inline-bar{flex:1;height:8px}
+.goal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
 .goal-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .goal-substats{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
 .goal-substats b{color:var(--ink);font-weight:700}

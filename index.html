@@ -1009,7 +1009,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v132 (rimosse substat obiettivo dalla home)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v133 (home ridisegnata su mockup: icone titoli, ordine, obiettivo inline)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3495,17 +3495,22 @@ function curioEmptyCard(){return '<div class="card pad" style="text-align:center
 function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
  const hideText=!!p.read; // possibile spoiler: il testo non si vede finché non lo apri tu
- box.innerHTML='<div class="card pad" style="position:relative">'
-  +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px">'
-   +'<span class="badge-tint sage" style="font-size:11.5px">'+esc(p.category)+'</span>'
-   +'<span class="muted" style="font-size:12.5px">«'+esc(p.title)+'» · '+esc(p.author)+'</span>'
+ // Badge "Spoiler" accanto al titolo di sezione (come nel mockup)
+ const head=document.getElementById('curioHead');
+ if(head){const old=head.querySelector('.curio-spoiler-badge');if(old)old.remove();
+   if(hideText){const b=document.createElement('span');b.className='badge-tint info curio-spoiler-badge';b.style.fontSize='11px';b.textContent='Spoiler';head.querySelector('.sec-title-ic').appendChild(b);}}
+ const subtitle=hideText?'Contiene dettagli sulla trama':esc(p.category);
+ box.innerHTML='<div class="card pad">'
+  +'<div class="curio-body">'
+    +'<div style="flex:1;min-width:0">'
+      +'<b style="font-family:\'Fraunces\';font-size:15.5px;display:block;line-height:1.3">Curiosità su «'+esc(p.title)+'»</b>'
+      +'<div class="muted" style="font-size:12.5px;margin-top:3px">'+subtitle+' · '+esc(p.author)+'</div>'
+      +(hideText?'':'<p id="curioText" style="font-size:14.5px;line-height:1.55;margin-top:10px">'+esc(p.text)+'</p>')
+      +(hideText?'<p id="curioText" style="font-size:14.5px;line-height:1.55;margin-top:10px;display:none">'+esc(p.text)+'</p>':'')
+    +'</div>'
+    +(hideText?'<button class="btn sm primary-outline curio-show-btn" style="flex:none" onclick="toggleCurioSpoiler(true)">Mostra curiosità</button>':'')
   +'</div>'
-  +(hideText
-    ?'<div id="curioSpoilerWrap"><div class="spoiler-gate"><span class="badge-tint info" style="display:inline-flex;align-items:center;gap:4px">'+icon('alert','spoiler-ic')+' possibili spoiler</span>'
-      +'<button class="btn sm primary-outline" style="margin-top:10px" onclick="toggleCurioSpoiler(true)">Mostra curiosità</button></div>'
-      +'<p id="curioText" style="font-size:15px;line-height:1.6;margin:2px 0 14px;display:none">'+esc(p.text)+'</p></div>'
-    :'<p style="font-size:15px;line-height:1.6;margin:2px 0 14px">'+esc(p.text)+'</p>')
-  +'<div id="curioActions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center'+(hideText?';margin-top:10px;display:none':'')+'">'
+  +'<div id="curioActions" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px'+(hideText?';display:none':'')+'">'
    +'<button class="btn sm" onclick="openBook('+p.bookId+')">Vedi nella libreria</button>'
    +'<button class="btn sm primary-outline" onclick="curioAnother()">Un\'altra</button>'
   +'</div>'
@@ -3513,13 +3518,13 @@ function paintCuriosity(box,p,st){
  if(isNew&&!curioOverride){const s=loadCurioState();s.seen=true;saveCurioState(s);}
 }
 function toggleCurioSpoiler(show){
- const gate=document.querySelector('.spoiler-gate');
  const txt=document.getElementById('curioText');
  const actions=document.getElementById('curioActions');
+ const showBtn=document.querySelector('.curio-show-btn');
  if(!txt)return;
  if(show){
-   if(gate)gate.style.display='none';
    txt.style.display='';
+   if(showBtn)showBtn.style.display='none';
    if(actions){actions.style.display='flex';
      if(!actions.querySelector('.hide-curio-btn')){
        const b=document.createElement('button');b.className='btn ghost sm hide-curio-btn';b.textContent='Nascondi curiosità';
@@ -3751,36 +3756,34 @@ function renderHomeCloud(){
  const nextMeet=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
 
  view.innerHTML=`
- <!-- 1) CONTINUA A LEGGERE — la cosa più importante: cosa sto leggendo ora -->
- <div class="sec-title">Continua a leggere</div>
+ <!-- 1) CONTINUA A LEGGERE -->
+ <div class="sec-head-ic"><div class="sec-title-ic">${icon('book')}<span>Continua a leggere</span></div></div>
  ${continueReadingCard(reading)}
 
- <!-- 2) CURIOSITÀ DELLA SETTIMANA — spunto leggero, legato al libro appena visto:
-      posizionata qui, subito dopo il libro attivo, quando si è più ricettivi, invece che
-      sepolta in fondo dove non la vedeva nessuno. -->
- <div class="sec-title">Curiosità della settimana</div>
- <div id="curioCard"></div>
+ <!-- 2) PROSSIMO INCONTRO (solo se esiste): ha una scadenza, va visto presto -->
+ ${nextMeet?`<div class="sec-head-ic"><div class="sec-title-ic">${icon('calendar')}<span>Prossimo incontro</span></div><button class="link-btn" onclick="go('incontri')">Vedi tutti ›</button></div>
+ <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
+   <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
+   <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
+   <span class="meet-go">›</span>
+ </div>`:''}
 
  <!-- 3) OBIETTIVO ANNUALE -->
- <div class="sec-title">Obiettivo ${YR}</div>
+ <div class="sec-head-ic"><div class="sec-title-ic">${icon('target')}<span>Obiettivo ${YR}</span></div><button class="link-btn" onclick="openEditProfile()">Modifica</button></div>
  <div class="card pad goal-card-v2">
    ${goalBlock(goal,readYrN,goalPct,goalPctBar,YR)}
  </div>
 
- <!-- Statistiche rapide, cliccabili solo se portano a una destinazione reale -->
+ <!-- Statistiche rapide -->
  <div class="quick-stats">
    <button class="qs-cell tint-sage" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic">${icon('book')}</span><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
    <button class="qs-cell tint-gold" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic">${icon('bookmark')}</span><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
    <button class="qs-cell tint-info" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
  </div>
 
- <!-- 4) PROSSIMO INCONTRO (solo se esiste) -->
- ${nextMeet?`<div class="sec-title">Prossimo incontro</div>
- <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
-   <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
-   <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
-   <span class="meet-go">›</span>
- </div>`:''}
+ <!-- 4) CURIOSITÀ DELLA SETTIMANA — spunto piacevole, in chiusura -->
+ <div class="sec-head-ic" id="curioHead"><div class="sec-title-ic">${icon('sparkles')}<span>Curiosità della settimana</span></div></div>
+ <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->
  <div id="invitesBox" class="lib-last-card"></div>`;
@@ -3823,8 +3826,8 @@ function continueReadingCard(reading){
        </div>
      </div>
      <div style="display:flex;gap:8px;margin-top:12px">
-       <button class="btn sm" style="flex:1;justify-content:center" onclick="openBook(${b.id})">Riprendi</button>
-       <button class="btn sm primary-outline" style="flex:1;justify-content:center" onclick="openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">Aggiorna pagina</button>
+       <button class="btn sm" style="flex:1;justify-content:center" onclick="${pr.cur===0?`setStatus(${b.id},'reading');`:''}openBook(${b.id})">${pr.cur===0?'Inizia a leggere':'Riprendi'}</button>
+       <button class="btn sm primary-outline" style="flex:1;justify-content:center;gap:6px" onclick="openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">${icon('bookmark')} Segna pagina</button>
      </div>
    </div>`;
  }).join('')}</div>`;
@@ -3838,13 +3841,19 @@ function goalBlock(goal,read,goalPct,goalPctBar,YR){
  let statusLine;
  if(read>goal)statusLine=`Hai superato il tuo obiettivo di ${goal} libri`;
  else if(read===goal)statusLine='Obiettivo raggiunto';
- else statusLine=`Ti mancano ${goal-read} ${goal-read===1?'libro':'libri'}`;
- return `<div class="goal-top">
-     <div><span class="me-metric-n gold">${read}</span><span class="me-metric-u"> di ${goal} libri</span></div>
-     <button class="goal-edit" onclick="editGoal()" aria-label="Modifica obiettivo">${icon('edit')}</button>
+ else statusLine=`${goal-read} ${goal-read===1?'libro al traguardo':'libri al traguardo'}`;
+ // CTA contestuale: se non hai ancora registrato nulla, invita a farlo; altrimenti niente rumore.
+ const cta=(read===0)
+   ? `<button class="btn ghost sm" onclick="libTab='read';go('libreria')">Registra il primo libro</button>`
+   : (read>=goal ? `<span class="badge-tint gold">Obiettivo raggiunto</span>` : '');
+ return `<div class="goal-inline">
+     <div class="goal-num"><span class="me-metric-n gold">${read}</span><span class="me-metric-u"> di ${goal} libri</span></div>
+     <div class="bar bar-goal goal-inline-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,goalPct)}" aria-label="${esc(label)}"><i style="width:${goalPctBar}%"></i></div>
    </div>
-   <div class="bar bar-goal" style="height:8px;margin-top:9px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100,goalPct)}" aria-label="${esc(label)}"><i style="width:${goalPctBar}%"></i></div>
-   <div class="muted" style="font-size:12px;margin-top:7px" aria-hidden="true">${goalPct}% completato · ${statusLine}${(read>=goal)?' <span class="badge-tint gold">Obiettivo raggiunto</span>':''}</div>`;
+   <div class="goal-foot">
+     <span class="muted" style="font-size:12.5px" aria-hidden="true">${statusLine}</span>
+     ${cta}
+   </div>`;
 }
 /* ===== IL TUO ANNO DI LETTURA ===== */
 function yearSummaryCard(readYr,YR){
