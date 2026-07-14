@@ -14,7 +14,7 @@
    riceva sempre l'ultima versione pubblicata.
    Nota: la Cache Storage viene svuotata e rinominata ad ogni cambio di CACHE_VERSION. */
 
-const CACHE_VERSION = 'pagina-v44';
+const CACHE_VERSION = 'pagina-v45';
 const OFFLINE_URLS = ['./', './index.html', './styles.css', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -49,6 +49,8 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_VERSION).then((c) => c.put(req, copy)).catch(() => {});
         return res;
       })
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html')))
+      // Offline: ignoreSearch così una richiesta versionata (es. styles.css?v=145)
+      // trova comunque la copia salvata (./styles.css), senza restare senza stili.
+      .catch(() => caches.match(req, { ignoreSearch: true }).then((hit) => hit || caches.match('./index.html')))
   );
 });
