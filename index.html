@@ -835,17 +835,6 @@ function openBook(id){
       <div class="muted" style="font-size:11.5px;margin-top:7px">Serve a organizzare la libreria per anno.</div>
     </div>`:''}
 
-    <div class="bd-card">
-      <div class="bd-sec-title">${icon('bookmark')} Categorie e tag</div>
-      <div class="tagwrap">
-        ${tags.map((t,i)=>`<span class="tagchip">${esc(t)}<button class="tagx" onclick="removeTagAt(${b.id},${i})" aria-label="Rimuovi ${esc(t)}">${icon('close')}</button></span>`).join('')}
-        ${_tagAdding
-          ?`<span class="tagadd-inline"><input id="tagInput" maxlength="24" placeholder="Nuovo tag…" autocomplete="off" onkeydown="if(event.key==='Enter'){addTag(${b.id})}else if(event.key==='Escape'){_tagAdding=false;openBook(${b.id})}"><button class="btn sm" onclick="addTag(${b.id})">${icon('check')}</button></span>`
-          :`<button class="tagadd" onclick="toggleTagAdd(${b.id})">${icon('plus')} Aggiungi</button>`}
-      </div>
-      <div class="muted" style="font-size:11.5px;margin-top:11px;line-height:1.5">Etichette personali (es. «Da rileggere», «Università»). Il genere in alto è rilevato in automatico.</div>
-    </div>
-
     <div class="bd-actions">
       ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
       ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Da leggere</button>`:''}
@@ -1052,7 +1041,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v137 (dettaglio libro ancora più fedele: card acquisto, Condividi in alto, valutazione e anno separati, azioni a 2 colonne, tag e note rifiniti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v138 (rimossa sezione Categorie e tag dal dettaglio libro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
