@@ -805,13 +805,13 @@ function openBook(id){
       </div>
       ${(()=>{const show=(_notesOpen||notes.length<=1)?notes:notes.slice(0,1);return `
         ${notes.length?`<div class="booknotes">${show.map((n,idx)=>editNoteIdx===idx
-          ? `<div class="booknote editing"><textarea id="editNoteTa${idx}" rows="3">${esc(n.t)}</textarea>
+          ? `<div class="booknote editing"><textarea id="editNoteTa${idx}" class="note-ta" rows="3">${esc(n.t)}</textarea>
              <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditBookNote(${b.id},${idx})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditBookNote(${b.id})">Annulla</button></div></div>`
           : `<div class="booknote"><span class="bn-mark">“</span><div class="bn-text">${esc(n.t)}</div>
              <div class="bn-foot">${n.d?`<time class="note-when">${fmtNoteDate(n.d)}</time>`:'<span></span>'}
              <div class="booknote-actions"><button class="bn-ic" onclick="editBookNoteAt(${b.id},${idx})" title="Modifica">${icon('edit')}</button><button class="bn-ic danger" onclick="deleteBookNote(${b.id},${idx})" title="Elimina">${icon('trash')}</button></div></div></div>`
         ).join('')}</div>`:`<div class="muted" style="font-size:13.5px;padding:2px 0 10px">Non hai ancora scritto note per questo libro.</div>`}
-        <div style="margin-top:10px"><textarea id="newNoteTa" rows="2" placeholder="Aggiungi una nota, una citazione, un pensiero…"></textarea>
+        <div style="margin-top:10px"><textarea id="newNoteTa" class="note-ta" rows="3" placeholder="Aggiungi una nota, una citazione, un pensiero…"></textarea>
         <button class="btn ghost sm" style="margin-top:8px" onclick="addBookNote(${b.id})">＋ Aggiungi nota</button></div>
       `})()}
     </div>
@@ -1041,7 +1041,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v138 (rimossa sezione Categorie e tag dal dettaglio libro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v139 (form nota rifinito: via il font macchina da scrivere)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita

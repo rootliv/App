@@ -1489,3 +1489,10 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .bn-ic{border:none;background:none;width:28px;height:28px;color:var(--ink-faint)}
 .bn-ic:hover{background:none;color:var(--sage)}
 .bn-ic.danger:hover{background:none;color:#c0392b}
+
+/* v139 — Form nota con lo stile dei campi dell'app (via font "macchina da scrivere") */
+.note-ta{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:14px 15px;
+  font-family:inherit;font-size:14.5px;line-height:1.6;color:var(--ink);background:var(--surface);
+  outline:none;resize:vertical;min-height:78px;transition:border-color .15s,box-shadow .15s}
+.note-ta::placeholder{color:var(--ink-faint)}
+.note-ta:focus{border-color:var(--brand-solid);box-shadow:0 0 0 4px var(--primary-muted)}
