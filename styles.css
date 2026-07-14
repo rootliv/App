@@ -1258,14 +1258,12 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .goal-in input::-webkit-outer-spin-button,.goal-in input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .goal-in .goal-unit{font-size:11px;color:var(--ink-faint);white-space:nowrap}
 @media(max-width:440px){.goal-grid{grid-template-columns:1fr}}
-.scope-seg{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px;max-width:100%}
+.scope-seg{display:flex;gap:4px;background:var(--bg2);padding:5px;border-radius:30px;border:1px solid var(--line);margin-top:10px;max-width:100%}
 .scope-lab{font-size:11px;letter-spacing:.4px;text-transform:uppercase;font-weight:700;color:var(--ink-faint);margin-top:16px}
 .scope-hint{font-size:12px;margin-top:8px}
 .btn:disabled,.btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none}
-.scope-seg button{white-space:normal;min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface2);font-family:inherit;font-weight:600;font-size:12.5px;padding:11px 10px;border-radius:12px;cursor:pointer;color:var(--ink-soft);transition:.15s;min-height:44px;text-align:center}
-.scope-seg button .icn{flex:none}
+.scope-seg button{flex:1;min-width:0;border:none;background:none;font-family:inherit;font-weight:600;font-size:12.5px;padding:10px 4px;border-radius:30px;cursor:pointer;color:var(--ink-soft);transition:.15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;min-height:40px}
 .scope-seg button.active{background:var(--surface);color:var(--plum);box-shadow:var(--shadow-sm)}
-@media(min-width:560px){.scope-seg{grid-template-columns:repeat(3,1fr)}}
 .scope-row{display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap;max-width:100%;min-width:0}
 .scope-in{display:flex;align-items:center;gap:8px;font-size:12.5px;min-width:0;flex-wrap:wrap}
 .diary-notes-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 0 14px}

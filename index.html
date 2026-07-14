@@ -1050,7 +1050,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v143 (diario: username e foto degli autori delle note; foto profilo nei lettori seguiti; fix pubProfiles)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v144 (selettore visibilità nota: segmentato compatto su una riga)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2322,7 +2322,7 @@ function renderNotesList(){
 let notesShown=20;
 let noteScope='page';
 function setNoteScope(k){noteScope=k;
- const seg=$('#scopeSeg');if(seg)seg.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.getAttribute('data-s')===k));
+ const seg=$('#scopeSeg');if(seg)seg.querySelectorAll('button').forEach(b=>{const on=b.getAttribute('data-s')===k;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on?'true':'false');});
  const show=(id,on)=>{const e=$(id);if(e)e.style.display=on?'':'none'};
  show('#scPage',k==='page');show('#scRange',k==='range');show('#scUpto',k==='upto');
  const hint=$('#scopeHint');if(hint)hint.textContent=k==='page'?'La nota riguarda una sola pagina.':(k==='range'?'La nota riguarda più pagine.':'La nota è visibile a chi ha raggiunto almeno questo punto.');
@@ -2441,10 +2441,10 @@ function paintDiary(c){
    <label class="cmp-label">${icon('edit')} Scrivi una considerazione</label>
    <textarea id="noteText" class="cmp-ta" rows="4" placeholder="Una riflessione, una domanda o una citazione…"></textarea>
    <div class="scope-lab">Visibilità della nota</div>
-   <div class="scope-seg" id="scopeSeg">
-     <button type="button" class="active" data-s="page" onclick="setNoteScope('page')">${icon('bookmark')} Pagina specifica</button>
-     <button type="button" data-s="range" onclick="setNoteScope('range')">${icon('library')} Intervallo di pagine</button>
-     <button type="button" data-s="upto" onclick="setNoteScope('upto')">${icon('book')} Fino a questa pagina</button>
+   <div class="scope-seg" id="scopeSeg" role="group" aria-label="Visibilità della nota">
+     <button type="button" class="active" data-s="page" aria-pressed="true" onclick="setNoteScope('page')">Pagina</button>
+     <button type="button" data-s="range" aria-pressed="false" onclick="setNoteScope('range')">Intervallo</button>
+     <button type="button" data-s="upto" aria-pressed="false" onclick="setNoteScope('upto')">Fino a qui</button>
    </div>
    <div class="muted scope-hint" id="scopeHint">La nota riguarda una sola pagina.</div>
    <div class="scope-row">
