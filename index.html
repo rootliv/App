@@ -1041,7 +1041,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v140 (link Feltrinelli e Mondadori corretti: parametro query)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v141 (pulsante Apri libreria per i lettori seguiti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2925,7 +2925,7 @@ async function renderLettoriCloud(){
  view.innerHTML=`
  <div class="card pad">
    <h3 style="font-size:16px;margin-bottom:6px">👥 Lettori che segui</h3>
-   <div class="muted" style="font-size:12.5px;margin-bottom:14px">Tocca un lettore per vedere la sua libreria (se pubblica).</div>
+   <div class="muted" style="font-size:12.5px;margin-bottom:14px">Tocca «Apri libreria» per sfogliare i libri di un lettore, quando la sua libreria è pubblica.</div>
    <div id="followingList"><div class="uhint">Carico…</div></div>
  </div>
  <div id="invitesBox"></div>
@@ -2951,14 +2951,19 @@ async function renderFollowingList(){
    myFollowing=ids;
    if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
    const profs=await pubProfiles('id,name,username,public_library',ids);
-   box.innerHTML=(profs||[]).map(u=>`<div class="user-row">
+   box.innerHTML=(profs||[]).map(u=>{const uname=esc((u.username||u.name||'').replace(/'/g,''));return `<div class="user-row">
      <div class="user-av">${avFill(u.name||u.username||'?',u.avatar)}</div>
-     <div style="flex:1;min-width:0;cursor:pointer" onclick="viewUserLibrary('${u.id}','${esc((u.username||u.name||'').replace(/'/g,''))}')">
+     <div style="flex:1;min-width:0;${u.public_library?'cursor:pointer':''}" ${u.public_library?`onclick="viewUserLibrary('${u.id}','${uname}')"`:''}>
        <b>@${esc(u.username||u.name||'lettore')}</b>
-       <div class="muted" style="font-size:12px">${u.public_library?'libreria visibile':'libreria privata'}</div>
+       <div class="muted" style="font-size:12px">${u.public_library?'libreria visibile':'🔒 libreria privata'}</div>
      </div>
-     <button class="btn ghost sm" onclick="unfollowFromList('${u.id}',this)">Smetti</button>
-   </div>`).join('');
+     <div class="user-row-actions">
+       ${u.public_library
+         ?`<button class="btn gold sm" onclick="viewUserLibrary('${u.id}','${uname}')">Apri libreria</button>`
+         :`<span class="lib-locked">Privata</span>`}
+       <button class="btn ghost sm" onclick="unfollowFromList('${u.id}',this)">Smetti</button>
+     </div>
+   </div>`;}).join('');
  }catch(e){box.innerHTML='<div class="uhint">Errore nel caricamento.</div>';}
 }
 async function unfollowFromList(uid,btn){
