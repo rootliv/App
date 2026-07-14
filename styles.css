@@ -1375,3 +1375,75 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 /* --- Footer account (Elimina account), vicino al contenuto --- */
 .acct-footer{text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .acct-footer .linklike-danger{font-size:12.5px}
+
+/* ============================================================
+   v135 — Dettaglio libro allineato allo screenshot
+   (card di completamento, trama espandibile, note, tag)
+   ============================================================ */
+
+/* Card di stato (completamento / avanzamento / lista desideri) */
+.bd-status{padding:18px 20px}
+.bds-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.bds-title{font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--ink)}
+.bds-pct{font-family:'Fraunces',serif;font-weight:600;font-size:26px;color:var(--sage);line-height:1}
+.bd-status .bar{height:11px}
+.bar-done{background:var(--sage-soft)}
+.bar-done i{background:linear-gradient(90deg,#2f7a5f,var(--sage))}
+.bds-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+.bds-done{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-soft)}
+.bds-done .icn{width:17px;height:17px;color:var(--sage);flex:none}
+.bds-foot .link-btn{display:inline-flex;align-items:center;gap:5px}
+.bds-foot .link-btn .icn{width:14px;height:14px}
+.bd-status .bookmark-track{height:12px;margin-top:2px}
+.bd-status .bm-page-row{margin-top:16px}
+
+/* Trama con "Mostra di più" */
+.trama-text{font-size:14px;line-height:1.72;color:var(--ink);margin:0;white-space:pre-line}
+.trama-text.clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.trama-more{margin-top:10px;background:none;border:none;padding:0;cursor:pointer;font-family:inherit;
+  font-weight:700;font-size:13px;color:var(--sage);display:inline-flex;align-items:center;gap:6px}
+.trama-more .tm-chev{font-size:15px;line-height:1}
+.bd-subrow{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.bd-subrow .bd-lab{display:inline-flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-weight:600;
+  font-size:13px;color:var(--gold);margin-bottom:6px}
+.bd-subrow .bd-lab .icn{width:15px;height:15px}
+.bd-subrow p{font-size:13.5px;line-height:1.65;color:var(--ink);margin:0}
+
+/* Intestazione di sezione con azione a destra */
+.bd-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.bd-sec-head .bd-sec-title{margin:0}
+.bd-sec-head .link-btn{display:inline-flex;align-items:center;font-size:12.5px}
+
+/* Note: blocco citazione come nello screenshot */
+.booknote{position:relative;background:var(--surface2);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px 12px 44px;margin-bottom:10px}
+.booknote.editing{padding:14px 16px;background:var(--surface)}
+.bn-mark{position:absolute;left:14px;top:10px;font-family:'Fraunces',serif;font-size:34px;line-height:1;
+  color:var(--sage);opacity:.5}
+.bn-text{font-family:'Fraunces',serif;font-style:italic;font-size:15px;line-height:1.55;color:var(--ink);white-space:pre-wrap}
+.bn-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+.bn-foot .note-when{font-size:11px;color:var(--ink-faint);margin:0}
+.booknote-actions{display:flex;gap:6px}
+.bn-ic{width:30px;height:30px;border-radius:9px;border:1px solid var(--line);background:var(--surface);
+  color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;transition:.15s}
+.bn-ic .icn{width:15px;height:15px}
+.bn-ic:hover{background:var(--hover);color:var(--ink)}
+.bn-ic.danger:hover{background:#fbeae5;color:#c0392b;border-color:transparent}
+[data-theme="dark"] .bn-ic.danger:hover{background:#3a271c;color:#e8a983}
+
+/* Categorie e tag */
+.tagwrap{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.tagchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;
+  padding:7px 8px 7px 13px;border-radius:20px;background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+.tagx{width:19px;height:19px;border-radius:50%;border:none;background:transparent;color:var(--ink-faint);
+  display:grid;place-items:center;cursor:pointer;transition:.15s}
+.tagx .icn{width:13px;height:13px}
+.tagx:hover{background:var(--line);color:var(--ink)}
+.tagadd{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--sage);
+  padding:7px 14px;border-radius:20px;border:1.5px dashed var(--line);background:none;cursor:pointer;transition:.15s;font-family:inherit}
+.tagadd .icn{width:15px;height:15px}
+.tagadd:hover{border-color:var(--sage);background:var(--sage-soft)}
+.tagadd-inline{display:inline-flex;align-items:center;gap:6px}
+.tagadd-inline input{width:150px;padding:8px 12px;border:1.5px solid var(--sage);border-radius:20px;
+  background:var(--surface);color:var(--ink);font-size:13px;outline:none}
+.tagadd-inline .btn.sm{padding:8px 12px}

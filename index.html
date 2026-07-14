@@ -760,11 +760,14 @@ renders.notifiche=()=>renderNotifCloud();
 /* ============ MODALS ============ */
 function openBook(id){
  const b=book(id);
- if(noteBookId!==id){noteEditing=false;noteBookId=id;}
+ if(noteBookId!==id){noteEditing=false;noteBookId=id;_tramaOpen=false;_notesOpen=false;_tagAdding=false;editNoteIdx=-1;}
  const statusMap={reading:['📖 In lettura','green'],read:['✓ Letto','sky'],toread:['🔖 Da leggere','gold']};
  const st=statusMap[b.status]||['',''];
  const hasTrama=b.trama&&!/non disponibile/i.test(b.trama);
  const hasSet=b.set&&b.set.length;
+ const tramaLong=hasTrama&&(b.trama.length>170||/\n/.test(b.trama));
+ const notes=getNotes(b);
+ const tags=bookTags(b);
  $('#modal').innerHTML=`
   <div class="modal-top"><b>Dettagli libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="book-head">
@@ -779,47 +782,36 @@ function openBook(id){
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
-      ${b.status==='reading'?`<div class="bookmark-wrap">
-        ${b.pg?`
-        <div class="bm-head"><span class="muted" style="font-size:12px">Il tuo segnalibro</span><span class="bm-pct">${Math.round(b.prog||0)}%</span></div>
-        <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
-          <div class="bookmark-fill" id="bmFill" style="width:${Math.round(((b.prog||0))*1)}%"></div>
-          <div class="bookmark-tag" id="bmTag" style="left:${Math.min(100,b.prog||0)}%">🔖</div>
-        </div>
-        <div class="bm-page-row">
-          <span class="muted" style="font-size:13px">Sono a pagina</span>
-          <input id="bmPage" type="number" min="0" max="${b.pg}" value="${Math.round((b.pg*(b.prog||0))/100)}" class="bm-page-input" onchange="setPage(${b.id},${b.pg},this.value)">
-          <span class="muted" style="font-size:13px">di ${b.pg}</span>
-        </div>
-        `:`
-        <div class="muted" style="font-size:13px;text-align:center;margin-bottom:10px">Quante pagine ha questo libro? Così il segnalibro sa dove metterti.</div>
-        <div class="bm-page-row">
-          <input id="bmTotal" type="number" min="1" placeholder="es. 302" onkeydown="if(event.key==='Enter')setTotalPages(${b.id},this.value)">
-          <button class="btn sm" onclick="setTotalPages(${b.id},$('#bmTotal').value)">Imposta</button>
-        </div>`}
-      </div>`:''}
       ${buyLinks(b.t,b.a)}
     </div>
   </div>
   <div class="modal-body">
-    ${(hasTrama||hasSet||b.cur||b.quote)?`<div class="bd-info">
-      ${hasTrama?`<div class="bd-row"><span class="bd-lab">${icon('book')} Trama</span><p>${esc(b.trama)}</p></div>`:`<div class="bd-row"><span class="bd-lab">${icon('book')} Trama</span><p class="muted">Trama non ancora disponibile.</p></div>`}
-      ${hasSet?`<div class="bd-row"><span class="bd-lab">🗺️ Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
-      ${b.cur?`<div class="bd-row"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${b.cur}</p></div>`:''}
-      ${b.quote?`<div class="quote">${b.quote}</div>`:''}
+    ${bookStatusCard(b)}
+
+    ${(hasTrama||hasSet||b.cur||b.quote)?`<div class="bd-card">
+      ${hasTrama?`<div class="bd-sec-title">${icon('book')} Trama</div>
+        <p id="tramaText" class="trama-text${(tramaLong&&!_tramaOpen)?' clamp':''}">${esc(b.trama)}</p>
+        ${tramaLong?`<button class="trama-more" onclick="toggleTrama(${b.id})">${_tramaOpen?'Mostra meno':'Mostra di più'} <span class="tm-chev">${_tramaOpen?'⌃':'⌄'}</span></button>`:''}
+      `:`<div class="bd-sec-title">${icon('book')} Trama</div><p class="muted" style="font-size:14px">Trama non ancora disponibile.</p>`}
+      ${hasSet?`<div class="bd-subrow"><span class="bd-lab">🗺️ Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
+      ${b.cur?`<div class="bd-subrow"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${b.cur}</p></div>`:''}
+      ${b.quote?`<div class="quote" style="margin-top:14px">${b.quote}</div>`:''}
     </div>`:''}
 
     <div class="bd-card">
-      <div class="bd-sec-title">${icon('edit')} Le tue note personali</div>
-      ${(()=>{const notes=getNotes(b);return `
-        ${notes.length?`<div class="booknotes">${notes.map((n,idx)=>editNoteIdx===idx
-          ? `<div class="booknote"><textarea id="editNoteTa${idx}" rows="3">${esc(n.t)}</textarea>
+      <div class="bd-sec-head">
+        <div class="bd-sec-title" style="margin:0">${icon('edit')} Le tue note</div>
+        ${notes.length>1?`<button class="link-btn sm" onclick="toggleNotes(${b.id})">${_notesOpen?'Mostra meno':'Vedi tutte ('+notes.length+')'} ›</button>`:''}
+      </div>
+      ${(()=>{const show=(_notesOpen||notes.length<=1)?notes:notes.slice(0,1);return `
+        ${notes.length?`<div class="booknotes">${show.map((n,idx)=>editNoteIdx===idx
+          ? `<div class="booknote editing"><textarea id="editNoteTa${idx}" rows="3">${esc(n.t)}</textarea>
              <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditBookNote(${b.id},${idx})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditBookNote(${b.id})">Annulla</button></div></div>`
-          : `<div class="booknote"><div class="usernote" style="margin:0">“${esc(n.t)}”</div>
-             ${n.d?`<time class="note-when">${fmtNoteDate(n.d)}</time>`:''}
-             <div class="booknote-actions"><button class="btn ghost sm" onclick="editBookNoteAt(${b.id},${idx})" title="Modifica">✏️</button><button class="btn danger sm" onclick="deleteBookNote(${b.id},${idx})" title="Elimina">🗑</button></div></div>`
+          : `<div class="booknote"><span class="bn-mark">“</span><div class="bn-text">${esc(n.t)}</div>
+             <div class="bn-foot">${n.d?`<time class="note-when">${fmtNoteDate(n.d)}</time>`:'<span></span>'}
+             <div class="booknote-actions"><button class="bn-ic" onclick="editBookNoteAt(${b.id},${idx})" title="Modifica">${icon('edit')}</button><button class="bn-ic danger" onclick="deleteBookNote(${b.id},${idx})" title="Elimina">${icon('trash')}</button></div></div></div>`
         ).join('')}</div>`:`<div class="muted" style="font-size:13.5px;padding:2px 0 10px">Non hai ancora scritto note per questo libro.</div>`}
-        <div style="margin-top:6px"><textarea id="newNoteTa" rows="2" placeholder="Aggiungi una nota, una citazione, un pensiero…"></textarea>
+        <div style="margin-top:10px"><textarea id="newNoteTa" rows="2" placeholder="Aggiungi una nota, una citazione, un pensiero…"></textarea>
         <button class="btn ghost sm" style="margin-top:8px" onclick="addBookNote(${b.id})">＋ Aggiungi nota</button></div>
       `})()}
     </div>
@@ -834,8 +826,19 @@ function openBook(id){
           <option value="">Non ricordo</option>
           ${(function(){const now=new Date().getFullYear();let o='';for(let y=now;y>=now-40;y--){o+=`<option value="${y}" ${bookYear(b)===y?'selected':''}>${y}</option>`;}return o;})()}
         </select>
-        <div class="muted" style="font-size:11.5px;margin-top:5px">Serve a organizzare la libreria per anno. Se non lo ricordi, resta tra i libri "Senza data".</div>
+        <div class="muted" style="font-size:11.5px;margin-top:5px">Serve a organizzare la libreria per anno.</div>
       </div>`:''}
+    </div>
+
+    <div class="bd-card">
+      <div class="bd-sec-title">${icon('bookmark')} Categorie e tag</div>
+      <div class="tagwrap">
+        ${tags.map((t,i)=>`<span class="tagchip">${esc(t)}<button class="tagx" onclick="removeTagAt(${b.id},${i})" aria-label="Rimuovi ${esc(t)}">${icon('close')}</button></span>`).join('')}
+        ${_tagAdding
+          ?`<span class="tagadd-inline"><input id="tagInput" maxlength="24" placeholder="Nuovo tag…" autocomplete="off" onkeydown="if(event.key==='Enter'){addTag(${b.id})}else if(event.key==='Escape'){_tagAdding=false;openBook(${b.id})}"><button class="btn sm" onclick="addTag(${b.id})">${icon('check')}</button></span>`
+          :`<button class="tagadd" onclick="toggleTagAdd(${b.id})">${icon('plus')} Aggiungi</button>`}
+      </div>
+      <div class="muted" style="font-size:11.5px;margin-top:11px;line-height:1.5">Etichette personali (es. «Da rileggere», «Università»). Il genere in alto è rilevato in automatico.</div>
     </div>
 
     <div class="bd-actions">
@@ -855,6 +858,63 @@ function openBook(id){
  if(b.status==='reading'&&b.pg)setTimeout(()=>bmDragSetup(b.id,b.pg),50);
  enrichBook(b).then(ch=>{if(ch&&!noteEditing&&$('#overlay').classList.contains('open'))openBook(id)});
 }
+/* Card di stato in cima al dettaglio: completamento (letto), avanzamento (in lettura) o invito (da leggere) */
+function bookStatusCard(b){
+ if(b.status==='read'){
+   const y=bookYear(b);
+   return `<div class="bd-card bd-status">
+     <div class="bds-top"><span class="bds-title">Hai completato il libro</span><span class="bds-pct">100%</span></div>
+     <div class="bar bar-done"><i style="width:100%"></i></div>
+     <div class="bds-foot">
+       <span class="bds-done">${icon('check')} ${y?('Hai finito di leggerlo nel '+y):'Hai finito questo libro'}</span>
+       <button class="link-btn sm" onclick="var s=document.getElementById('bookYearSel');if(s){s.scrollIntoView({block:'center'});s.focus();}">${icon('edit')} Modifica</button>
+     </div>
+   </div>`;
+ }
+ if(b.status==='reading'){
+   if(b.pg){
+     const pr=STATS.readingProgress(b);
+     return `<div class="bd-card bd-status">
+       <div class="bds-top"><span class="bds-title">La tua lettura</span><span class="bds-pct">${pr.pct}%</span></div>
+       <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
+         <div class="bookmark-fill" id="bmFill" style="width:${pr.pct}%"></div>
+         <div class="bookmark-tag" id="bmTag" style="left:${Math.min(100,pr.pct)}%">🔖</div>
+       </div>
+       <div class="bm-page-row">
+         <span class="muted" style="font-size:13px">Sono a pagina</span>
+         <input id="bmPage" type="number" min="0" max="${b.pg}" value="${pr.cur}" class="bm-page-input" onchange="setPage(${b.id},${b.pg},this.value)">
+         <span class="muted" style="font-size:13px">di ${b.pg}</span>
+       </div>
+     </div>`;
+   }
+   return `<div class="bd-card bd-status">
+     <div class="bds-title" style="margin-bottom:8px">La tua lettura</div>
+     <div class="muted" style="font-size:13px;text-align:center;margin-bottom:12px">Quante pagine ha questo libro? Così il segnalibro sa dove metterti.</div>
+     <div class="bm-page-row"><input id="bmTotal" type="number" min="1" placeholder="es. 302" onkeydown="if(event.key==='Enter')setTotalPages(${b.id},this.value)"><button class="btn sm" onclick="setTotalPages(${b.id},$('#bmTotal').value)">Imposta</button></div>
+   </div>`;
+ }
+ return `<div class="bd-card bd-status">
+   <div class="bds-title" style="margin-bottom:6px">Nella lista dei desideri</div>
+   <div class="muted" style="font-size:13px">Questo libro è tra quelli da leggere. Quando inizi, il segnalibro terrà il segno per te.</div>
+ </div>`;
+}
+let _tramaOpen=false,_notesOpen=false,_tagAdding=false;
+function toggleTrama(id){_tramaOpen=!_tramaOpen;openBook(id);}
+function toggleNotes(id){_notesOpen=!_notesOpen;openBook(id);}
+/* Categorie e tag: etichette personali del libro (persistite nella colonna 'tags' come JSON) */
+function bookTags(b){if(!b)return [];if(Array.isArray(b.tags))return b.tags;try{const t=JSON.parse(b.tags||'[]');return Array.isArray(t)?t:[]}catch(e){return []}}
+function persistTags(id,arr){const p={tags:JSON.stringify(arr)};if(mode==='cloud'&&supa){supa.from('books').update(p).eq('id',id).then(()=>{},()=>{})}else save();}
+function toggleTagAdd(id){_tagAdding=true;openBook(id);setTimeout(()=>{const i=document.getElementById('tagInput');if(i)i.focus();},60);}
+function addTag(id){
+ const i=document.getElementById('tagInput');if(!i){_tagAdding=false;return;}
+ const v=(i.value||'').trim();
+ if(!v){_tagAdding=false;openBook(id);return;}
+ const b=book(id);const arr=bookTags(b).slice();
+ if(!arr.some(t=>t.toLowerCase()===v.toLowerCase()))arr.push(v);
+ b.tags=arr;_tagAdding=true;persistTags(id,arr);openBook(id);
+ setTimeout(()=>{const n=document.getElementById('tagInput');if(n)n.focus();},60);
+}
+function removeTagAt(id,idx){const b=book(id);const arr=bookTags(b).slice();if(idx<0||idx>=arr.length)return;arr.splice(idx,1);b.tags=arr;persistTags(id,arr);openBook(id);}
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
  if(mode==='cloud'&&supa)supa.from('books').delete().eq('id',id).then(()=>{},()=>{});
@@ -992,7 +1052,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v135 (dettaglio libro rifinito, username dal nome, generi automatici, copertine uniformi, home 1 tasto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v136 (dettaglio libro come da screenshot: card completamento, trama espandibile, note, Categorie e tag; username dal nome; copertine uniformi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4369,8 +4429,9 @@ async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localSto
 
 /* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
 function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
+ let tags=[];try{const t=JSON.parse(r.tags||'[]');if(Array.isArray(t))tags=t;}catch(e){}
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
-   finishedYear:r.finished_year||null,updatedAt:r.updated_at||null,
+   finishedYear:r.finished_year||null,updatedAt:r.updated_at||null,tags,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
  const {data,error}=await supa.from('books').select('*').eq('user_id',authUser.id).order('id');
