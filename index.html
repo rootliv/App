@@ -214,8 +214,8 @@ function ini(n){return n.split(' ').map(x=>x[0]).join('')}
 function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
  return`<div class="buy">
    <a target="_blank" rel="noopener noreferrer" href="https://www.amazon.it/s?k=${q}"><span class="buy-ic">🛒</span><span class="buy-lb">Amazon</span></a>
-   <a target="_blank" rel="noopener noreferrer" href="https://www.lafeltrinelli.it/ricerca/${q}"><span class="buy-ic">📕</span><span class="buy-lb">Feltrinelli</span></a>
-   <a target="_blank" rel="noopener noreferrer" href="https://www.mondadoristore.it/search/?q=${q}"><span class="buy-ic">📗</span><span class="buy-lb">Mondadori</span></a>
+   <a target="_blank" rel="noopener noreferrer" href="https://www.lafeltrinelli.it/search/?query=${q}"><span class="buy-ic">📕</span><span class="buy-lb">Feltrinelli</span></a>
+   <a target="_blank" rel="noopener noreferrer" href="https://www.mondadoristore.it/search?query=${q}"><span class="buy-ic">📗</span><span class="buy-lb">Mondadori</span></a>
  </div>`}
 function stars(n){return'★'.repeat(n)+'☆'.repeat(5-n)}
 /* Condivisione libro: usa la condivisione nativa del telefono (Web Share API) se disponibile,
@@ -1041,7 +1041,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v139 (form nota rifinito: via il font macchina da scrivere)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v140 (link Feltrinelli e Mondadori corretti: parametro query)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
