@@ -1447,3 +1447,45 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .tagadd-inline input{width:150px;padding:8px 12px;border:1.5px solid var(--sage);border-radius:20px;
   background:var(--surface);color:var(--ink);font-size:13px;outline:none}
 .tagadd-inline .btn.sm{padding:8px 12px}
+
+/* ============================================================
+   v136 — Rifiniture dettaglio libro per aderenza allo screenshot
+   ============================================================ */
+
+/* Condividi nella barra in alto */
+.mt-actions{display:flex;align-items:center;gap:10px}
+.mt-share{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;
+  border-radius:50%;border:1px solid var(--line);background:none;color:var(--ink-soft);cursor:pointer;transition:.15s}
+.mt-share .icn{width:18px;height:18px}
+.mt-share:hover{background:var(--hover);color:var(--sage)}
+
+/* Tasti di acquisto come tre card uguali */
+.buy{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.buy a{display:flex;align-items:center;justify-content:center;gap:8px;flex-direction:row;
+  font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid var(--line);
+  padding:12px 8px;border-radius:14px;color:var(--ink);background:var(--surface);
+  transition:.15s;box-shadow:var(--shadow-sm)}
+.buy a:hover{border-color:var(--sage);background:var(--hover);transform:translateY(-2px)}
+.buy .buy-ic{font-size:17px;line-height:1}
+.buy .buy-lb{white-space:nowrap}
+@media(max-width:560px){.buy a{flex-direction:column;gap:5px;padding:11px 6px;font-size:12px}}
+
+/* Azioni finali: griglia a due colonne + rimozione con bordo rosso */
+.bd-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  margin-top:22px;padding-top:0;border-top:none}
+.bd-actions .btn{justify-content:center}
+.btn.danger-outline{background:var(--surface);color:#c0392b;border:1.5px solid #e6b3a6;box-shadow:none}
+.btn.danger-outline:hover{background:#fbeae5;border-color:#c0392b}
+[data-theme="dark"] .btn.danger-outline{color:#e8a983;border-color:#5a3a2c;background:transparent}
+[data-theme="dark"] .btn.danger-outline:hover{background:#3a271c}
+@media(max-width:560px){.bd-actions{grid-template-columns:1fr}}
+
+/* "+ Aggiungi" tag: testo verde semplice, come nello screenshot */
+.tagadd{border:none;background:none;padding:7px 6px;color:var(--sage)}
+.tagadd:hover{background:none;text-decoration:underline;text-underline-offset:3px}
+
+/* Note: testo diritto (non corsivo), icone senza riquadro */
+.bn-text{font-style:normal}
+.bn-ic{border:none;background:none;width:28px;height:28px;color:var(--ink-faint)}
+.bn-ic:hover{background:none;color:var(--sage)}
+.bn-ic.danger:hover{background:none;color:#c0392b}

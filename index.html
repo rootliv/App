@@ -213,9 +213,9 @@ function book(id){return books.find(b=>b.id===id)}
 function ini(n){return n.split(' ').map(x=>x[0]).join('')}
 function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
  return`<div class="buy">
-   <a target="_blank" rel="noopener noreferrer" href="https://www.amazon.it/s?k=${q}">🛒 Amazon</a>
-   <a target="_blank" rel="noopener noreferrer" href="https://www.lafeltrinelli.it/ricerca/${q}">📕 Feltrinelli</a>
-   <a target="_blank" rel="noopener noreferrer" href="https://www.mondadoristore.it/search/?q=${q}">📗 Mondadori</a>
+   <a target="_blank" rel="noopener noreferrer" href="https://www.amazon.it/s?k=${q}"><span class="buy-ic">🛒</span><span class="buy-lb">Amazon</span></a>
+   <a target="_blank" rel="noopener noreferrer" href="https://www.lafeltrinelli.it/ricerca/${q}"><span class="buy-ic">📕</span><span class="buy-lb">Feltrinelli</span></a>
+   <a target="_blank" rel="noopener noreferrer" href="https://www.mondadoristore.it/search/?q=${q}"><span class="buy-ic">📗</span><span class="buy-lb">Mondadori</span></a>
  </div>`}
 function stars(n){return'★'.repeat(n)+'☆'.repeat(5-n)}
 /* Condivisione libro: usa la condivisione nativa del telefono (Web Share API) se disponibile,
@@ -769,7 +769,7 @@ function openBook(id){
  const notes=getNotes(b);
  const tags=bookTags(b);
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>Dettagli libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>Dettagli libro</b><div class="mt-actions"><button class="mt-share" onclick="shareBook(${b.id})" title="Condividi" aria-label="Condividi">${icon('share')}</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>
   <div class="book-head">
     <div class="bh-cover">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
     <div class="bh-info">
@@ -778,7 +778,7 @@ function openBook(id){
       ${b.originalTitle&&normKey(b.originalTitle)!==normKey(b.t)?`<div class="muted" style="font-size:12.5px;margin-top:3px">Titolo originale: <i>${esc(b.originalTitle)}</i></div>`:''}
       <div class="chips" style="margin-top:12px">
         <span class="pill ${st[1]}">${st[0]}</span>
-        ${b.g?`<span class="pill genre-pill">${esc(b.g)}</span>`:''}
+        ${b.g?`<span class="pill">${esc(b.g)}</span>`:''}
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
@@ -817,18 +817,23 @@ function openBook(id){
     </div>
 
     <div class="bd-card">
-      <div class="bd-sec-title">${icon('star')} La tua valutazione</div>
+      <div class="bd-sec-head">
+        <div class="bd-sec-title" style="margin:0">${icon('star')} La tua valutazione</div>
+        ${(b.status==='read'&&b.rate)?`<button class="link-btn sm" onclick="var s=document.getElementById('rateStars');if(s){s.classList.add('pulse');setTimeout(function(){s.classList.remove('pulse')},1400);s.scrollIntoView({block:'center'});}">Modifica</button>`:''}
+      </div>
       ${b.status==='read'
       ? `${!b.rate?`<div class="muted" style="font-size:13px;margin-bottom:8px">Hai finito il libro 🎉 Che voto gli dai?</div>`:''}<div class="stars rate-stars${!b.rate?' pulse':''}" style="font-size:32px;cursor:pointer" id="rateStars">${[1,2,3,4,5].map(i=>`<span onclick="setRate(${b.id},${i})">${i<=b.rate?'★':'☆'}</span>`).join('')}</div>`
       : `<div class="muted" style="font-size:13px;padding:2px 0">Potrai valutare il libro quando l'avrai finito. ${b.status==='reading'?'Continua così! 📖':''}</div>`}
-      ${b.status==='read'?`<div class="field" style="margin-top:16px"><label>📅 Anno di lettura</label>
-        <select id="bookYearSel" onchange="setBookYear(${b.id},this.value)" style="max-width:200px">
-          <option value="">Non ricordo</option>
-          ${(function(){const now=new Date().getFullYear();let o='';for(let y=now;y>=now-40;y--){o+=`<option value="${y}" ${bookYear(b)===y?'selected':''}>${y}</option>`;}return o;})()}
-        </select>
-        <div class="muted" style="font-size:11.5px;margin-top:5px">Serve a organizzare la libreria per anno.</div>
-      </div>`:''}
     </div>
+
+    ${b.status==='read'?`<div class="bd-card">
+      <div class="bd-sec-title">${icon('calendar')} Anno di lettura</div>
+      <select id="bookYearSel" onchange="setBookYear(${b.id},this.value)" style="max-width:220px">
+        <option value="">Non ricordo</option>
+        ${(function(){const now=new Date().getFullYear();let o='';for(let y=now;y>=now-40;y--){o+=`<option value="${y}" ${bookYear(b)===y?'selected':''}>${y}</option>`;}return o;})()}
+      </select>
+      <div class="muted" style="font-size:11.5px;margin-top:7px">Serve a organizzare la libreria per anno.</div>
+    </div>`:''}
 
     <div class="bd-card">
       <div class="bd-sec-title">${icon('bookmark')} Categorie e tag</div>
@@ -842,17 +847,12 @@ function openBook(id){
     </div>
 
     <div class="bd-actions">
-      <div class="bd-actions-main">
-        ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
-        ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Da leggere</button>`:''}
-        ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
-      </div>
-      <div class="bd-actions-side">
-        <button class="btn ghost sm" onclick="shareBook(${b.id})" title="Condividi">📤 Condividi</button>
-        <button class="btn danger sm" onclick="removeBook(${b.id})">🗑 Rimuovi</button>
-      </div>
+      ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
+      ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Da leggere</button>`:''}
+      ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
+      <button class="btn danger-outline" onclick="removeBook(${b.id})">🗑 Rimuovi dalla libreria</button>
     </div>
-    <div class="muted" style="font-size:11.5px;margin-top:12px;text-align:center">Valutazione e stato si salvano automaticamente.</div>
+    <div class="muted" style="font-size:11.5px;margin-top:14px;text-align:center">Valutazione e stato si salvano automaticamente.</div>
   </div>`;
  openOverlay();
  if(b.status==='reading'&&b.pg)setTimeout(()=>bmDragSetup(b.id,b.pg),50);
@@ -1052,7 +1052,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v136 (dettaglio libro come da screenshot: card completamento, trama espandibile, note, Categorie e tag; username dal nome; copertine uniformi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v137 (dettaglio libro ancora più fedele: card acquisto, Condividi in alto, valutazione e anno separati, azioni a 2 colonne, tag e note rifiniti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
