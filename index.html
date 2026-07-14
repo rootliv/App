@@ -906,8 +906,17 @@ function addTag(id){
 function removeTagAt(id,idx){const b=book(id);const arr=bookTags(b).slice();if(idx<0||idx>=arr.length)return;arr.splice(idx,1);b.tags=arr;persistTags(id,arr);openBook(id);}
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
+ const rb=book(id);
  if(mode==='cloud'&&supa)supa.from('books').delete().eq('id',id).then(()=>{},()=>{});
  books=books.filter(b=>b.id!==id);if(mode==='demo')save();
+ // Il libro esce anche dalla mappa: l'ambientazione rilevata è salvata a parte
+ // (per titolo), quindi va rimossa qui, altrimenti resterebbe un segnaposto orfano.
+ // La togliamo solo se nessun altro libro in libreria ha lo stesso titolo.
+ try{
+   if(rb){const k=normKey(rb.t);
+     if(!books.some(b=>normKey(b.t)===k)){const m=bookLocs();if(m[k]){delete m[k];setBookLocs(m);}}
+   }
+ }catch(e){}
  // Se la curiosità in cache riguardava proprio questo libro, invalidala subito
  // (non aspettare il prossimo render): niente curiosità orfane, nemmeno per un istante.
  try{const s=loadCurioState();if(s.payload&&s.payload.bookId===id){s.week=null;s.payload=null;saveCurioState(s);}}catch(e){}
@@ -1041,7 +1050,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v141 (pulsante Apri libreria per i lettori seguiti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v142 (riga lettore rifinita; libri rimossi spariscono dalla mappa)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2751,11 +2760,15 @@ async function detectBookLocations(){
 }
 function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','✓');renderMappaCloud()}
 function renderMappaCloud(){
- const all=Object.values(bookLocs());
+ // Mostriamo solo le ambientazioni dei libri ancora in libreria: se un libro è stato
+ // rimosso (anche in passato), il suo segnaposto non deve restare sulla mappa.
+ const _m=bookLocs();
+ const _inLib=new Set(books.map(b=>normKey(b.t)));
+ const all=Object.keys(_m).filter(k=>_inLib.has(k)).map(k=>_m[k]);
  const locs=all.filter(l=>l.lat!=null);           // effettivamente sulla mappa
  const noPlace=all.filter(l=>l.noPlace);          // rilevati come senza luogo reale
  const countries=[...new Set(locs.map(l=>l.country).filter(Boolean))];
- const todo=books.filter(b=>!bookLocs()[normKey(b.t)]).length;  // non ancora rilevati
+ const todo=books.filter(b=>!_m[normKey(b.t)]).length;  // non ancora rilevati
  const empty=!locs.length; // nessuna ambientazione ancora sulla mappa
 
  // Conteggio libri per paese, per la lista testuale (accessibile, non solo sulla mappa)
@@ -2798,7 +2811,8 @@ function renderMappaCloud(){
 }
 function focusMapCountry(country){
  if(!mapObj)return;
- const pts=Object.values(bookLocs()).filter(l=>l.lat!=null&&l.country===country);
+ const m=bookLocs();const inLib=new Set(books.map(b=>normKey(b.t)));
+ const pts=Object.keys(m).filter(k=>inLib.has(k)).map(k=>m[k]).filter(l=>l.lat!=null&&l.country===country);
  if(!pts.length)return;
  try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));mapObj.fitBounds(g.getBounds().pad(0.4));}catch(e){}
 }
@@ -2951,26 +2965,27 @@ async function renderFollowingList(){
    myFollowing=ids;
    if(!ids.length){box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';return;}
    const profs=await pubProfiles('id,name,username,public_library',ids);
-   box.innerHTML=(profs||[]).map(u=>{const uname=esc((u.username||u.name||'').replace(/'/g,''));return `<div class="user-row">
-     <div class="user-av">${avFill(u.name||u.username||'?',u.avatar)}</div>
-     <div style="flex:1;min-width:0;${u.public_library?'cursor:pointer':''}" ${u.public_library?`onclick="viewUserLibrary('${u.id}','${uname}')"`:''}>
-       <b>@${esc(u.username||u.name||'lettore')}</b>
-       <div class="muted" style="font-size:12px">${u.public_library?'libreria visibile':'🔒 libreria privata'}</div>
-     </div>
-     <div class="user-row-actions">
-       ${u.public_library
-         ?`<button class="btn gold sm" onclick="viewUserLibrary('${u.id}','${uname}')">Apri libreria</button>`
-         :`<span class="lib-locked">Privata</span>`}
-       <button class="btn ghost sm" onclick="unfollowFromList('${u.id}',this)">Smetti</button>
-     </div>
-   </div>`;}).join('');
+   box.innerHTML=(profs||[]).map(u=>{
+     const uname=esc((u.username||u.name||'').replace(/'/g,''));
+     const pub=!!u.public_library;
+     return `<div class="reader-card ${pub?'is-open':'is-locked'}">
+       <${pub?'button':'div'} class="rc-main" ${pub?`onclick="viewUserLibrary('${u.id}','${uname}')" aria-label="Apri la libreria di @${uname}"`:''}>
+         <span class="rc-av">${avFill(u.name||u.username||'?',u.avatar)}</span>
+         <span class="rc-txt">
+           <span class="rc-name">@${esc(u.username||u.name||'lettore')}</span>
+           <span class="rc-sub">${pub?`<i class="rc-dot"></i> Libreria aperta · tocca per sfogliare`:`${icon('lock')} Libreria privata`}</span>
+         </span>
+         ${pub?`<span class="rc-chev">${icon('chevron')}</span>`:''}
+       </${pub?'button':'div'}>
+       <button class="rc-unfollow" onclick="unfollowFromList('${u.id}',this)" aria-label="Smetti di seguire @${uname}">Smetti</button>
+     </div>`;}).join('');
  }catch(e){box.innerHTML='<div class="uhint">Errore nel caricamento.</div>';}
 }
 async function unfollowFromList(uid,btn){
  try{await supa.from('follows').delete().eq('follower_id',authUser.id).eq('followed_id',uid);
    myFollowing=myFollowing.filter(x=>x!==uid);
-   const row=btn.closest('.user-row');if(row)row.remove();
-   const box=$('#followingList');if(box&&!box.querySelector('.user-row'))box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';
+   const row=btn.closest('.reader-card');if(row)row.remove();
+   const box=$('#followingList');if(box&&!box.querySelector('.reader-card'))box.innerHTML='<div class="uhint">Non segui ancora nessuno. Cerca qui sotto i lettori da seguire.</div>';
  }catch(e){alert('Errore: '+e.message);}
 }
 let _usearchT=null;
