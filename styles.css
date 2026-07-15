@@ -1378,7 +1378,9 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .uname-field input{border:none;background:none;outline:none;padding:13px 0;flex:1;font-size:15px;color:var(--ink)}
 
 /* --- Footer account (Elimina account), vicino al contenuto --- */
-.acct-footer{text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.acct-footer{text-align:center;margin-top:30px;padding-top:18px;border-top:1px solid var(--line)}
+/* Zona di rispetto attorno al link: si tocca solo volendolo */
+.acct-footer .linklike-danger{padding:8px 14px;border-radius:10px}
 .acct-footer .linklike-danger{font-size:12.5px}
 
 /* ============================================================
