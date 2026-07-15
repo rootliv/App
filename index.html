@@ -722,13 +722,13 @@ renders.calendario=()=>{
  // l'obiettivo è "arrivare pronta a quell'incontro". Niente date inventate.
  const items=planItems();
  if(!items.length){
-   view.innerHTML=`<div class="card pad" style="text-align:center;padding:46px 22px">
-     <div style="font-size:44px">🗓️</div>
-     <h2 style="font-size:21px;margin:10px 0 8px">Nessun incontro da preparare</h2>
-     <div class="muted" style="max-width:440px;margin:0 auto 20px;line-height:1.6">Il piano di lettura ti aiuta ad arrivare in tempo agli incontri del club. Servono due cose: un club che stia leggendo un libro, e un incontro fissato in calendario per quel libro.</div>
-     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-       <button class="btn" onclick="go('club')">👥 Vai ai club</button>
-       <button class="btn ghost" onclick="go('incontri')">📅 Fissa un incontro</button>
+   view.innerHTML=`<div class="card pad empty-state-card">
+     <span class="icn-badge sky">${icon('calendar')}</span>
+     <h3 style="font-size:21px">Nessun incontro da preparare</h3>
+     <p style="max-width:440px">Il piano di lettura ti aiuta ad arrivare in tempo agli incontri del club. Servono due cose: un club che stia leggendo un libro, e un incontro fissato in calendario per quel libro.</p>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px">
+       <button class="btn" onclick="go('club')">${icon('club')} Vai ai club</button>
+       <button class="btn ghost" onclick="go('incontri')">${icon('calendar')} Fissa un incontro</button>
      </div>
    </div>`;return;
  }
@@ -1861,11 +1861,11 @@ function renderClubCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club…</div></div>';
    cloudLoadClubs().then(()=>{clubsLoaded=true;if(!clubSel&&myClubs[0])clubSel=myClubs[0].id;renderClubCloud()}).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">'+icon('alert')+' Errore nel caricamento dei club.</div></div>'});return}
  if(!myClubs.length){
-   view.innerHTML=`<div class="card pad" style="text-align:center;padding:50px 20px">
-     <span class="icn-badge sky" style="margin:0 auto 8px">${icon('club')}</span>
-     <h2 style="font-size:22px;margin:10px 0 6px">Nessun club, per ora</h2>
-     <div class="muted" style="max-width:430px;margin:0 auto 18px">Crea il tuo club del libro e invita gli amici con un codice, oppure unisciti a un club esistente.</div>
-     <button class="btn" onclick="openClubModalFresh()">${icon('plus')} Crea o unisciti a un club</button>
+   view.innerHTML=`<div class="card pad empty-state-card">
+     <span class="icn-badge sky">${icon('club')}</span>
+     <h3 style="font-size:22px">Nessun club, per ora</h3>
+     <p style="max-width:430px">Crea il tuo club del libro e invita gli amici con un codice, oppure unisciti a un club esistente.</p>
+     <button class="btn" style="margin-top:6px" onclick="openClubModalFresh()">${icon('plus')} Crea o unisciti a un club</button>
    </div>`;return}
  const c=myClubs.find(x=>x.id===clubSel)||myClubs[0];clubSel=c.id;
  const role=myRoles[c.id]||'membro';
@@ -2423,7 +2423,7 @@ function renderDiarioCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico… ☁️</div></div>';
    cloudLoadClubs().then(()=>{clubsLoaded=true;renderDiarioCloud()});return}
  const withBook=myClubs.filter(c=>c.current_title);
- if(!withBook.length){view.innerHTML=`<div class="card pad" style="text-align:center;padding:44px 20px"><div style="font-size:42px">✍️</div><div class="muted" style="margin:12px auto 16px;max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</div><button class="btn" onclick="go('club')">Vai ai club</button></div>`;return}
+ if(!withBook.length){view.innerHTML=`<div class="card pad empty-state-card"><span class="icn-badge sage">${icon('edit')}</span><h3>Diario non ancora attivo</h3><p style="max-width:420px">Il diario condiviso si attiva quando un tuo club ha scelto il libro del mese.</p><button class="btn" style="margin-top:6px" onclick="go('club')">${icon('club')} Vai ai club</button></div>`;return}
  const c=withBook.find(x=>x.id===clubSel)||withBook[0];clubSel=c.id;curDiaryClub=c;curDiaryTitle=c.current_title;
  view.innerHTML='<div class="card pad"><div class="srch-empty">Carico il diario… ✍️</div></div>';
  Promise.all([loadClubNotes(c),ensureClubBookPages(c)]).then(()=>paintDiary(c)).catch(()=>{view.innerHTML='<div class="card pad"><div class="srch-empty">⚠️ Errore nel diario.</div></div>'});
@@ -2589,9 +2589,10 @@ async function loadAiRecs(force){
  const libraryTitles=[...new Set(books.map(b=>b.t).filter(Boolean))].slice(0,20);
  const disliked=(d.disliked||[]);
  if(!authors.length && !genres.length && !loved.length && !libraryTitles.length){
-   box.innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:42px">✨</div>
-     <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
-     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="go('profilo')">Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">Aggiungi un libro</button></div></div>`;return;
+   box.innerHTML=`<div class="card pad empty-state-card"><span class="icn-badge gold">${icon('sparkles')}</span>
+     <h3>Nessun consiglio ancora</h3>
+     <p style="max-width:440px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</p>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px"><button class="btn" onclick="go('profilo')">${icon('profile')} Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button></div></div>`;return;
  }
 
  // 1) CACHE: se la firma coincide e non è una rigenerazione forzata, mostra subito.
@@ -2719,9 +2720,10 @@ async function loadAiRecsFallback(){
  const aMax=authorQs.slice(0,3),gMax=genreQs.slice(0,3);const queries=[];
  for(let i=0;i<3;i++){if(aMax[i])queries.push(aMax[i]);if(gMax[i])queries.push(gMax[i]);}
  if(!queries.length){
-   box.innerHTML=`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:42px">✨</div>
-     <div class="muted" style="max-width:440px;margin:12px auto 16px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</div>
-     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" onclick="go('profilo')">Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">Aggiungi un libro</button></div></div>`;return;
+   box.innerHTML=`<div class="card pad empty-state-card"><span class="icn-badge gold">${icon('sparkles')}</span>
+     <h3>Nessun consiglio ancora</h3>
+     <p style="max-width:440px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</p>
+     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px"><button class="btn" onclick="go('profilo')">${icon('profile')} Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button></div></div>`;return;
  }
  const buckets=[];
  for(const x of queries){
@@ -3239,7 +3241,7 @@ function openEditProfile(){
     <button class="btn" id="epSaveBtn" style="width:100%;justify-content:center;margin-top:22px" onclick="saveProfile()">${icon('check')} Salva profilo</button>
 
     ${mode==='cloud'?`<div class="ep-danger-zone">
-      <div class="ep-sec-lab" style="color:#c0392b">Zona pericolosa</div>
+      <div class="ep-sec-lab" style="color:var(--danger)">Zona pericolosa</div>
       <div class="muted" style="font-size:12px;margin-bottom:10px">Eliminare l'account è permanente: rimuove profilo, libreria, note e iscrizioni ai club.</div>
       <button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button>
     </div>`:''}
@@ -3905,7 +3907,7 @@ function homeSkeleton(){
  <div class="sec-title">Obiettivo</div><div class="card pad">${Array(3).fill('<div class="skel skel-line"></div>').join('')}</div>`;
 }
 function homeErrorState(){
- return `<div class="card pad" style="text-align:center;padding:40px 20px">${icon('close')}<h2 style="font-size:18px;margin:12px 0 6px">Non è stato possibile caricare i dati</h2><button class="btn" onclick="clubsLoaded=false;go('home')">Riprova</button></div>`;
+ return `<div class="card pad empty-state-card"><span class="icn-badge sky">${icon('alert')}</span><h3 style="font-size:18px">Non è stato possibile caricare i dati</h3><button class="btn" style="margin-top:6px" onclick="clubsLoaded=false;go('home')">Riprova</button></div>`;
 }
 /* ===== CONTINUA A LEGGERE ===== */
 function continueReadingCard(reading){
@@ -4057,10 +4059,10 @@ function openMeetingModal(id){
  if(!pool.length){
    const anyBook=myClubs.some(c=>c.current_title);
    $('#modal').innerHTML=`<div class="modal-top"><b>📅 Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
-     <div class="modal-body" style="text-align:center;padding:34px 26px">
-       <div style="font-size:42px">${anyBook?'📅':'📖'}</div>
-       <h3 style="font-size:18px;margin:10px 0 6px">${anyBook?'Ogni club ha già un incontro':'Prima serve il libro del mese'}</h3>
-       <div class="muted" style="max-width:440px;margin:0 auto 18px;line-height:1.55">${anyBook?'Ogni club può avere <b>un solo incontro</b> per volta: modifica quello esistente (icona ✏️) invece di crearne uno nuovo.':'Non puoi ancora fissare un incontro: nessuno dei tuoi club ha scelto il libro del mese. Avvia un <b>sorteggio</b> o una <b>votazione</b>, poi torna qui.'}</div>
+     <div class="modal-body empty-state-card">
+       <span class="icn-badge gold">${icon(anyBook?'calendar':'book')}</span>
+       <h3 style="font-size:18px">${anyBook?'Ogni club ha già un incontro':'Prima serve il libro del mese'}</h3>
+       <p style="max-width:440px">${anyBook?'Ogni club può avere <b>un solo incontro</b> per volta: modifica quello esistente (icona di modifica) invece di crearne uno nuovo.':'Non puoi ancora fissare un incontro: nessuno dei tuoi club ha scelto il libro del mese. Avvia un <b>sorteggio</b> o una <b>votazione</b>, poi torna qui.'}</p>
        <button class="btn" onclick="closeModal();${anyBook?"go('incontri')":"go('club')"}">${anyBook?'Ho capito':'Vai ai club'}</button>
      </div>`;
    openOverlay();return;
