@@ -627,7 +627,7 @@ function renderChat(){
  if(!aiChat.length){out.innerHTML='<div class="muted" style="font-size:13px;padding:6px 2px">Scrivimi qui sotto: posso aiutarti con la tua libreria, i club, le note, il progresso di lettura e consigli su misura.</div>';return}
  out.innerHTML=aiChat.map(m=>m.who==='me'
    ? `<div class="chat-row me"><div class="chat-bubble me">${m.html}</div></div>`
-   : `<div class="chat-row ai"><div class="chat-av">🤖</div><div class="chat-bubble ai">${m.html}${m.src?`<div class="chat-src">${m.src}</div>`:''}</div></div>`).join('');
+   : `<div class="chat-row ai"><div class="chat-av">${icon('sparkles')}</div><div class="chat-bubble ai">${m.html}${m.src?`<div class="chat-src">${m.src}</div>`:''}</div></div>`).join('');
  const last=out.lastElementChild;if(last)last.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function aiClear(){aiChat=[];renderChat()}
@@ -2972,15 +2972,15 @@ async function renderLettoriCloud(){
  if(mode!=='cloud'){view.innerHTML='<div class="card pad"><div class="srch-empty">Questa sezione è disponibile con un account cloud.</div></div>';return;}
  view.innerHTML=`
  <div class="card pad">
-   <h3 style="font-size:16px;margin-bottom:6px">👥 Lettori che segui</h3>
+   <h3 style="font-size:16px;margin-bottom:6px">${icon('club')} Lettori che segui</h3>
    <div class="muted" style="font-size:12.5px;margin-bottom:14px">Tocca «Apri libreria» per sfogliare i libri di un lettore, quando la sua libreria è pubblica.</div>
    <div id="followingList"><div class="uhint">Carico…</div></div>
  </div>
  <div id="invitesBox"></div>
  <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:6px">🔎 Trova nuovi lettori</h3>
+   <h3 style="font-size:16px;margin-bottom:6px">${icon('search')} Trova nuovi lettori</h3>
    <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username e inizia a seguire. Con la libreria pubblica, chi ti segue vede i tuoi libri.</div>
-   <div class="usearch"><span class="usearch-ic">🔎</span><input id="userSearch" placeholder="Cerca per username…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)"></div>
+   <div class="usearch"><span class="usearch-ic">${icon('search')}</span><input id="userSearch" placeholder="Cerca per username…" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)"></div>
    <div id="userResults" class="uresults"></div>
  </div>`;
  loadFollowing();renderFollowingList();renderMyInvites();
@@ -3052,9 +3052,9 @@ async function doSearchUsers(q){
        <div class="user-av">${ini2(u.name||u.username||'?')}</div>
        <div style="flex:1;min-width:0" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
          <b>${esc(u.name||u.username)}</b>
-         <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· 📖 pubblica':'· 🔒 privata'}</div>
+         <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· '+icon('globe')+' pubblica':'· '+icon('lock')+' privata'}</div>
        </div>
-       <button class="btn ${following?'ghost':''} sm" onclick="toggleFollow('${u.id}',this)">${following?'✓ Segui già':'+ Segui'}</button>
+       <button class="btn ${following?'ghost':''} sm" onclick="toggleFollow('${u.id}',this)">${following?icon('check')+' Segui già':'+ Segui'}</button>
      </div>`;
    }).join('');
  }catch(e){box.innerHTML='<div class="uhint">Errore nella ricerca.</div>';}
@@ -3062,12 +3062,12 @@ async function doSearchUsers(q){
 async function toggleFollow(uid,btn){
  const following=myFollowing.includes(uid);
  try{
-   if(following){await supa.from('follows').delete().eq('follower_id',authUser.id).eq('followed_id',uid);myFollowing=myFollowing.filter(x=>x!==uid);if(btn){btn.textContent='+ Segui';btn.classList.remove('ghost');}}
-   else{await supa.from('follows').insert({follower_id:authUser.id,followed_id:uid});myFollowing.push(uid);if(btn){btn.textContent='✓ Segui già';btn.classList.add('ghost');}}
+   if(following){await supa.from('follows').delete().eq('follower_id',authUser.id).eq('followed_id',uid);myFollowing=myFollowing.filter(x=>x!==uid);if(btn){btn.innerHTML='+ Segui';btn.classList.remove('ghost');}}
+   else{await supa.from('follows').insert({follower_id:authUser.id,followed_id:uid});myFollowing.push(uid);if(btn){btn.innerHTML=icon('check')+' Segui già';btn.classList.add('ghost');}}
  }catch(e){alert('Errore: '+e.message);}
 }
 async function viewUserLibrary(uid,name){
- $('#modal').innerHTML=`<div class="modal-top"><b>📚 Libreria di ${esc(name)}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div><div class="modal-body"><div class="srch-empty">Carico…</div></div>`;openOverlay();
+ $('#modal').innerHTML=`<div class="modal-top"><b>${icon('library')} Libreria di ${esc(name)}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div><div class="modal-body"><div class="srch-empty">Carico…</div></div>`;openOverlay();
  try{
    const {data}=await supa.from('books').select('*').eq('user_id',uid);
    const body=$('#modal .modal-body');
@@ -3162,10 +3162,10 @@ async function renderMyInvites(){
    const pr=await pubProfiles('id,name,username',iids);(pr||[]).forEach(p=>inviterNames[p.id]=p.username||p.name);
  }catch(e){}
  box.innerHTML=`<div class="card pad" style="margin-top:18px;border-left:4px solid var(--gold)">
-   <h3 style="font-size:16px;margin-bottom:12px">✉️ Inviti ai club</h3>
+   <h3 style="font-size:16px;margin-bottom:12px">${icon('send')} Inviti ai club</h3>
    ${invites.map(i=>`<div class="user-row">
      <div style="flex:1;min-width:0"><b>${esc(clubNames[i.club_id]||'Club')}</b><div class="muted" style="font-size:12px">Invito da ${esc(inviterNames[i.inviter_id]||'un membro')}</div></div>
-     <button class="btn sm" onclick="respondInvite('${i.id}',${i.club_id},true)">✓ Accetta</button>
+     <button class="btn sm" onclick="respondInvite('${i.id}',${i.club_id},true)">${icon('check')} Accetta</button>
      <button class="btn ghost sm" onclick="respondInvite('${i.id}',${i.club_id},false)">✕</button>
    </div>`).join('')}
  </div>`;

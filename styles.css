@@ -909,6 +909,7 @@ body.sidebar-open .topsearch-res{display:none!important}
 .chat-row{display:flex;gap:10px;margin-bottom:8px}
 .chat-row.me{justify-content:flex-end}
 .chat-av{width:34px;height:34px;border-radius:11px;background:var(--ai-bg);display:grid;place-items:center;flex:none;font-size:17px}
+.chat-av .icn{width:18px;height:18px;color:var(--plum)}
 .chat-bubble{max-width:82%;padding:12px 15px;border-radius:16px;font-size:14px;line-height:1.62;box-shadow:var(--shadow-sm);animation:viewIn .2s both}
 .chat-bubble.ai{background:var(--surface);border:1px solid var(--line);border-top-left-radius:5px}
 .chat-bubble.me{background:var(--brand-grad);color:#fff;border-top-right-radius:5px}
