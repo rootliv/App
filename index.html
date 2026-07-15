@@ -1925,7 +1925,7 @@ function renderClubCloud(){
 
   <div class="panel" style="margin-top:16px">
    ${c.owner===authUser.id
-     ? `<details class="club-set"><summary>${icon('settings')} Impostazioni club</summary>
+     ? `<details class="club-set"><summary>Impostazioni club</summary>
           <div class="muted" style="font-size:12.5px;margin:12px 0 14px;line-height:1.55">Solo l'amministratore può eliminare il club. L'azione è <b>definitiva</b>: rimuove anche membri, proposte, incontri e note collegate.</div>
           <button class="btn danger sm" onclick="deleteClub(${c.id})">${icon('trash')} Elimina club</button>
         </details>`
