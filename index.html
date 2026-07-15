@@ -2204,7 +2204,12 @@ async function closeVoting(clubId){
  await addClubBookToLibrary(win.title,win.author,win.cover);
  clubsLoaded=false;go('club');
 }
-function inviteLink(id){const base=location.href.split('#')[0].split('?')[0];return base+'?club='+clubCode(id)}
+/* Indirizzo pubblico del sito: qui SEMPRE questo, mai location.href/origin, perche' nell'app
+   nativa location.* punta all'indirizzo interno di Capacitor (https://localhost/...), non
+   raggiungibile da chi riceve il link. Usato solo per link condivisi FUORI dall'app (inviti
+   club, redirect email reset password) - le ricariche interne della pagina restano invariate. */
+const SITE_URL='https://rootliv.github.io/App/';
+function inviteLink(id){return SITE_URL+'?club='+clubCode(id)}
 function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.innerHTML;btn.innerHTML=icon('check')+' Link copiato!';setTimeout(()=>btn.innerHTML=t,1700)}}
 async function joinByCode(code){
  const id=clubCodeToId(code);if(!id)return false;
@@ -4256,7 +4261,7 @@ async function sendPasswordReset(){
  if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
  if(Date.now()<fgCooldownUntil)return;
  const btn=$('#fgBtn');if(btn){btn.disabled=true;btn.textContent='Invio…'}
- try{await supa.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});}catch(e){}
+ try{await supa.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});}catch(e){}
  showAuthMsg('Se l\'indirizzo è registrato, riceverai a breve un\'email con le istruzioni per reimpostare la password. Controlla anche lo spam.');
  fgCooldownUntil=Date.now()+30000;
  clearTimeout(fgTimer);
