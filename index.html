@@ -375,7 +375,10 @@ const ICONS={
  send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
  eye:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.2 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
- camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
+ camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
+ dice:'<rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="0.6" fill="currentColor" stroke="none"/><circle cx="16" cy="8" r="0.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="0.6" fill="currentColor" stroke="none"/><circle cx="8" cy="16" r="0.6" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="0.6" fill="currentColor" stroke="none"/>',
+ vote:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 function togglePwView(id,btn){
@@ -1807,13 +1810,13 @@ function editClubDesc(clubId){
  const c=myClubs.find(x=>x.id===clubId)||{};
  const cur=(c.description||'');
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>✏️ Descrizione del club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon('edit')} Descrizione del club</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Descrizione</label>
       <textarea id="clubDescTa" rows="2" maxlength="60" placeholder="Una breve frase che presenta il club…" oninput="document.getElementById('descCount').textContent=this.value.length">${esc(cur)}</textarea>
       <div class="muted" style="font-size:11.5px;margin-top:6px;text-align:right"><span id="descCount">${cur.length}</span>/60</div>
     </div>
-    <button class="btn" style="width:100%;justify-content:center" onclick="saveClubDesc(${clubId})">💾 Salva</button>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveClubDesc(${clubId})">${icon('check')} Salva</button>
   </div>`;
  openOverlay();
 }
@@ -1888,7 +1891,7 @@ function renderClubCloud(){
        <div class="club-eyebrow">Club del libro</div>
        <h2>${esc(c.name)}</h2>
      </div>
-     <span class="role-chip">${role==='admin'?'★ Admin':'Membro'}</span>
+     <span class="role-chip">${role==='admin'?icon('star')+' Admin':'Membro'}</span>
    </div>
    <div class="club-desc-row">
      <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span class="club-desc-empty">Aggiungi una descrizione</span>'}</p>
@@ -1950,7 +1953,7 @@ function openClubModal(){
   <div class="modal-body">
     <div class="nc-hero">
       <div class="nc-photo" id="ncPhoto" onclick="pickNewClubPhoto()">
-        <span id="ncPhotoPlaceholder">📷</span>
+        <span id="ncPhotoPlaceholder">${icon('camera')}</span>
         <div class="nc-photo-cam">＋</div>
       </div>
       <div style="flex:1;min-width:0">
@@ -1960,9 +1963,9 @@ function openClubModal(){
     </div>
     <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
     <div class="field"><label>Descrizione <span class="muted" style="font-weight:400">(facoltativa)</span></label><input id="ncDesc" maxlength="60" placeholder="Una breve frase che presenta il club"></div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">✨ Crea club</button>
+    <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">${icon('plus')} Crea club</button>
     <hr style="margin:22px 0">
-    <h3 style="font-size:15px;margin-bottom:10px">🔑 Unisciti con un codice</h3>
+    <h3 style="font-size:15px;margin-bottom:10px">${icon('lock')} Unisciti con un codice</h3>
     <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
     <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
@@ -1980,7 +1983,7 @@ function openClubModalWithPhoto(){
  openClubModal();
  if(_ncDraft.name&&$('#ncName'))$('#ncName').value=_ncDraft.name;
  if(_ncDraft.desc&&$('#ncDesc'))$('#ncDesc').value=_ncDraft.desc;
- const ph=$('#ncPhoto');if(ph&&_newClubImg)ph.innerHTML=`<img src="${_newClubImg}" alt=""><div class="nc-photo-cam">✎</div>`;
+ const ph=$('#ncPhoto');if(ph&&_newClubImg)ph.innerHTML=`<img src="${_newClubImg}" alt=""><div class="nc-photo-cam">${icon('edit')}</div>`;
 }
 function clubMsg(m,ok){const e=$('#clubMsg');if(e){e.textContent=m;e.classList.add('show');e.style.color=ok?'var(--sage)':'';e.style.background=ok?'#e3f1e8':''}}
 async function createClub(){
@@ -2012,8 +2015,8 @@ function openBookSearch(title,pickFn,clubId){
 }
 function liveSearchPick(q,fn,clubId){clearTimeout(searchTimer);q=(q||'').trim();const box=$('#searchResults');if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere…</div>';return}searchTimer=setTimeout(()=>searchBooksPick(q,fn,clubId),350)}
 async function searchBooksPick(q,fn,clubId){q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco…</div>';searchResults=await doSearch(q);renderResults(i=>`<button class="btn sm" onclick="${fn}(${clubId},${i})">Scegli</button>`)}
-function openChooseClubBook(clubId){openBookSearch('📖 Scegli il libro del mese','chooseClubBook',clubId)}
-function openProposeBook(clubId){openBookSearch('💡 Proponi un libro','proposeFound',clubId)}
+function openChooseClubBook(clubId){openBookSearch(icon('book')+' Scegli il libro del mese','chooseClubBook',clubId)}
+function openProposeBook(clubId){openBookSearch(icon('book')+' Proponi un libro','proposeFound',clubId)}
 
 /* Quando un club sceglie un libro, lo aggiungiamo anche alla libreria personale (come "in lettura")
    se non è già presente: così l'utente lo ritrova tra i suoi libri, col segnalibro e le note. */
@@ -2078,23 +2081,23 @@ function selectionPanelHTML(c,role,members){
    const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers:[];
    const chosen=members.filter(m=>cc.includes(m.id));
    const ch=members.find(m=>m.id===c.current_chooser);const nm=ch?ch.name:'…';
-   let h=`<div class="pill sky">🎲 Sorteggio: tocca a <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
-   if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">📖 Scegli il libro del mese</button></div>`;
+   let h=`<div class="pill sky">${icon('dice')} Sorteggio: tocca a <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
+   if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">${icon('book')} Scegli il libro del mese</button></div>`;
    else h+=`<div class="muted" style="font-size:13px;margin-top:10px">In attesa che ${nm} scelga il libro del mese…</div>`;
    if(chosen.length)h+=`<div class="muted" style="font-size:12px;margin-top:10px">Hanno già scelto in questo giro: <b>${chosen.map(m=>esc(m.name)).join(', ')}</b>.</div>`;
    if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:10px" onclick="cancelSelection(${c.id})">Annulla turno</button></div>`;
    return h;
  }
  if(c.selection_mode==='voting'){
-   let h=`<div class="pill gold">🗳️ Votazione in corso</div>
+   let h=`<div class="pill gold">${icon('vote')} Votazione in corso</div>
      <div style="margin-top:12px" id="proposeWrap"><button id="proposeBtn" class="btn sm" onclick="openProposeBook(${c.id})">＋ Proponi un libro</button></div>
      <div id="propList" style="margin-top:14px"><div class="muted" style="font-size:13px">Carico le proposte…</div></div>`;
-   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:12px" onclick="closeVoting(${c.id})">🏆 Chiudi votazione</button></div>`;
+   if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:12px" onclick="closeVoting(${c.id})">${icon('trophy')} Chiudi votazione</button></div>`;
    return h;
  }
  let h=c.current_title?`<div style="display:flex;gap:14px">
      <div style="width:60px;flex:none">${coverEl(c.id,c.current_title,'',null,c.current_cover)}</div>
-     <div><b style="font-family:'Fraunces';font-size:17px">${esc(c.current_title)}</b><div class="muted" style="font-size:13px">${esc(c.current_author||'')}</div><span class="pill green" style="margin-top:8px">📖 In lettura</span></div>
+     <div><b style="font-family:'Fraunces';font-size:17px">${esc(c.current_title)}</b><div class="muted" style="font-size:13px">${esc(c.current_author||'')}</div><span class="pill green" style="margin-top:8px">${icon('book')} In lettura</span></div>
    </div>`:`<div class="muted" style="font-size:13.5px">Nessun libro scelto, per ora.</div>`;
  // stato del giro di sorteggio
  const cc=Array.isArray(c.cycle_choosers)?c.cycle_choosers:[];
@@ -2106,7 +2109,7 @@ function selectionPanelHTML(c,role,members){
  if(role==='admin'){
    if(inProgress){
      h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-         <button class="btn sm" onclick="startRotation(${c.id})">➡️ Prossimo turno (sorteggio)</button>
+         <button class="btn sm" onclick="startRotation(${c.id})">${icon('chevron')} Prossimo turno (sorteggio)</button>
          <button class="btn ghost sm" onclick="resetRotation(${c.id})">↺ Azzera giro</button>
        </div>
        <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.5">Giro in corso: hanno scelto <b>${chosen.length}/${total}</b>. Sorteggiabili ora: ${remaining.map(m=>esc(m.name)).join(', ')}.</div>`;
@@ -2115,12 +2118,12 @@ function selectionPanelHTML(c,role,members){
      const canRotate=nMembers>=2;const canVote=nMembers>=3;
      if(canRotate||canVote){
        h+=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-         ${canRotate?`<button class="btn sm" onclick="startRotation(${c.id})">🎲 ${completed?'Nuovo giro: sorteggia tutti':'Sorteggio a turni'}</button>`:''}
-         ${canVote?`<button class="btn sm gold" onclick="startVoting(${c.id})">🗳️ Avvia votazione</button>`:''}
+         ${canRotate?`<button class="btn sm" onclick="startRotation(${c.id})">${icon('dice')} ${completed?'Nuovo giro: sorteggia tutti':'Sorteggio a turni'}</button>`:''}
+         ${canVote?`<button class="btn sm gold" onclick="startVoting(${c.id})">${icon('vote')} Avvia votazione</button>`:''}
        </div><div class="muted" style="font-size:11.5px;margin-top:6px;line-height:1.5">${completed?'Giro completato 🎉 Il nuovo sorteggio includerà di nuovo tutti i membri.':'Il sorteggio decide da chi iniziare; chi sceglie viene escluso dai sorteggi finché non hanno scelto tutti.'}${!canVote&&canRotate?' La votazione si sblocca da 3 membri.':''}</div>`;
      }else{
-       h+=`<div class="note" style="margin-top:14px;padding:11px 13px"><div style="font-size:12.5px">👥 Invita almeno <b>un altro membro</b> per scegliere il libro insieme (sorteggio da 2, votazione da 3).</div></div>
-         <div style="margin-top:10px"><button class="btn sm" onclick="inviteToClub(${c.id})">🔎 Invita al club</button></div>`;
+       h+=`<div class="note" style="margin-top:14px;padding:11px 13px"><div style="font-size:12.5px">${icon('club')} Invita almeno <b>un altro membro</b> per scegliere il libro insieme (sorteggio da 2, votazione da 3).</div></div>
+         <div style="margin-top:10px"><button class="btn sm" onclick="inviteToClub(${c.id})">${icon('search')} Invita al club</button></div>`;
      }
    }
  }else if(!c.current_title)h+=`<div class="muted" style="font-size:12px;margin-top:8px">L'admin avvierà la scelta del libro.</div>`;
@@ -2171,15 +2174,15 @@ async function loadAndRenderProposals(clubId){
        <div class="bar" style="margin-top:5px"><i style="width:${total?Math.round(n/total*100):0}%"></i></div></div>
      <div style="text-align:right;flex:none"><div class="muted" style="font-size:12px">${n} ${n===1?'voto':'voti'}</div>
        ${own
-         ? `<button class="btn ghost sm" onclick="removeMyProposal(${clubId})">🗑 Togli</button>`
-         : `<button class="btn ${mine?'':'ghost'} sm" onclick="castVote(${clubId},${p.id})">${mine?'✓ Votato':'Vota'}</button>`}
+         ? `<button class="btn ghost sm" onclick="removeMyProposal(${clubId})">${icon('trash')} Togli</button>`
+         : `<button class="btn ${mine?'':'ghost'} sm" onclick="castVote(${clubId},${p.id})">${mine?icon('check')+' Votato':'Vota'}</button>`}
      </div>
    </div>`}).join('');
  // se ho già una proposta, blocco il pulsante "Proponi"
  const hasMine=(props||[]).some(p=>p.user_id===authUser.id);
  const pw=$('#proposeWrap');
  if(pw)pw.innerHTML=hasMine
-   ? `<div class="muted" style="font-size:12px;line-height:1.5">Hai già proposto un libro. Per cambiarlo, usa <b>🗑 Togli</b> accanto alla tua proposta qui sotto.</div>`
+   ? `<div class="muted" style="font-size:12px;line-height:1.5">Hai già proposto un libro. Per cambiarlo, usa <b>Togli</b> accanto alla tua proposta qui sotto.</div>`
    : `<button id="proposeBtn" class="btn sm" onclick="openProposeBook(${clubId})">＋ Proponi un libro</button>`;
 }
 async function castVote(clubId,proposalId){
@@ -2201,7 +2204,7 @@ async function closeVoting(clubId){
  clubsLoaded=false;go('club');
 }
 function inviteLink(id){const base=location.href.split('#')[0].split('?')[0];return base+'?club='+clubCode(id)}
-function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.textContent;btn.textContent='✓ Link copiato!';setTimeout(()=>btn.textContent=t,1700)}}
+function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.innerHTML;btn.innerHTML=icon('check')+' Link copiato!';setTimeout(()=>btn.innerHTML=t,1700)}}
 async function joinByCode(code){
  const id=clubCodeToId(code);if(!id)return false;
  try{const {data:cl}=await supa.from('clubs').select('id').eq('id',id).maybeSingle();
@@ -3083,15 +3086,15 @@ async function openInviteHub(clubId){
  _clubPendingInvites=[];_clubMemberIds=[];
  try{const {data}=await supa.from('club_invites').select('invitee_id,status').eq('club_id',clubId).eq('status','pending');_clubPendingInvites=(data||[]).map(r=>r.invitee_id);}catch(e){}
  try{const {data}=await supa.from('club_members').select('user_id').eq('club_id',clubId);_clubMemberIds=(data||[]).map(r=>r.user_id);}catch(e){}
- $('#modal').innerHTML=`<div class="modal-top"><b>👥 Invita a ${esc(c.name||'club')}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+ $('#modal').innerHTML=`<div class="modal-top"><b>${icon('club')} Invita a ${esc(c.name||'club')}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <label class="hub-lab">🔎 Cerca e invita una persona</label>
-    <div class="usearch"><span class="usearch-ic">🔎</span><input id="inviteSearch" placeholder="Username…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
+    <label class="hub-lab">${icon('search')} Cerca e invita una persona</label>
+    <div class="usearch"><span class="usearch-ic">${icon('search')}</span><input id="inviteSearch" placeholder="Username…" autocapitalize="off" oninput="searchInvitees(${clubId},this.value)"></div>
     <div id="inviteResults" class="uresults"></div>
     <hr style="margin:20px 0 18px">
-    <label class="hub-lab">🔗 Condividi il link d'invito</label>
-    <button class="btn gold" style="width:100%;justify-content:center" onclick="copyInvite(${clubId},this)">🔗 Copia link d'invito</button>
-    <label class="hub-lab" style="margin-top:20px">🔑 Oppure il codice</label>
+    <label class="hub-lab">${icon('link')} Condividi il link d'invito</label>
+    <button class="btn gold" style="width:100%;justify-content:center" onclick="copyInvite(${clubId},this)">${icon('link')} Copia link d'invito</button>
+    <label class="hub-lab" style="margin-top:20px">${icon('lock')} Oppure il codice</label>
     <div style="display:flex;justify-content:center"><code class="codechip big" onclick="copyCode('${clubCode(clubId)}',this)" title="Tocca per copiare">${clubCode(clubId)}</code></div>
     <div class="muted" style="font-size:11.5px;margin-top:16px;line-height:1.55;text-align:center">Chi cerchi per <b>username</b> riceve un invito da accettare. Con <b>link</b> o <b>codice</b> può unirsi da solo.</div>
   </div>`;
@@ -3122,9 +3125,9 @@ async function doSearchInvitees(clubId,q){
    if(!data||!data.length){box.innerHTML='<div class="uhint">Nessun lettore trovato.</div>';return}
    box.innerHTML=data.slice(0,12).map(u=>{
      let btn;
-     if(_clubMemberIds.includes(u.id))btn='<span class="inv-state ok">✓ Già membro</span>';
-     else if(_clubPendingInvites.includes(u.id))btn='<span class="inv-state wait">⏳ In attesa di risposta</span>';
-     else btn=`<button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">✉️ Invita</button>`;
+     if(_clubMemberIds.includes(u.id))btn='<span class="inv-state ok">'+icon('check')+' Già membro</span>';
+     else if(_clubPendingInvites.includes(u.id))btn='<span class="inv-state wait">'+icon('clock')+' In attesa di risposta</span>';
+     else btn=`<button class="btn sm" onclick="sendClubInvite(${clubId},'${u.id}',this)">${icon('send')} Invita</button>`;
      return `<div class="user-row">
        <div class="user-av">${ini2(u.name||u.username||'?')}</div>
        <div style="flex:1;min-width:0"><b>${esc(u.name||u.username)}</b><div class="muted" style="font-size:12px">@${esc(u.username||'')}</div></div>
@@ -3137,7 +3140,7 @@ async function sendClubInvite(clubId,uid,btn){
  try{const {error}=await supa.from('club_invites').insert({club_id:clubId,inviter_id:authUser.id,invitee_id:uid,status:'pending'});
    if(error){if(error.code==='23505'){alert('Hai già invitato questa persona.');}else{alert('Errore: '+error.message);}return;}
    _clubPendingInvites.push(uid);
-   if(btn){const span=document.createElement('span');span.className='inv-state wait';span.textContent='⏳ In attesa di risposta';btn.replaceWith(span);}
+   if(btn){const span=document.createElement('span');span.className='inv-state wait';span.innerHTML=icon('clock')+' In attesa di risposta';btn.replaceWith(span);}
  }catch(e){alert('Errore: '+e.message);}
 }
 async function respondInvite(inviteId,clubId,accept){
