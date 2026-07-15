@@ -63,6 +63,26 @@
     }
   } catch (e) {}
 
+  /* ---- 3b. Sessione Supabase: rinnova il token quando l'app torna in primo piano ----
+     Nelle WebView native i timer JS si fermano quando l'app va in background: il refresh
+     automatico di Supabase (basato su un timer) non scatta piu', e il token puo' scadere
+     senza che nessuno se ne accorga. Al ritorno in primo piano forziamo un tentativo di
+     refresh; altrimenti le richieste (es. aggiungere un libro) falliscono con un errore
+     di row-level security perche' la sessione e' scaduta, non perche' manchino permessi. */
+  try {
+    if (P.App) {
+      P.App.addListener('appStateChange', ({ isActive }) => {
+        try {
+          if (!window.supa || !window.supa.auth) return;
+          if (isActive) window.supa.auth.startAutoRefresh();
+          else window.supa.auth.stopAutoRefresh();
+        } catch (e) {}
+      });
+      // L'app potrebbe essere stata riaperta dopo ore: prova subito un refresh.
+      setTimeout(() => { try { window.supa && window.supa.auth && window.supa.auth.startAutoRefresh(); } catch (e) {} }, 500);
+    }
+  } catch (e) {}
+
   /* ---- 4. Haptics: piccola vibrazione sui tocchi dei pulsanti principali ---- */
   function haptic(style) {
     try { P.Haptics && P.Haptics.impact({ style: style || 'LIGHT' }); } catch (e) {}

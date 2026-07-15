@@ -4204,7 +4204,13 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 const SUPABASE_URL='https://ogcgfemadhtzzhdjkjda.supabase.co';
 const SUPABASE_KEY='sb_publishable_d-yZxBxgQc_7k2alklVAKA_AVMBT7d5';
 let supa=null;
-try{ supa = window.supabase && window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){}
+// In app nativa (Capacitor) il rilevamento di un token nella URL non serve mai (non ci sono
+// redirect OAuth/magic-link dentro la WebView), quindi lo disattiviamo solo li': su web resta
+// attivo perche' e' quello che fa funzionare il link di recupero password (evento PASSWORD_RECOVERY).
+const _isNativeApp=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+try{ supa = window.supabase && window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:!_isNativeApp }
+}); }catch(e){}
 try{
  if(supa)supa.auth.onAuthStateChange((event)=>{ if(event==='PASSWORD_RECOVERY')showPasswordRecoveryScreen(); });
 }catch(e){}
