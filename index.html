@@ -82,7 +82,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
 
       <div id="formLogin">
         <div class="field"><label>Email o username</label><input id="lId" placeholder="nome@email.it oppure @username"></div>
-        <div class="field"><label>Password</label><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"></div>
+        <div class="field"><label>Password</label><div class="pw-wrap"><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('lPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <div style="text-align:right;margin:-6px 0 14px"><a href="#" onclick="authTab('forgot');return false" style="font-size:12.5px;color:var(--plum);font-weight:600">Password dimenticata?</a></div>
         <button class="btn" style="width:100%;justify-content:center" onclick="login()">Accedi</button>
       </div>
@@ -90,7 +90,8 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       <div id="formReg" style="display:none">
         <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off" onkeydown="if(event.key==='Enter')register()"></div>
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
-        <div class="field"><label>Password</label><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Password</label><div class="pw-wrap"><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <button class="btn gold" style="width:100%;justify-content:center" onclick="register()">Crea il mio account</button>
       </div>
 
@@ -103,8 +104,8 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
 
       <div id="formRecovery" style="display:none">
         <p class="muted" style="font-size:13px;margin-bottom:16px">Scegli una nuova password per il tuo account.</p>
-        <div class="field"><label>Nuova password</label><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-        <div class="field"><label>Conferma nuova password</label><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')completePasswordRecovery()"></div>
+        <div class="field"><label>Nuova password</label><div class="pw-wrap"><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Conferma nuova password</label><div class="pw-wrap"><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')completePasswordRecovery()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <button class="btn" id="rcBtn" style="width:100%;justify-content:center" onclick="completePasswordRecovery()">🔑 Imposta nuova password</button>
       </div>
 
@@ -371,9 +372,18 @@ const ICONS={
  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H10a1.7 1.7 0 0 0 1-1.5V4a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V10c.1.7.6 1.3 1.5 1.5H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
  trash:'<path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/>',
  logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>',
- send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>'
+ send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+ eye:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+ eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.2 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
+function togglePwView(id,btn){
+ const el=$('#'+id);if(!el)return;
+ const show=el.type==='password';
+ el.type=show?'text':'password';
+ if(btn)btn.innerHTML=icon(show?'eyeOff':'eye');
+ try{el.focus({preventScroll:true});const v=el.value;el.setSelectionRange(v.length,v.length);}catch(e){}
+}
 /* Ombra/bordo dell'header sticky solo mentre si scorre, non un'ombra fissa. */
 window.addEventListener('scroll',()=>{
  const tb=document.querySelector('.topbar');if(!tb)return;
@@ -564,11 +574,11 @@ renders.libreria=()=>{
  ${libTab==='ai'
   ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
   : `<div id="libShelf">${list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
-     :`<div class="card pad" style="text-align:center;padding:48px 20px">
-        <div style="font-size:46px">${libFilter?'🔍':'📚'}</div>
-        <h2 style="font-size:21px;margin:10px 0 6px">${libFilter?'Nessun libro trovato':(libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora'))}</h2>
-        <div class="muted" style="max-width:420px;margin:0 auto 18px">${libFilter?('Nessun risultato per «'+esc(libFilter)+'». Prova con un altro termine.'):(libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.')}</div>
-        ${libFilter?`<button class="btn ghost" onclick="libFilter='';renders.libreria()">Azzera ricerca</button>`:`<button class="btn" onclick="openAddBook()">＋ Aggiungi un libro</button>`}
+     :`<div class="card pad empty-state-card">
+        <span class="icn-badge gold">${icon(libFilter?'search':'book')}</span>
+        <h3>${libFilter?'Nessun libro trovato':(libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora'))}</h3>
+        <p>${libFilter?('Nessun risultato per «'+esc(libFilter)+'». Prova con un altro termine.'):(libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.')}</p>
+        ${libFilter?`<button class="btn ghost" style="margin-top:6px" onclick="libFilter='';renders.libreria()">Azzera ricerca</button>`:`<button class="btn" style="margin-top:6px" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button>`}
       </div>`}</div>`}`;
  if(libTab==='ai')loadAiRecs();
 };
@@ -3354,7 +3364,7 @@ function openDeleteAccount(){
   <div class="modal-body">
     <div class="auth-err" id="daErr"></div>
     <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account.</p>
-    <div class="field"><label>Password attuale</label><input id="daPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')deleteAccount()"></div>
+    <div class="field"><label>Password attuale</label><div class="pw-wrap"><input id="daPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')deleteAccount()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('daPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
     <button class="btn danger" id="daBtn" onclick="deleteAccount()">🗑️ Elimina definitivamente il mio account</button>
   </div>`;
  openOverlay();
@@ -3567,7 +3577,7 @@ async function buildCuriosity(b,seed){
 
 // --- UI ---
 function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">✨ Preparo la curiosità della settimana…</div></div>'}
-function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni settimana una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
+function curioEmptyCard(){return '<div class="card pad empty-state-card"><span class="icn-badge sage">'+icon('sparkles')+'</span><h3>Ancora nessuna curiosità</h3><p>Aggiungi un libro alla tua libreria per riceverne una ogni settimana, personalizzata e senza spoiler.</p><button class="btn" style="margin-top:6px" onclick="openAddBook()">'+icon('plus')+' Aggiungi un libro</button></div>'}
 function paintCuriosity(box,p,st){
  if(!box)return;const isNew=!st.seen;
  const hideText=!!p.read; // possibile spoiler: il testo non si vede finché non lo apri tu
@@ -3838,7 +3848,7 @@ function refreshLibraryList(){
  if(libFilter){const q=libFilter.toLowerCase();list=list.filter(b=>(b.t||'').toLowerCase().includes(q)||(b.a||'').toLowerCase().includes(q)||(b.g||'').toLowerCase().includes(q));}
  const x=document.querySelector('.lib-search-x');if(x)x.style.display=libFilter?'':'none';
  shelf.innerHTML=list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
-   :`<div class="card pad" style="text-align:center;padding:40px 20px"><div style="font-size:40px">🔍</div><h2 style="font-size:19px;margin:10px 0 6px">Nessun libro trovato</h2><div class="muted" style="font-size:13px">Nessun risultato per «${esc(libFilter)}».</div></div>`;
+   :`<div class="card pad empty-state-card"><span class="icn-badge gold">${icon('search')}</span><h3>Nessun libro trovato</h3><p>Nessun risultato per «${esc(libFilter)}».</p></div>`;
 }
 function renderHomeCloud(){
  if(!clubsLoaded){view.innerHTML=homeSkeleton();cloudLoadClubs().then(()=>{clubsLoaded=true;renderHomeCloud()}).catch(()=>{view.innerHTML=homeErrorState()});return}
@@ -4329,9 +4339,10 @@ function traduciErrore(m){m=(m||'').toLowerCase();
 async function register(){
  clearErr();
  const username=$('#rUser').value.trim().replace(/^@/,'');
- const email=$('#rEmail').value.trim().toLowerCase(),pass=$('#rPass').value;
+ const email=$('#rEmail').value.trim().toLowerCase(),pass=$('#rPass').value,confirm=($('#rConfirm')||{}).value;
  if(!/^[a-zA-Z0-9_]{3,20}$/.test(username))return showErr('Username: 3-20 caratteri, solo lettere, numeri o _ (niente spazi).');
  if(!/^\S+@\S+\.\S+$/.test(email))return showErr('Inserisci un\'email valida.');
+ if(pass!==confirm)return showErr('Le due password non coincidono.');
  const pwIssues=passwordIssues(pass,{email,username});
  if(pwIssues.length)return showErr(pwIssues[0]);
  if(!supa)return showErr('Connessione a Supabase non disponibile. Controlla di essere online.');
