@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=149">
+<link rel="stylesheet" href="styles.css?v=150">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1120,7 +1120,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v149 (genere manuale quando non rilevato; elimina account ravvicinato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v150 (riga Senza genere toccabile: assegnazione manuale dove serve)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3831,14 +3831,22 @@ function renderProfiloPage(){
    ${total>0?`
    <div class="genre-summary-row">
      <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} · rilevati in automatico`:(total===1?'Il tuo libro è classificato':`Tutti i ${total} libri sono classificati`)}</div>
-     ${dist.total-dist.classified>0?`<button class="link-btn sm" onclick="openClassifyMissing()" aria-label="Assegna a mano il genere ai ${dist.total-dist.classified} libri senza genere">Assegna a mano</button>`:''}
    </div>
    <div class="genre-bars" role="list">${genreRows.map((g,i)=>{
      const isNone=g[0]==='Senza genere';
      const col=isNone?GREY:palette[i%palette.length];
      const label=`${g[0]}, ${g[1]} ${g[1]===1?'libro':'libri'} su ${total}, ${pcts[i]} percento`;
+     if(isNone)return `<button class="gb-row2 gb-none" onclick="openClassifyMissing()" aria-label="Assegna il genere ai ${g[1]} libri senza genere">
+       <span class="gb-icon" style="background:${col}" aria-hidden="true">${icon('bookmark')}</span>
+       <span class="gb-main" aria-hidden="true">
+         <span class="gb-top"><span class="gb-name">Senza genere</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></span>
+         <span class="gb-track"><i style="width:${pcts[i]}%;background:${col}"></i></span>
+         <span class="gb-hint">Tocca per ${g[1]===1?'assegnarlo':'assegnarli'} a mano</span>
+       </span>
+       <span class="gb-go" aria-hidden="true">${icon('chevron')}</span>
+     </button>`;
      return `<div class="gb-row2" role="listitem" aria-label="${esc(label)}">
-       <span class="gb-icon" style="background:${col}" aria-hidden="true">${icon(isNone?'bookmark':genreIcon(g[0]))}</span>
+       <span class="gb-icon" style="background:${col}" aria-hidden="true">${icon(genreIcon(g[0]))}</span>
        <div class="gb-main" aria-hidden="true">
          <div class="gb-top"><span class="gb-name">${esc(g[0])}</span><span class="gb-meta">${g[1]} ${g[1]===1?'libro':'libri'} · ${pcts[i]}%</span></div>
          <div class="gb-track"><i style="width:${pcts[i]}%;background:${col}"></i></div>

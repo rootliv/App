@@ -1572,3 +1572,14 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .gp-head{display:flex;gap:14px;align-items:center}
 .gp-cover{width:52px;flex:none}
 .gp-list{max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch;align-content:flex-start;padding:2px}
+
+/* v150 — La riga "Senza genere" è essa stessa l'azione: si tocca dove si vede il problema */
+.gb-none{width:100%;text-align:left;background:none;border:none;font-family:inherit;cursor:pointer;
+  border-radius:14px;margin:2px -8px;padding:8px;width:calc(100% + 16px);transition:background .15s}
+.gb-none:hover{background:var(--hover)}
+.gb-none:active{background:var(--surface2)}
+.gb-none .gb-track{display:block}
+.gb-hint{display:block;font-size:11.5px;color:var(--brand-solid);font-weight:600;margin-top:7px}
+.gb-go{flex:none;color:var(--ink-faint);display:grid;place-items:center}
+.gb-go .icn{width:17px;height:17px}
+.gb-none:hover .gb-go{color:var(--brand-solid)}
