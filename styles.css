@@ -156,6 +156,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .btn.ghost:hover{border-color:var(--coral);background:var(--hover)}
 .btn.sm{padding:8px 15px;font-size:12.5px}
 .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:20px;background:var(--surface2);color:var(--plum);border:1px solid var(--line)}
+.pill .icn{width:14px;height:14px}
 .pill-btn{font-family:inherit;cursor:pointer;min-height:32px}
 .pill-btn:active{background:var(--hover)}
 .pill.green{background:var(--sage-soft);color:#3a6a48;border-color:transparent}
@@ -572,6 +573,7 @@ input[type=range]{accent-color:var(--coral)}
 /* Badge stato -> pillola "foil" smerigliata */
 .cover .badge{top:8px;right:8px;width:auto;height:auto;min-width:0;padding:5px 8px;border-radius:9px;font-size:12px;
   background:var(--glass);backdrop-filter:blur(5px);color:var(--plum);box-shadow:0 3px 9px rgba(0,0,0,.20)}
+.cover .badge .icn{width:14px;height:14px;display:block}
 
 /* Badge di stato testuale (sostituisce lo spunto sovrapposto): compatto, non copre la copertina */
 .status-badge{position:absolute;top:8px;left:8px;z-index:2;font-family:inherit;font-size:10px;font-weight:700;

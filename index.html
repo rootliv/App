@@ -832,8 +832,8 @@ function openBook(id){
  const b=book(id);
  _modalKind='book:'+id;
  if(noteBookId!==id){noteEditing=false;noteBookId=id;_tramaOpen=false;_notesOpen=false;editNoteIdx=-1;}
- const statusMap={reading:['📖 In lettura','green'],read:['✓ Letto','sky'],toread:['🔖 Da leggere','gold']};
- const st=statusMap[b.status]||['',''];
+ const statusMap={reading:['book','In lettura','green'],read:['check','Letto','sky'],toread:['bookmark','Da leggere','gold']};
+ const st=statusMap[b.status]||['','',''];
  const hasTrama=b.trama&&!/non disponibile/i.test(b.trama);
  const hasSet=b.set&&b.set.length;
  const tramaLong=hasTrama&&(b.trama.length>170||/\n/.test(b.trama));
@@ -847,7 +847,7 @@ function openBook(id){
       <div class="book-author">${esc(b.a)}</div>
       ${b.originalTitle&&normKey(b.originalTitle)!==normKey(b.t)?`<div class="muted" style="font-size:12.5px;margin-top:3px">Titolo originale: <i>${esc(b.originalTitle)}</i></div>`:''}
       <div class="chips" style="margin-top:12px">
-        <span class="pill ${st[1]}">${st[0]}</span>
+        <span class="pill ${st[2]}">${icon(st[0])} ${st[1]}</span>
         ${b.g?`<button class="pill pill-btn" onclick="editBookGenre(${b.id},'book')" aria-label="Correggi il genere: ${esc(b.g)}">${esc(b.g)}</button>`
              :`<button class="pill pill-btn gold" onclick="editBookGenre(${b.id},'book')" aria-label="Aggiungi un genere a questo libro">＋ Aggiungi genere</button>`}
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
@@ -864,7 +864,7 @@ function openBook(id){
         <p id="tramaText" class="trama-text${(tramaLong&&!_tramaOpen)?' clamp':''}">${esc(b.trama)}</p>
         ${tramaLong?`<button class="trama-more" onclick="toggleTrama(${b.id})">${_tramaOpen?'Mostra meno':'Mostra di più'} <span class="tm-chev">${_tramaOpen?'⌃':'⌄'}</span></button>`:''}
       `:`<div class="bd-sec-title">${icon('book')} Trama</div><p class="muted" style="font-size:14px">Trama non ancora disponibile.</p>`}
-      ${hasSet?`<div class="bd-subrow"><span class="bd-lab">🗺️ Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
+      ${hasSet?`<div class="bd-subrow"><span class="bd-lab">${icon('globe')} Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
       ${b.cur?`<div class="bd-subrow"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${esc(b.cur)}</p></div>`:''}
       ${b.quote?`<div class="quote" style="margin-top:14px">${esc(b.quote)}</div>`:''}
     </div>`:''}
@@ -877,7 +877,7 @@ function openBook(id){
       ${(()=>{const show=(_notesOpen||notes.length<=1)?notes:notes.slice(0,1);return `
         ${notes.length?`<div class="booknotes">${show.map((n,idx)=>editNoteIdx===idx
           ? `<div class="booknote editing"><textarea id="editNoteTa${idx}" class="note-ta" rows="3">${esc(n.t)}</textarea>
-             <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditBookNote(${b.id},${idx})">💾 Salva</button><button class="btn ghost sm" onclick="cancelEditBookNote(${b.id})">Annulla</button></div></div>`
+             <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sm" onclick="saveEditBookNote(${b.id},${idx})">${icon('check')} Salva</button><button class="btn ghost sm" onclick="cancelEditBookNote(${b.id})">Annulla</button></div></div>`
           : `<div class="booknote"><span class="bn-mark">“</span><div class="bn-text">${esc(n.t)}</div>
              <div class="bn-foot">${n.d?`<time class="note-when">${fmtNoteDate(n.d)}</time>`:'<span></span>'}
              <div class="booknote-actions"><button class="bn-ic" onclick="editBookNoteAt(${b.id},${idx})" title="Modifica">${icon('edit')}</button><button class="bn-ic danger" onclick="deleteBookNote(${b.id},${idx})" title="Elimina">${icon('trash')}</button></div></div></div>`
@@ -907,10 +907,10 @@ function openBook(id){
     </div>`:''}
 
     <div class="bd-actions">
-      ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">📖 Inizia a leggere</button>`:''}
-      ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">✓ Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">🔖 Da leggere</button>`:''}
+      ${b.status==='toread'?`<button class="btn gold" onclick="setStatus(${b.id},'reading')">${icon('book')} Inizia a leggere</button>`:''}
+      ${b.status==='reading'?`<button class="btn gold" onclick="setStatus(${b.id},'read')">${icon('check')} Segna come letto</button><button class="btn ghost" onclick="setStatus(${b.id},'toread')">${icon('bookmark')} Da leggere</button>`:''}
       ${b.status==='read'?`<button class="btn ghost" onclick="setStatus(${b.id},'reading')">↩ Riporta in lettura</button>`:''}
-      <button class="btn danger-outline" onclick="removeBook(${b.id})">🗑 Rimuovi dalla libreria</button>
+      <button class="btn danger-outline" onclick="removeBook(${b.id})">${icon('trash')} Rimuovi dalla libreria</button>
     </div>
     <div class="muted" style="font-size:11.5px;margin-top:14px;text-align:center">Valutazione e stato si salvano automaticamente.</div>
   </div>`;
@@ -1442,9 +1442,9 @@ async function searchBooks(q){
  const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco nell\'archivio…</div>';
  searchResults=await doSearch(q);
  renderResults(i=>`<div class="add-choice">
-   <button class="add-mini" onclick="quickAdd(${i},'toread')" title="Da leggere">🔖</button>
-   <button class="add-mini" onclick="quickAdd(${i},'reading')" title="Lo sto leggendo">📖</button>
-   <button class="add-mini gold" onclick="askReadYear(${i})" title="Già letto">✅</button>
+   <button class="add-mini" onclick="quickAdd(${i},'toread')" title="Da leggere">${icon('bookmark')}</button>
+   <button class="add-mini" onclick="quickAdd(${i},'reading')" title="Lo sto leggendo">${icon('book')}</button>
+   <button class="add-mini gold" onclick="askReadYear(${i})" title="Già letto">${icon('check')}</button>
  </div>`);
 }
 function addFoundBook(i){quickAdd(i,'toread');}
@@ -1486,15 +1486,15 @@ function askReadYear(i){
  const s=searchResults[i];if(!s)return;
  const now=new Date().getFullYear();let yopts='';for(let y=now;y>=now-40;y--)yopts+=`<option value="${y}">${y}</option>`;
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>✅ Già letto</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon('check')} Già letto</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:18px">
-      <div style="width:52px;flex:none">${coverEl(i,s.t,s.a,'📖',s.coverUrl)}</div>
+      <div style="width:52px;flex:none">${coverEl(i,s.t,s.a,icon('book'),s.coverUrl)}</div>
       <div style="min-width:0"><b style="font-family:'Fraunces';font-size:16px">${esc(s.t)}</b><div class="muted" style="font-size:13px">${esc(s.a||'')}</div></div>
     </div>
-    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">📅 In che anno l'hai letto? <span style="font-weight:400">(facoltativo)</span></label>
+    <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">${icon('calendar')} In che anno l'hai letto? <span style="font-weight:400">(facoltativo)</span></label>
     <select id="addReadYear" style="max-width:200px;margin-bottom:18px"><option value="">Non ricordo</option>${yopts}</select>
-    <button class="btn" style="width:100%;justify-content:center" onclick="confirmReadAdd(${i})">✅ Aggiungi ai letti</button>
+    <button class="btn" style="width:100%;justify-content:center" onclick="confirmReadAdd(${i})">${icon('check')} Aggiungi ai letti</button>
   </div>`;
  openOverlay();
 }
@@ -1557,7 +1557,7 @@ async function enrichGenreFromWiki(title,author){
 }
 function openAddBook(){
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>📚 Aggiungi un libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon('library')} Aggiungi un libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div style="padding:20px 30px 6px">
     <div class="muted" style="font-size:13.5px">Cerca per titolo o autore: i suggerimenti compaiono mentre scrivi. Copertina, trama e dettagli arrivano automaticamente (edizioni italiane).</div>
   </div>
@@ -2698,10 +2698,10 @@ function renderAiRecs(verifying){
  box.innerHTML=header+`<div class="shelf">${aiRecsData.map((s,i)=>`
    <div class="book">
      <button class="ai-x" title="Non questo" onclick="event.stopPropagation();excludeAiRec(${i})">✕</button>
-     ${coverEl(i,s.t,s.a,'✨',s.coverUrl)}
+     ${coverEl(i,s.t,s.a,icon('sparkles'),s.coverUrl)}
      <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
        ${s.reason?`<div style="font-size:11.5px;margin-top:5px;color:var(--sage);font-weight:600;line-height:1.4">✨ ${esc(s.reason)}</div>`:''}
-       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">🔖 Aggiungi</button>
+       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">${icon('bookmark')} Aggiungi</button>
      </div>
    </div>`).join('')}</div>`;
 }
@@ -2756,10 +2756,10 @@ async function loadAiRecsFallback(){
  const note=aiUnavailable?`<div class="muted" style="font-size:12px;margin-bottom:12px;padding:9px 12px;background:var(--gold-soft);border-radius:10px">ℹ️ Consigli AI non disponibili al momento: ecco suggerimenti in base ai tuoi autori e generi.</div>`:'';
  box.innerHTML=note+`<div class="shelf">${list.map((s,i)=>`
    <div class="book">
-     ${coverEl(i,s.t,s.a,'✨',s.coverUrl)}
+     ${coverEl(i,s.t,s.a,icon('sparkles'),s.coverUrl)}
      <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
        <div style="font-size:11.5px;margin-top:5px;color:var(--sage);font-weight:600">✨ ${esc(s.reason)}</div>
-       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">🔖 Aggiungi</button>
+       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">${icon('bookmark')} Aggiungi</button>
      </div>
    </div>`).join('')}</div>`;
 }
