@@ -1071,8 +1071,11 @@ body.sidebar-open .topsearch-res{display:none!important}
 .spoiler-ic{width:12px;height:12px}
 .spoiler-gate{padding:14px 0 4px}
 .clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.goal-card-v2{padding-bottom:16px;background:linear-gradient(180deg,var(--progress-muted) 0%,var(--surface) 65%)}
-.goal-inline{display:flex;align-items:center;gap:16px}
+.goal-card-v2{padding-bottom:16px;background:var(--surface)}
+/* Proporzioni come nel riferimento: numero grande, unità leggibile accanto (rapporto ~2:1) */
+.goal-num .me-metric-n{font-size:26px}
+.goal-num .me-metric-u{font-size:12.5px}
+.goal-inline{display:flex;align-items:center;gap:18px}
 .goal-num{flex:none;white-space:nowrap}
 .goal-inline-bar{flex:1;height:8px}
 .goal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
