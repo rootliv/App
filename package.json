@@ -31,7 +31,6 @@
     "@capacitor/android": "^6.1.2"
   },
   "overrides": {
-    "tar": "^7.5.20",
     "minimatch": "^10.2.5",
     "uuid": "^14.0.1"
   }
