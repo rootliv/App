@@ -899,6 +899,7 @@ body.sidebar-open .topsearch-res{display:none!important}
 .ts-item{display:flex;align-items:center;gap:11px;padding:9px 15px;cursor:pointer}
 .ts-item:hover{background:var(--hover)}
 .ts-ic{width:32px;height:32px;border-radius:10px;background:var(--surface2);display:grid;place-items:center;font-size:15px;flex:none}
+.ts-ic .icn{width:18px;height:18px}
 .ts-item b{font-size:13.5px;display:block;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ts-item small{font-size:11.5px;color:var(--ink-faint);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ts-empty{padding:15px;color:var(--ink-soft);font-size:13px}

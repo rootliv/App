@@ -331,9 +331,9 @@ function topSearchInput(q){
  if(!q){box.style.display='none';box.innerHTML='';return}
  const nq=deburr(q);
  const secs=pages.filter(p=>deburr(p.label).includes(nq)||deburr(p.title).includes(nq)).slice(0,6)
-   .map(p=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="go('${p.id}');topClose()"><span class="ts-ic">${p.ic}</span><span style="min-width:0"><b>${p.label}</b><small>${esc(p.sub)}</small></span></div>`).join('');
+   .map(p=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="go('${p.id}');topClose()"><span class="ts-ic">${icon(p.ic)}</span><span style="min-width:0"><b>${p.label}</b><small>${esc(p.sub)}</small></span></div>`).join('');
  const bks=(typeof books!=='undefined'?books:[]).filter(b=>deburr(b.t).includes(nq)||deburr(b.a||'').includes(nq)).slice(0,5)
-   .map(b=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="openBook(${b.id});topClose()"><span class="ts-ic">📖</span><span style="min-width:0"><b>${esc(b.t)}</b><small>${esc(b.a||'')}</small></span></div>`).join('');
+   .map(b=>`<div class="ts-item" onmousedown="event.preventDefault()" onclick="openBook(${b.id});topClose()"><span class="ts-ic">${icon('book')}</span><span style="min-width:0"><b>${esc(b.t)}</b><small>${esc(b.a||'')}</small></span></div>`).join('');
  box.innerHTML=(secs?'<div class="ts-grp">Sezioni</div>'+secs:'')+(bks?'<div class="ts-grp">Libreria</div>'+bks:'')||'<div class="ts-empty">Nessun risultato</div>';
  box.style.display='block';
 }
