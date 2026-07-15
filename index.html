@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=148">
+<link rel="stylesheet" href="styles.css?v=149">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -207,9 +207,77 @@ let books=JSON.parse(JSON.stringify(seedBooks));
 const $=s=>document.querySelector(s);
 const view=$('#view');
 function book(id){return books.find(b=>b.id===id)}
-/* I generi non si modificano più a mano: vengono rilevati e corretti automaticamente
-   da Wikidata (P136, etichette italiane) tramite autoEnrichGenres(). Se un genere è
-   assente o generico, la rete di sicurezza lo riassegna in background senza intervento. */
+/* I generi vengono rilevati automaticamente da Wikidata (P136, etichette italiane).
+   Qui sotto la via manuale, per quando il rilevamento non trova nulla o sbaglia:
+   la scelta viene "bloccata" così l'automatismo non la sovrascrive più. */
+/* Elenco costruito alla prima richiesta: GENRE_IT è dichiarato più sotto,
+   quindi non si può leggere al caricamento (darebbe ReferenceError). */
+let _genreChoices=null;
+function genreChoices(){if(!_genreChoices)_genreChoices=[...new Set(Object.values(GENRE_IT))].sort((a,b)=>a.localeCompare(b,'it'));return _genreChoices;}
+let _genreQuery='';
+function manualGenreKey(){return 'pag_manual_genres_'+((authUser&&authUser.id)||'demo')}
+function manualGenres(){try{return new Set(JSON.parse(localStorage.getItem(manualGenreKey())||'[]'))}catch(e){return new Set()}}
+function markManualGenre(t){try{const s=manualGenres();s.add(normKey(t));localStorage.setItem(manualGenreKey(),JSON.stringify([...s]))}catch(e){}}
+function isManualGenre(t){try{return manualGenres().has(normKey(t))}catch(e){return false}}
+
+function editBookGenre(id,back){_genreQuery='';renderGenrePicker(id,back||'book');openOverlay();}
+function filterGenrePicker(id,back,v){_genreQuery=v;
+ const box=$('#genreList');if(!box)return;
+ box.innerHTML=genreChips(id,back);
+}
+function genreChips(id,back){
+ const b=book(id);if(!b)return'';
+ const q=(_genreQuery||'').trim().toLowerCase();
+ const list=genreChoices().filter(g=>!q||g.toLowerCase().includes(q));
+ const esc2=g=>g.replace(/'/g,"\\'");
+ let html=list.map(g=>`<button class="pill pill-btn ${g===b.g?'green':''}" onclick="saveBookGenre(${id},'${esc2(g)}','${back}')">${esc(g)}</button>`).join('');
+ const exact=genreChoices().some(g=>g.toLowerCase()===q);
+ if(q&&!exact){
+   const own=_genreQuery.trim();
+   html=`<button class="pill pill-btn gold" onclick="saveBookGenre(${id},'${esc2(own)}','${back}')">＋ Usa «${esc(own)}»</button>`+html;
+ }
+ return html||`<div class="muted" style="font-size:13px;padding:6px 2px">Nessun genere corrisponde. Scrivilo e usa «＋ Usa …».</div>`;
+}
+function renderGenrePicker(id,back){
+ const b=book(id);if(!b)return;
+ $('#modal').innerHTML=`
+  <div class="modal-top"><b>${b.g?'Correggi il genere':'Genere del libro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-body">
+    <div class="gp-head">
+      <div class="gp-cover">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
+      <div style="min-width:0">
+        <b style="font-family:'Fraunces';font-size:15.5px;display:block;line-height:1.3">${esc(b.t)}</b>
+        <div class="muted" style="font-size:12.5px;margin-top:2px">${esc(b.a||'')}</div>
+        ${b.g?`<span class="pill green" style="margin-top:8px">${esc(b.g)}</span>`:`<span class="pill" style="margin-top:8px">Senza genere</span>`}
+      </div>
+    </div>
+    <div class="field" style="margin:16px 0 12px">
+      <label>Cerca o scrivi un genere</label>
+      <input id="genreSearch" autocomplete="off" placeholder="Es. Romanzo storico" value="${esc(_genreQuery)}" oninput="filterGenrePicker(${id},'${back}',this.value)">
+    </div>
+    <div class="chips gp-list" id="genreList">${genreChips(id,back)}</div>
+    ${b.g?`<button class="btn ghost sm" style="margin-top:16px" onclick="saveBookGenre(${id},'','${back}')">Togli il genere</button>`:''}
+  </div>`;
+}
+async function saveBookGenre(id,g,back){
+ const b=book(id);if(!b)return;
+ g=(g||'').trim();
+ b.g=g;
+ if(g)markManualGenre(b.t);
+ if(mode==='cloud'&&supa){try{await supa.from('books').update({genre:g||null}).eq('id',id)}catch(e){}}
+ else save();
+ toast(g?('Genere: '+g):'Genere rimosso','📚');
+ if(back==='profilo'){const next=STATS.unclassifiedRead()[0];
+   if(next){editBookGenre(next.id,'profilo');return;}
+   closeModal();renderProfiloPage();return;}
+ openBook(id);
+}
+/* Assegna a mano i generi mancanti, uno dopo l'altro */
+function openClassifyMissing(){
+ const missing=STATS.unclassifiedRead();
+ if(!missing.length){toast('Tutti i libri hanno un genere','✓');return;}
+ editBookGenre(missing[0].id,'profilo');
+}
 function ini(n){return n.split(' ').map(x=>x[0]).join('')}
 function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
  return`<div class="buy">
@@ -779,7 +847,8 @@ function openBook(id){
       ${b.originalTitle&&normKey(b.originalTitle)!==normKey(b.t)?`<div class="muted" style="font-size:12.5px;margin-top:3px">Titolo originale: <i>${esc(b.originalTitle)}</i></div>`:''}
       <div class="chips" style="margin-top:12px">
         <span class="pill ${st[1]}">${st[0]}</span>
-        ${b.g?`<span class="pill">${esc(b.g)}</span>`:''}
+        ${b.g?`<button class="pill pill-btn" onclick="editBookGenre(${b.id},'book')" aria-label="Correggi il genere: ${esc(b.g)}">${esc(b.g)}</button>`
+             :`<button class="pill pill-btn gold" onclick="editBookGenre(${b.id},'book')" aria-label="Aggiungi un genere a questo libro">＋ Aggiungi genere</button>`}
         ${b.pg?`<span class="pill">${b.pg} pagine</span>`:''}
         ${b.ch?`<span class="pill">${b.ch} capitoli</span>`:''}
       </div>
@@ -1051,7 +1120,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v148 (obiettivo su card bianca con proporzioni da riferimento; icona libro aperto per In lettura)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v149 (genere manuale quando non rilevato; elimina account ravvicinato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3758,10 +3827,11 @@ function renderProfiloPage(){
  </div>`:''}
 
  <div class="sec-head"><div class="sec-title">I tuoi generi</div></div>
- <div class="card pad lib-last-card">
+ <div class="card pad">
    ${total>0?`
    <div class="genre-summary-row">
-     <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} · i mancanti vengono rilevati automaticamente`:(total===1?'Il tuo libro è classificato':`Tutti i ${total} libri sono classificati`)}</div>
+     <div class="muted" style="font-size:11.5px">${dist.total-dist.classified>0?`${dist.classified} ${dist.classified===1?'libro classificato':'libri classificati'} su ${total} · rilevati in automatico`:(total===1?'Il tuo libro è classificato':`Tutti i ${total} libri sono classificati`)}</div>
+     ${dist.total-dist.classified>0?`<button class="link-btn sm" onclick="openClassifyMissing()" aria-label="Assegna a mano il genere ai ${dist.total-dist.classified} libri senza genere">Assegna a mano</button>`:''}
    </div>
    <div class="genre-bars" role="list">${genreRows.map((g,i)=>{
      const isNone=g[0]==='Senza genere';
@@ -3841,7 +3911,8 @@ async function autoEnrichGenres(){
  if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
  try{
    const isCleanIt=g=>g&&(IT_VALID.has(g.toLowerCase())||Object.values(GENRE_IT).includes(g));
-   const todo=books.filter(b=>!isCleanIt(b.g)||GENERIC_GENRES.has(b.g)).slice(0,10);
+   // I generi scelti a mano sono intoccabili: l'automatismo non li riscrive.
+   const todo=books.filter(b=>!isManualGenre(b.t)&&(!isCleanIt(b.g)||GENERIC_GENRES.has(b.g))).slice(0,10);
    let changed=false;
    for(const b of todo){
      let g='';

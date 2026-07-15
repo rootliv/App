@@ -1378,7 +1378,7 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .uname-field input{border:none;background:none;outline:none;padding:13px 0;flex:1;font-size:15px;color:var(--ink)}
 
 /* --- Footer account (Elimina account), vicino al contenuto --- */
-.acct-footer{text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.acct-footer{text-align:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 .acct-footer .linklike-danger{font-size:12.5px}
 
 /* ============================================================
@@ -1567,3 +1567,8 @@ select:focus{outline:none;border-color:var(--brand-solid)}
   .empty-reading .er-badge .icn{width:22px;height:22px}
   .er-actions .btn{flex:1;justify-content:center;white-space:nowrap}
 }
+
+/* v149 — Selettore del genere (via manuale quando il rilevamento non trova nulla) */
+.gp-head{display:flex;gap:14px;align-items:center}
+.gp-cover{width:52px;flex:none}
+.gp-list{max-height:38vh;overflow-y:auto;-webkit-overflow-scrolling:touch;align-content:flex-start;padding:2px}
