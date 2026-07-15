@@ -536,6 +536,7 @@ input[type=range]{accent-color:var(--coral)}
 .auth-note{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--ink-faint);margin-top:18px;line-height:1.4}
 .auth-note .icn-badge{width:30px;height:30px}
 .auth-note .icn-badge .icn{width:15px;height:15px}
+#authTabs button{flex:1;text-align:center}
 #authTabs button.active{background:var(--brand-grad);color:#fff;box-shadow:0 6px 14px -6px rgba(20,80,55,.5)}
 @media(max-width:760px){.auth-card{grid-template-columns:1fr}.auth-side{display:none}.auth-form{padding:34px 26px}}
 
