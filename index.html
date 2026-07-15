@@ -1530,11 +1530,11 @@ function editGoal(){
  const cur=(profile&&profile.data&&+profile.data.goal)||0;
  const YR=new Date().getFullYear();
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>🎯 Obiettivo ${YR}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon('target')} Obiettivo ${YR}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin-bottom:8px">Quanti libri vuoi leggere quest'anno?</label>
     <div class="goal-in" style="margin-bottom:18px"><input id="goalInput" type="number" min="0" inputmode="numeric" placeholder="Es. 24" value="${cur||''}"><span class="goal-unit">libri</span></div>
-    <button class="btn" style="width:100%;justify-content:center" onclick="saveGoal()">💾 Salva obiettivo</button>
+    <button class="btn" style="width:100%;justify-content:center" onclick="saveGoal()">${icon('check')} Salva obiettivo</button>
   </div>`;
  openOverlay();
  setTimeout(()=>{const el=$('#goalInput');if(el)el.focus()},80);
