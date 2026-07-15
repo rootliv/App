@@ -1080,17 +1080,21 @@ body.sidebar-open .topsearch-res{display:none!important}
 .goal-substats{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
 .goal-substats b{color:var(--ink);font-weight:700}
 .gs-sep{width:1px;height:14px;background:var(--line)}
-.quick-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
-.qs-cell{display:flex;flex-direction:column;align-items:center;gap:6px;border:1px solid var(--line);border-radius:14px;padding:12px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent;box-shadow:none;transition:.12s}
-.qs-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.55)}
-[data-theme="dark"] .qs-ic{background:rgba(255,255,255,.10)}
-.qs-cell .icn{width:17px;height:17px}
-.qs-cell.tint-sage{background:var(--primary-muted)}.qs-cell.tint-sage .icn{color:var(--primary)}.qs-cell.tint-sage:active{filter:brightness(1.15)}
-.qs-cell.tint-gold{background:var(--progress-muted)}.qs-cell.tint-gold .icn{color:var(--progress)}.qs-cell.tint-gold:active{filter:brightness(1.15)}
-.qs-cell.tint-info{background:var(--info-muted)}.qs-cell.tint-info .icn{color:var(--info)}.qs-cell.tint-info:active{filter:brightness(1.15)}
-.qs-cell:active{transform:scale(.97)}
+.quick-stats{display:grid;grid-template-columns:repeat(3,1fr);margin:14px 0 4px;
+  background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-sm);overflow:hidden}
+.qs-cell{display:flex;align-items:center;justify-content:center;gap:10px;border:none;background:none;
+  padding:14px 6px;cursor:pointer;font-family:inherit;min-height:44px;-webkit-tap-highlight-color:transparent;transition:.12s}
+.qs-cell+.qs-cell{border-left:1px solid var(--line)}
+.qs-cell:active{background:var(--hover)}
+.qs-ic{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:none}
+.qs-cell .icn{width:18px;height:18px}
+.qs-ic.sage{background:var(--primary-muted)}.qs-ic.sage .icn{color:var(--primary)}
+.qs-ic.gold{background:var(--progress-muted)}.qs-ic.gold .icn{color:var(--progress)}
+.qs-ic.info{background:var(--info-muted)}.qs-ic.info .icn{color:var(--info)}
+.qs-txt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.15;min-width:0}
 .qs-n{font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--ink)}
-.qs-l{font-size:10.5px;color:var(--ink-soft);font-weight:600}
+.qs-l{font-size:10.5px;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+@media(max-width:360px){.qs-cell{flex-direction:column;gap:5px}.qs-txt{align-items:center}}
 .empty-state-card{text-align:center;padding:36px 22px;display:flex;flex-direction:column;align-items:center;gap:8px}
 .empty-state-card.small{padding:24px 20px;background:linear-gradient(180deg,var(--primary-muted) 0%,var(--surface) 75%);border-color:var(--primary-muted)}
 .empty-state-card .icn-badge{width:52px;height:52px;border-radius:50%;background:var(--gold-soft);display:grid;place-items:center;margin-bottom:6px}
@@ -1521,3 +1525,23 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .rc-unfollow{flex:none;background:none;border:none;font-family:inherit;font-size:12.5px;font-weight:600;
   color:var(--ink-faint);cursor:pointer;padding:10px 10px;border-radius:10px;transition:.15s}
 .rc-unfollow:hover{color:#c0392b;background:var(--hover)}
+
+/* v146 — Home: "Continua a leggere" come da riferimento
+   (copertina, titolo, pagina/percentuale, barra, tasto "Riprendi" verde a destra) */
+.mb-row{display:flex;align-items:center;gap:14px}
+.mb-cover{width:76px;flex:none;cursor:pointer}
+.mb-main{flex:1;min-width:0}
+.mb-title{font-family:'Fraunces',serif;font-size:16.5px;font-weight:600;line-height:1.28;display:block;color:var(--ink)}
+.mb-sub{font-size:12.5px;color:var(--ink-soft);margin:6px 0 10px}
+.mb-bar{height:7px}
+.mb-go{flex:none;padding:11px 16px;gap:4px;white-space:nowrap}
+.mb-go .icn{width:16px;height:16px}
+.me-book-v2{padding:16px}
+/* Sotto i 380px il tasto va a capo a tutta larghezza: niente testo schiacciato */
+@media(max-width:380px){
+  .mb-row{flex-wrap:wrap}
+  .mb-go{width:100%;justify-content:center;margin-top:2px}
+}
+/* Chevron dell'incontro: icona vera, non il carattere "›" */
+.meet-go{display:grid;place-items:center}
+.meet-go .icn{width:18px;height:18px}

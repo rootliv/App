@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=145">
+<link rel="stylesheet" href="styles.css?v=146">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1050,7 +1050,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v145 (selettore nota compatto; CSS versionato per evitare la cache vecchia)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v146 (home come da riferimento: Riprendi inline, statistiche in card unica, chevron icona)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1861,7 +1861,7 @@ function renderClubCloud(){
    ${nextMeet?`<div class="meet-row" onclick="clubSel=${c.id};go('incontri')">
      <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
      <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.place?' · '+esc(nextMeet.place):''}</div></div>
-     <span class="meet-go">›</span>
+     <span class="meet-go">${icon('chevron')}</span>
    </div>`:(isAdmin
      ?`<div class="muted" style="font-size:13px;margin-bottom:12px">Nessun incontro fissato per questo club.</div>
      <button class="btn sm" onclick="clubSel=${c.id};go('incontri')">${icon('calendar')} Fissa un incontro</button>`
@@ -3901,7 +3901,7 @@ function renderHomeCloud(){
  <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
    <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
    <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
-   <span class="meet-go">›</span>
+   <span class="meet-go">${icon('chevron')}</span>
  </div>`:''}
 
  <!-- 3) OBIETTIVO ANNUALE -->
@@ -3912,9 +3912,9 @@ function renderHomeCloud(){
 
  <!-- Statistiche rapide -->
  <div class="quick-stats">
-   <button class="qs-cell tint-sage" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic">${icon('book')}</span><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></button>
-   <button class="qs-cell tint-gold" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic">${icon('bookmark')}</span><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></button>
-   <button class="qs-cell tint-info" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic">${icon('club')}</span><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></button>
+   <button class="qs-cell" onclick="libTab='reading';go('libreria')" aria-label="In lettura: ${reading.length} libri, vai alla libreria"><span class="qs-ic sage">${icon('book')}</span><span class="qs-txt"><span class="qs-n">${reading.length}</span><span class="qs-l">In lettura</span></span></button>
+   <button class="qs-cell" onclick="libTab='toread';go('libreria')" aria-label="Da leggere: ${toread} libri, vai alla libreria"><span class="qs-ic gold">${icon('bookmark')}</span><span class="qs-txt"><span class="qs-n">${toread}</span><span class="qs-l">Da leggere</span></span></button>
+   <button class="qs-cell" onclick="go('club')" aria-label="Club: ${myClubs.length}, vai ai club"><span class="qs-ic info">${icon('club')}</span><span class="qs-txt"><span class="qs-n">${myClubs.length}</span><span class="qs-l">Club</span></span></button>
  </div>
 
  <!-- 4) CURIOSITÀ DELLA SETTIMANA — spunto piacevole, in chiusura -->
@@ -3948,21 +3948,17 @@ function continueReadingCard(reading){
  }
  return `<div class="me-reading">${reading.map(b=>{
    const pr=STATS.readingProgress(b);
-   const when=b.updatedAt?fmtNoteDate(b.updatedAt):null;
    const label=`${b.t}, ${pr.hasTotal?('pagina '+pr.cur+' di '+pr.tot):'avanzamento'}, ${pr.pct} percento completato`;
+   const act=`${pr.cur===0?`setStatus(${b.id},'reading');`:''}openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)`;
    return `<div class="card pad me-book-v2">
-     <div style="display:flex;gap:14px">
-       <div style="width:64px;flex:none">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
-       <div style="flex:1;min-width:0">
-         <b class="clamp2" style="font-family:'Fraunces';font-size:16px;display:block">${esc(b.t)}</b>
-         <div class="muted clamp1" style="font-size:12.5px;margin:2px 0 10px">${b.a?esc(b.a):'Autore sconosciuto'}</div>
-         <div class="bar bar-reading" style="height:7px" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
-         <div class="muted" style="font-size:11.5px;margin-top:6px" aria-hidden="true">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}${pr.cur===0?' <span class="badge-tint sage">Non ancora iniziato</span>':''}</div>
-         ${when?`<div class="muted" style="font-size:10.5px;margin-top:2px;opacity:.75">Ultimo aggiornamento: ${when}</div>`:''}
+     <div class="mb-row">
+       <div class="mb-cover" onclick="openBook(${b.id})">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
+       <div class="mb-main">
+         <b class="mb-title clamp2">${esc(b.t)}</b>
+         <div class="mb-sub">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}</div>
+         <div class="bar bar-reading mb-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
        </div>
-     </div>
-     <div style="margin-top:12px">
-       <button class="btn sm" style="width:100%;justify-content:center;gap:8px" onclick="${pr.cur===0?`setStatus(${b.id},'reading');`:''}openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)">${icon('bookmark')} ${pr.cur===0?'Inizia a leggere':'Riprendi e segna la pagina'}</button>
+       <button class="btn mb-go" onclick="${act}" aria-label="${pr.cur===0?'Inizia a leggere':'Riprendi e segna la pagina'}: ${esc(b.t)}">${pr.cur===0?'Inizia':'Riprendi'} ${icon('chevron')}</button>
      </div>
    </div>`;
  }).join('')}</div>`;
