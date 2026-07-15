@@ -4040,7 +4040,7 @@ async function fetchPlaces(q,box,inp){
    const d=await r.json();const feats=(d.features||[]).filter(f=>f.geometry&&f.geometry.coordinates);
    if(!feats.length){box.style.display='none';return}
    box.innerHTML=feats.map(f=>{const c=f.geometry.coordinates;const lab=placeLabel(f.properties);
-     return `<div class="ac-item" data-lat="${c[1]}" data-lng="${c[0]}" data-label="${esc(lab)}">📍 ${esc(lab)}</div>`}).join('');
+     return `<div class="ac-item" data-lat="${c[1]}" data-lng="${c[0]}" data-label="${esc(lab)}">${icon('globe')} ${esc(lab)}</div>`}).join('');
    box.style.display='block';
    box.querySelectorAll('.ac-item').forEach(el=>el.onclick=()=>{
      inp.value=el.getAttribute('data-label');box.style.display='none';
@@ -4062,7 +4062,7 @@ function openMeetingModal(id){
  if(m){const mc=myClubs.find(c=>c.id===m.club_id);if(mc&&!pool.some(c=>c.id===mc.id))pool=[mc].concat(pool);}
  if(!pool.length){
    const anyBook=myClubs.some(c=>c.current_title);
-   $('#modal').innerHTML=`<div class="modal-top"><b>📅 Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+   $('#modal').innerHTML=`<div class="modal-top"><b>${icon('calendar')} Nuovo incontro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
      <div class="modal-body empty-state-card">
        <span class="icn-badge gold">${icon(anyBook?'calendar':'book')}</span>
        <h3 style="font-size:18px">${anyBook?'Ogni club ha già un incontro':'Prima serve il libro del mese'}</h3>
@@ -4073,7 +4073,7 @@ function openMeetingModal(id){
  }
  const opts=pool.map(c=>`<option value="${c.id}" ${m&&m.club_id===c.id?'selected':''}>${c.current_title?('📖 '+esc(c.current_title)+' · '+esc(c.name)):((c.emoji||'📖')+' '+esc(c.name))}</option>`).join('');
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>${m?'✏️ Modifica incontro':'📅 Nuovo incontro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon(m?'edit':'calendar')} ${m?'Modifica incontro':'Nuovo incontro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="field"><label>Club & libro del mese</label>
       <select id="mtClub">${opts}</select>

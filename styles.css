@@ -1147,7 +1147,8 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .note-when{font-size:11.5px;color:var(--ink-faint);margin-left:4px}
 .ac-box{position:absolute;left:0;right:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:12px;
   box-shadow:var(--shadow);margin-top:4px;max-height:230px;overflow-y:auto}
-.ac-item{padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);line-height:1.35}
+.ac-item{padding:10px 13px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--line);line-height:1.35;display:flex;align-items:center;gap:6px}
+.ac-item .icn{width:14px;height:14px;flex:none}
 .ac-item:last-child{border-bottom:none}
 .ac-item:hover{background:var(--coral-soft);color:var(--plum)}
 
