@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=152">
+<link rel="stylesheet" href="styles.css?v=153">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -218,7 +218,6 @@ let _genreQuery='';
 function manualGenreKey(){return 'pag_manual_genres_'+((authUser&&authUser.id)||'demo')}
 function manualGenres(){try{return new Set(JSON.parse(localStorage.getItem(manualGenreKey())||'[]'))}catch(e){return new Set()}}
 function markManualGenre(t){try{const s=manualGenres();s.add(normKey(t));localStorage.setItem(manualGenreKey(),JSON.stringify([...s]))}catch(e){}}
-function isManualGenre(t){try{return manualGenres().has(normKey(t))}catch(e){return false}}
 
 function editBookGenre(id,back){_genreQuery='';renderGenrePicker(id,back||'book');openOverlay();}
 function filterGenrePicker(id,back,v){_genreQuery=v;
@@ -240,6 +239,7 @@ function genreChips(id,back){
 }
 function renderGenrePicker(id,back){
  const b=book(id);if(!b)return;
+ _modalKind='genre:'+id;
  $('#modal').innerHTML=`
   <div class="modal-top"><b>${b.g?'Correggi il genere':'Genere del libro'}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
@@ -278,7 +278,6 @@ function openClassifyMissing(){
  if(!missing.length){toast('Tutti i libri hanno un genere','✓');return;}
  editBookGenre(missing[0].id,'profilo');
 }
-function ini(n){return n.split(' ').map(x=>x[0]).join('')}
 function buyLinks(t,a){const q=encodeURIComponent(t+' '+a);
  return`<div class="buy">
    <a target="_blank" rel="noopener noreferrer" href="https://www.amazon.it/s?k=${q}"><span class="buy-ic">🛒</span><span class="buy-lb">Amazon</span></a>
@@ -384,7 +383,6 @@ const NAV_ICON={home:'home',profilo:'profile',libreria:'library',club:'club',ai:
 
 /* ===== STATISTICHE CENTRALIZZATE (fonte unica di verità per tutte le schermate) ===== */
 function fmtIt(n){try{return new Intl.NumberFormat('it-IT').format(n);}catch(e){return ''+n;}}
-function fmtItDecimal(n){try{return new Intl.NumberFormat('it-IT',{maximumFractionDigits:1}).format(n);}catch(e){return ''+n;}}
 const STATS={
  currentYear(){return new Date().getFullYear();},
  total(){return books.length;},
@@ -575,18 +573,9 @@ renders.libreria=()=>{
  if(libTab==='ai')loadAiRecs();
 };
 
-let clubTab=1;
 renders.club=()=>renderClubCloud();
 
 renders.ai=()=>renderAiCloud();
-const aiAnswers={
- 'Genera 5 domande per la discussione finale':"<b>Domande per l'incontro finale:</b><br>1. Come cambia il significato della 'casa' nel corso delle tre generazioni?<br>2. Clara e i suoi poteri: realtà, metafora o forma di resistenza?<br>3. In che modo la Storia politica del Cile entra nelle vite private dei Trueba?<br>4. Esteban è un villain, una vittima o entrambi?<br>5. Cosa significa il quaderno di Clara per la memoria familiare?",
- 'Suggerisci temi di dibattito':"<b>Temi per il dibattito:</b><br>• Memoria personale vs. memoria collettiva<br>• Il ciclo della violenza e la possibilità del perdono<br>• Il ruolo delle donne come custodi della famiglia<br>• Realismo magico come linguaggio del trauma storico",
- 'Spiega i riferimenti storici':"<b>Contesto storico:</b> il romanzo riflette il Cile del Novecento fino al colpo di stato del 1973. Il personaggio del 'Poeta' richiama Pablo Neruda, e 'il Candidato' evoca Salvador Allende (zio dell'autrice). La parte finale dialoga con la dittatura di Pinochet.",
- "Curiosità sull'autrice":"<b>Isabel Allende:</b> inizia ogni nuovo libro l'8 gennaio, data in cui scrisse la lettera al nonno da cui nacque questo romanzo. È tra le autrici in lingua spagnola più lette al mondo, con oltre 75 milioni di copie vendute.",
- 'Citazioni significative':"<div class='quote'>«La memoria è fragile e il corso di una vita è molto breve.»</div><div class='quote'>«Le parole non hanno colore.»</div>",
- 'Spunto di riflessione (senza spoiler, sono al cap. 8)':"🔒 <b>Sei al capitolo 8 — niente spoiler.</b><br>Fin qui, nota come la casa di città e la tenuta di campagna rappresentino due mondi opposti. Mentre leggi, chiediti: di chi è davvero la voce che narra? Tieni l'ipotesi a mente per i prossimi capitoli."
-};
 function mdLite(s){s=esc(s||'');
  s=s.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*(.+?)\*(?=[\s).,;:!?]|$)/g,'$1<i>$2</i>');
  s=s.replace(/^\s*[-*]\s+/gm,'• ').replace(/^\s*\d+\.\s+/gm,m=>m.trim()+' ');
@@ -827,16 +816,17 @@ renders.lettori=()=>renderLettoriCloud();
 renders.notifiche=()=>renderNotifCloud();
 
 /* ============ MODALS ============ */
+let _modalKind=null;   // cosa mostra il modale adesso: evita che una risposta di rete tardiva lo sostituisca
 function openBook(id){
  const b=book(id);
- if(noteBookId!==id){noteEditing=false;noteBookId=id;_tramaOpen=false;_notesOpen=false;_tagAdding=false;editNoteIdx=-1;}
+ _modalKind='book:'+id;
+ if(noteBookId!==id){noteEditing=false;noteBookId=id;_tramaOpen=false;_notesOpen=false;editNoteIdx=-1;}
  const statusMap={reading:['📖 In lettura','green'],read:['✓ Letto','sky'],toread:['🔖 Da leggere','gold']};
  const st=statusMap[b.status]||['',''];
  const hasTrama=b.trama&&!/non disponibile/i.test(b.trama);
  const hasSet=b.set&&b.set.length;
  const tramaLong=hasTrama&&(b.trama.length>170||/\n/.test(b.trama));
  const notes=getNotes(b);
- const tags=bookTags(b);
  $('#modal').innerHTML=`
   <div class="modal-top"><b>Dettagli libro</b><div class="mt-actions"><button class="mt-share" onclick="shareBook(${b.id})" title="Condividi" aria-label="Condividi">${icon('share')}</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>
   <div class="book-head">
@@ -864,8 +854,8 @@ function openBook(id){
         ${tramaLong?`<button class="trama-more" onclick="toggleTrama(${b.id})">${_tramaOpen?'Mostra meno':'Mostra di più'} <span class="tm-chev">${_tramaOpen?'⌃':'⌄'}</span></button>`:''}
       `:`<div class="bd-sec-title">${icon('book')} Trama</div><p class="muted" style="font-size:14px">Trama non ancora disponibile.</p>`}
       ${hasSet?`<div class="bd-subrow"><span class="bd-lab">🗺️ Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
-      ${b.cur?`<div class="bd-subrow"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${b.cur}</p></div>`:''}
-      ${b.quote?`<div class="quote" style="margin-top:14px">${b.quote}</div>`:''}
+      ${b.cur?`<div class="bd-subrow"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${esc(b.cur)}</p></div>`:''}
+      ${b.quote?`<div class="quote" style="margin-top:14px">${esc(b.quote)}</div>`:''}
     </div>`:''}
 
     <div class="bd-card">
@@ -915,7 +905,9 @@ function openBook(id){
   </div>`;
  openOverlay();
  if(b.status==='reading'&&b.pg)setTimeout(()=>bmDragSetup(b.id,b.pg),50);
- enrichBook(b).then(ch=>{if(ch&&!noteEditing&&$('#overlay').classList.contains('open'))openBook(id)});
+ // Se nel frattempo l'utente ha aperto un altro libro (o il selettore del genere), la risposta
+ // tardiva non deve sostituire cio' che sta guardando ora.
+ enrichBook(b).then(ch=>{if(ch&&!noteEditing&&_modalKind==='book:'+id&&$('#overlay').classList.contains('open'))openBook(id)});
 }
 /* Card di stato in cima al dettaglio: completamento (letto), avanzamento (in lettura) o invito (da leggere) */
 function bookStatusCard(b){
@@ -957,23 +949,9 @@ function bookStatusCard(b){
    <div class="muted" style="font-size:13px">Questo libro è tra quelli da leggere. Quando inizi, il segnalibro terrà il segno per te.</div>
  </div>`;
 }
-let _tramaOpen=false,_notesOpen=false,_tagAdding=false;
+let _tramaOpen=false,_notesOpen=false;
 function toggleTrama(id){_tramaOpen=!_tramaOpen;openBook(id);}
 function toggleNotes(id){_notesOpen=!_notesOpen;openBook(id);}
-/* Categorie e tag: etichette personali del libro (persistite nella colonna 'tags' come JSON) */
-function bookTags(b){if(!b)return [];if(Array.isArray(b.tags))return b.tags;try{const t=JSON.parse(b.tags||'[]');return Array.isArray(t)?t:[]}catch(e){return []}}
-function persistTags(id,arr){const p={tags:JSON.stringify(arr)};if(mode==='cloud'&&supa){supa.from('books').update(p).eq('id',id).then(()=>{},()=>{})}else save();}
-function toggleTagAdd(id){_tagAdding=true;openBook(id);setTimeout(()=>{const i=document.getElementById('tagInput');if(i)i.focus();},60);}
-function addTag(id){
- const i=document.getElementById('tagInput');if(!i){_tagAdding=false;return;}
- const v=(i.value||'').trim();
- if(!v){_tagAdding=false;openBook(id);return;}
- const b=book(id);const arr=bookTags(b).slice();
- if(!arr.some(t=>t.toLowerCase()===v.toLowerCase()))arr.push(v);
- b.tags=arr;_tagAdding=true;persistTags(id,arr);openBook(id);
- setTimeout(()=>{const n=document.getElementById('tagInput');if(n)n.focus();},60);
-}
-function removeTagAt(id,idx){const b=book(id);const arr=bookTags(b).slice();if(idx<0||idx>=arr.length)return;arr.splice(idx,1);b.tags=arr;persistTags(id,arr);openBook(id);}
 function removeBook(id){
  if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
  const rb=book(id);
@@ -994,7 +972,6 @@ function removeBook(id){
 }
 function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
 let noteEditing=false,noteBookId=null;
-function saveBookNote(id){const b=book(id);const ta=$('#bookNote');if(ta)b.note=(ta.value||'').trim();persistBook(id,{note:b.note||''});noteEditing=false;openBook(id)}
 /* Note personali multiple: salvate come JSON nel campo testo 'note' (schema DB invariato).
    Retrocompatibile: se 'note' è testo semplice (vecchia nota singola), lo leggiamo come 1 nota. */
 function getNotes(b){
@@ -1023,8 +1000,6 @@ function saveEditBookNote(id,idx){
  editNoteIdx=-1;saveNotes(id,arr);openBook(id);
 }
 function cancelEditBookNote(id){editNoteIdx=-1;openBook(id);}
-function editNote(id){noteEditing=true;openBook(id)}
-function cancelNote(id){noteEditing=false;openBook(id)}
 async function enrichBook(b){
  if(b.enriched)return false;
  if(b.set&&b.set.length){b.enriched=true;return false;} // libri d'esempio già curati
@@ -1120,7 +1095,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v152 (elimina account: conferma diretta con password)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v153 (audit: XSS nei nomi membri, memory leak, race condition, codice morto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1167,7 +1142,6 @@ async function fromGoogle(q,itOnly){
 }
 async function fetchVolume(id){if(GBLOCK||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){GBLOCK=true;return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
   return{trama:stripHtml(v.description),lang:langCode(v.language),coverUrl:httpsImg(im.large||im.medium||im.thumbnail||im.smallThumbnail||''),isbn:(v.industryIdentifiers||[]).map(x=>cleanIsbn(x.identifier)).filter(Boolean)}}catch(e){return null}}
-async function fetchDescription(id){const v=await fetchVolume(id);return v?v.trama:''}
 async function googleByIsbn(isbn){try{return await fromGoogle('isbn:'+cleanIsbn(isbn),false)}catch(e){return[]}}
 async function fromOpenLib(q){
  const r=await fetch('https://openlibrary.org/search.json?q='+encodeURIComponent(q)+'&limit=12&fields=key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,language,isbn');
@@ -1462,13 +1436,6 @@ async function searchBooks(q){
    <button class="add-mini gold" onclick="askReadYear(${i})" title="Già letto">✅</button>
  </div>`);
 }
-function liveSearchClub(q,clubId){clearTimeout(searchTimer);q=(q||'').trim();const box=$('#searchResults');if(q.length<3){if(box)box.innerHTML='<div class="srch-empty">Scrivi almeno 3 lettere…</div>';return}searchTimer=setTimeout(()=>searchBooksClub(q,clubId),350)}
-async function searchBooksClub(q,clubId){
- q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);
- const box=$('#searchResults');box.innerHTML='<div class="srch-empty">🔎 Cerco…</div>';
- searchResults=await doSearch(q);
- renderResults(i=>`<button class="btn sm" onclick="chooseClubBook(${clubId},${i})">Scegli</button>`);
-}
 function addFoundBook(i){quickAdd(i,'toread');}
 async function quickAdd(i,status,fy){
  const s=searchResults[i];if(!s)return;
@@ -1642,7 +1609,6 @@ async function purgePastMeetings(){        // elimina automaticamente gli incont
  myMeetings=(myMeetings||[]).filter(m=>!past.some(p=>p.id===m.id));
 }
 function todayStr(){return new Date().toISOString().slice(0,10)}
-function isoInDays(n){return new Date(Date.now()+n*86400000).toISOString().slice(0,10)}
 function fmtDateParts(d){const p=String(d).slice(0,10).split('-');const M=['GEN','FEB','MAR','APR','MAG','GIU','LUG','AGO','SET','OTT','NOV','DIC'];return {d:+p[2]||'',m:M[(+p[1]||1)-1]}}
 function daysTo(d){return Math.round((new Date(String(d).slice(0,10))-new Date(todayStr()))/86400000)}
 function upcomingMeetings(){const t=todayStr();return (myMeetings||[]).filter(m=>m.date&&String(m.date).slice(0,10)>=t).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
@@ -1731,7 +1697,7 @@ async function loadMembers(clubId){
      username:p.username||'',
      avatar:p.avatar||''};});
 }
-function ini2(n){return ((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase()}
+function ini2(n){return esc(((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase())}
 function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}
  t.innerHTML='<span>'+(icon||'✓')+'</span>'+esc(msg);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
 /* AI sempre attiva (nessun interruttore). Se il provider non risponde, ripiego base silenzioso. */
@@ -2104,7 +2070,7 @@ function selectionPanelHTML(c,role,members){
    let h=`<div class="pill sky">🎲 Sorteggio: tocca a <b>${nm}${c.current_chooser===me?' (tu)':''}</b></div>`;
    if(c.current_chooser===me)h+=`<div style="margin-top:12px"><button class="btn" onclick="openChooseClubBook(${c.id})">📖 Scegli il libro del mese</button></div>`;
    else h+=`<div class="muted" style="font-size:13px;margin-top:10px">In attesa che ${nm} scelga il libro del mese…</div>`;
-   if(chosen.length)h+=`<div class="muted" style="font-size:12px;margin-top:10px">Hanno già scelto in questo giro: <b>${chosen.map(m=>m.name).join(', ')}</b>.</div>`;
+   if(chosen.length)h+=`<div class="muted" style="font-size:12px;margin-top:10px">Hanno già scelto in questo giro: <b>${chosen.map(m=>esc(m.name)).join(', ')}</b>.</div>`;
    if(role==='admin')h+=`<div><button class="btn ghost sm" style="margin-top:10px" onclick="cancelSelection(${c.id})">Annulla turno</button></div>`;
    return h;
  }
@@ -2132,7 +2098,7 @@ function selectionPanelHTML(c,role,members){
          <button class="btn sm" onclick="startRotation(${c.id})">➡️ Prossimo turno (sorteggio)</button>
          <button class="btn ghost sm" onclick="resetRotation(${c.id})">↺ Azzera giro</button>
        </div>
-       <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.5">Giro in corso: hanno scelto <b>${chosen.length}/${total}</b>. Sorteggiabili ora: ${remaining.map(m=>m.name).join(', ')}.</div>`;
+       <div class="muted" style="font-size:11.5px;margin-top:8px;line-height:1.5">Giro in corso: hanno scelto <b>${chosen.length}/${total}</b>. Sorteggiabili ora: ${remaining.map(m=>esc(m.name)).join(', ')}.</div>`;
    }else{
      const nMembers=(members||[]).length;
      const canRotate=nMembers>=2;const canVote=nMembers>=3;
@@ -2269,7 +2235,6 @@ function setBookPos(title,p){
    if(pct!==b.prog){b.prog=pct;if(b.status==='toread')b.status='reading';if(pct>=100)b.status='read';persistBook(b.id,{progress:b.prog,status:b.status});}}
 }
 function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
-function stepPos(title,d){const mn=diaryMinPos();const np=Math.max(mn,bookPos(title)+d);setBookPos(title,np);syncReadingPos(title,np);if(curDiaryClub)paintDiary(curDiaryClub);}
 /* Segnalibro del diario: click e trascinamento, coerente col dettaglio libro. Aggiorna la
    posizione di lettura (che controlla anche quali note anti-spoiler sono visibili). */
 function diaryTrackClick(ev,title,total,mn){
@@ -2279,7 +2244,7 @@ function diaryTrackClick(ev,title,total,mn){
  const page=Math.max(mn,Math.round(total*frac));
  setBookPos(title,page);syncReadingPos(title,page);paintDiary(curDiaryClub);
 }
-let _diaryDrag=null,_diaryMove=null,_diaryUp=null;
+let _diaryDrag=null,_diaryMove=null,_diaryUp=null,_diaryMovePrev=null,_diaryUpPrev=null;
 function diaryDragSetup(title,total,mn){
  const track=$('#diaryTrack');if(!track)return;
  const posFromX=cx=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(cx-r.left)/r.width));};
@@ -2289,7 +2254,11 @@ function diaryDragSetup(title,total,mn){
  track.onmousedown=e=>{e.preventDefault();_diaryDrag=1;live(posFromX(e.clientX));};
  _diaryMove=e=>{if(_diaryDrag)live(posFromX(e.clientX));};
  _diaryUp=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX(e.clientX));}};
+ // Questa funzione viene rieseguita a ogni ridisegno del diario: senza togliere i listener
+ // precedenti si accumulerebbero su window a ogni giro (perdita di memoria e lavoro doppio).
+ if(_diaryMovePrev){window.removeEventListener('mousemove',_diaryMovePrev);window.removeEventListener('mouseup',_diaryUpPrev);}
  window.addEventListener('mousemove',_diaryMove);window.addEventListener('mouseup',_diaryUp);
+ _diaryMovePrev=_diaryMove;_diaryUpPrev=_diaryUp;
  track.ontouchstart=e=>{_diaryDrag=1;live(posFromX(e.touches[0].clientX));};
  track.ontouchmove=e=>{if(_diaryDrag){live(posFromX(e.touches[0].clientX));e.preventDefault();}};
  track.ontouchend=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX((e.changedTouches[0]||{}).clientX||0));}};
@@ -2971,29 +2940,6 @@ function initMapCloud(locs){
 }
 /* ============ PROFILO (cloud) ============ */
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function readStatsHTML(){
- const read=books.filter(b=>b.status==='read');
- const reading=books.filter(b=>b.status==='reading');
- if(!books.length)return `<div class="muted" style="font-size:13.5px">Aggiungi libri alla tua libreria per vedere le statistiche di lettura.</div>`;
- let pages=0;read.forEach(b=>pages+=(b.pg||0));reading.forEach(b=>pages+=Math.round((b.pg||0)*((b.prog||0)/100)));
- const rel=[...read,...reading];
- const freq=(arr)=>{const m={};arr.filter(Boolean).forEach(x=>m[x]=(m[x]||0)+1);let best='',n=0;for(const k in m)if(m[k]>n){n=m[k];best=k}return best;};
- const topGenre=freq(rel.map(b=>b.g));
- const topAuthor=freq(rel.map(b=>b.a));
- const rated=read.filter(b=>b.rate>0);
- const avg=rated.length?(rated.reduce((s,b)=>s+b.rate,0)/rated.length):0;
- const stat=(num,lab)=>`<div class="rstat"><div class="rs-num">${num}</div><div class="rs-lab">${lab}</div></div>`;
- return `<div class="rstats">
-   ${stat(read.length,'libri letti')}
-   ${stat(pages.toLocaleString('it-IT'),'pagine lette')}
-   ${stat(reading.length,'in lettura')}
-   ${avg?stat(avg.toFixed(1)+'★','voto medio'):stat('—','voto medio')}
- </div>
- ${(topGenre||topAuthor)?`<div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
-   ${topGenre?`<div class="muted" style="font-size:13px">📚 Genere che leggi di più: <b style="color:var(--ink)">${esc(topGenre)}</b></div>`:''}
-   ${topAuthor?`<div class="muted" style="font-size:13px">✍️ Autore più presente: <b style="color:var(--ink)">${esc(topAuthor)}</b></div>`:''}
- </div>`:''}`;
-}
 /* ===== SOCIAL: ricerca utenti, follow, libreria altrui, inviti ai club ===== */
 async function toggleLibraryPrivacy(btn){
  const now=!!(profile&&profile.public_library);
@@ -3023,7 +2969,6 @@ async function renderLettoriCloud(){
  </div>`;
  loadFollowing();renderFollowingList();renderMyInvites();
 }
-async function renderLettoriCloudPlaceholder(){}
 async function loadFollowing(){
  try{const {data}=await supa.from('follows').select('followed_id').eq('follower_id',authUser.id);
    myFollowing=(data||[]).map(r=>r.followed_id);}catch(e){myFollowing=[];}
@@ -3188,60 +3133,6 @@ async function respondInvite(inviteId,clubId,accept){
    if(accept){await supa.from('club_members').insert({club_id:clubId,user_id:authUser.id,role:'membro'});clubsLoaded=false;}
    renderHomeCloud();
  }catch(e){alert('Errore: '+e.message);}
-}
-function renderProfiloCloud(){
- const p=profile||{};const d=p.data||{};
- const read=books.filter(b=>b.status==='read').length;
- const goal=+d.goal||0;
- const yr=p.created_at?new Date(p.created_at).getFullYear():new Date().getFullYear();
- const chips=(arr,empty)=>(arr&&arr.length)?arr.map(x=>`<span class="pill">${esc(x)}</span>`).join(''):`<span class="muted" style="font-size:13px">${empty}</span>`;
- view.innerHTML=`
- <div class="card pad" style="display:flex;gap:24px;align-items:center;flex-wrap:wrap">
-   <div class="prof-av" onclick="openAvatarMenu()" title="Foto profilo">${safeImgUrl(d.avatar)?`<img src="${esc(safeImgUrl(d.avatar))}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}<div class="prof-av-cam">${d.avatar?'Foto':'📷 Aggiungi'}</div></div>
-   <div style="flex:1;min-width:200px">
-     ${(p.username&&p.name&&p.name.toLowerCase()===p.username.toLowerCase())
-       ? `<h2 style="font-size:26px">${esc(p.name)}</h2><div class="muted" style="font-size:13px">Iscrizione dal ${yr}</div>`
-       : `<h2 style="font-size:26px">${esc(p.name)||'Lettore'}</h2><div class="muted" style="font-size:13px">${p.username?'@'+esc(p.username)+' · ':''}Iscrizione dal ${yr}</div>`}
-     <div class="stat-pills" style="margin:12px 0 0">
-       ${d.pace?`<span class="pill gold">🔥 ${+d.pace} pag/giorno</span>`:''}
-       ${goal?`<span class="pill green">🎯 ${goal} libri/anno</span>`:''}
-       <span class="pill sky">👥 ${myClubs.length} club</span>
-     </div>
-   </div>
-   <button class="btn ghost" onclick="openEditProfile()">✏️ Modifica profilo</button>
- </div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:6px">🔎 Trova lettori</h3>
-   <div class="muted" style="font-size:12.5px;margin-bottom:12px">Cerca per username e segui altri lettori. Se hai la libreria pubblica, chi ti segue vede i tuoi libri.</div>
-   <input id="userSearch" placeholder="Cerca uno username… (es. alice_libri)" autocapitalize="off" autocomplete="off" oninput="searchUsers(this.value)">
-   <div id="userResults" style="margin-top:12px"></div>
- </div>
- <div id="invitesBox"></div>
- <div class="row" style="margin-top:18px">
-   <div class="card pad" style="flex:1;min-width:260px">
-     <h3 style="font-size:16px;margin-bottom:12px">📗 Generi preferiti</h3>
-     <div class="chips">${chips(d.genres,'Non hai ancora indicato generi preferiti.')}</div>
-     <h3 style="font-size:16px;margin:18px 0 12px">✍️ Autori preferiti</h3>
-     <div class="chips">${chips(d.authors,'Nessun autore preferito.')}</div>
-   </div>
- </div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:12px">🎯 Obiettivo di lettura ${new Date().getFullYear()}</h3>
-   ${goal?`<div class="bar"><i style="width:${Math.min(100,Math.round(read/goal*100))}%"></i></div><div class="muted" style="font-size:13px;margin-top:8px">${read} di ${goal} libri completati.</div>`:`<div class="muted" style="font-size:13.5px">Nessun obiettivo impostato. <a href="#" onclick="openEditProfile();return false" style="color:var(--plum);font-weight:600">Impostane uno →</a></div>`}
-   <hr>
-   <div class="card pad ai-card" style="align-items:center;box-shadow:none">
-     <div style="font-size:26px">✨</div>
-     <div style="flex:1"><b style="font-family:'Fraunces';font-size:16px">Consigli di lettura su misura</b>
-       <div class="muted" style="font-size:13px;margin-top:2px">In base ai tuoi generi, autori e alla tua libreria, l'assistente ti propone nuovi libri.</div></div>
-     <button class="btn gold sm" onclick="libTab='ai';go('libreria')">Vedi consigli</button>
-   </div>
- </div>
- <div class="card pad" style="margin-top:18px">
-   <h3 style="font-size:16px;margin-bottom:12px">🔒 Sicurezza</h3>
-   ${mode==='cloud'?`<div class="muted" style="font-size:13px;margin-bottom:10px">Eliminare l'account è permanente: rimuove il profilo, la libreria personale, le note e l'iscrizione ai club. Non si può annullare.</div>
-   <button class="btn danger sm" onclick="openDeleteAccount()">🗑️ Elimina account</button>`:`<div class="muted" style="font-size:13px">Sei in modalità dimostrativa: crea un account cloud per gestire la sicurezza del tuo profilo.</div>`}
- </div>`;
- if(mode==='cloud'){loadFollowing();renderMyInvites();}
 }
 async function renderMyInvites(){
  const box=$('#invitesBox');if(!box)return;
@@ -3502,7 +3393,6 @@ let curioOverride=0;
 function curioKey(){return 'pagina_curio_v1_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
 function loadCurioState(){try{return JSON.parse(localStorage.getItem(curioKey())||'{}')||{}}catch(e){return {}}}
 function saveCurioState(s){try{localStorage.setItem(curioKey(),JSON.stringify(s))}catch(e){}}
-function curioTodayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function curioDayIndex(){const d=new Date();return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()))/86400000)}
 // chiave/indice SETTIMANALI: la curiosità resta stabile per tutta la settimana e cambia la successiva
 function curioWeekIndex(){return Math.floor((curioDayIndex()+3)/7)} // +3: settimane allineate al lunedì (epoch = giovedì)
@@ -3676,7 +3566,6 @@ async function buildCuriosity(b,seed){
 }
 
 // --- UI ---
-function curioPillColor(cat){return({'Autore':'sky','Dietro le quinte':'plum','Genere':'gold','Titolo':'coral','Adattamenti':'sky','Riconoscimenti':'gold','Pubblicazione':'plum','Lettura':'gold','Libreria':'plum'})[cat]||'plum'}
 function curioSkeleton(){return '<div class="card pad"><div class="srch-empty">✨ Preparo la curiosità della settimana…</div></div>'}
 function curioEmptyCard(){return '<div class="card pad" style="text-align:center;padding:30px 20px"><div style="font-size:40px">✨</div><div class="muted" style="max-width:430px;margin:10px auto 16px">Aggiungi un libro alla tua libreria per ricevere ogni settimana una curiosità personalizzata, senza spoiler.</div><button class="btn" onclick="openAddBook()">📚 Aggiungi un libro</button></div>'}
 function paintCuriosity(box,p,st){
@@ -3752,9 +3641,6 @@ async function renderCuriosity(){
  paintCuriosity($('#curioCard'),payload,st);
 }
 function curioAnother(){curioOverride++;renderCuriosity();}
-function curioDismiss(id){const s=loadCurioState();s.disliked=(s.disliked||[]);if(!s.disliked.includes(id))s.disliked.push(id);s.week=null;s.payload=null;saveCurioState(s);curioOverride=0;renderCuriosity();}
-function curioEnableNotif(){if(!('Notification' in window))return;Notification.requestPermission().then(perm=>{const s=loadCurioState();s.notif=(perm==='granted');saveCurioState(s);if(perm==='granted'){try{new Notification('📚 Promemoria attivato',{body:'Ti avviserò quando c\'è una nuova curiosità della settimana.'})}catch(e){}}renderCuriosity();})}
-function curioDisableNotif(){const s=loadCurioState();s.notif=false;saveCurioState(s);renderCuriosity();}
 
 /* Anno di completamento di un libro: usa finished_year se presente, altrimenti l'anno di creazione record.
    I libri letti senza anno noto restituiscono null (restano navigabili in "Senza data"). */
@@ -3856,10 +3742,6 @@ function renderProfiloPage(){
  </div>
  ${mode==='cloud'?`<div class="acct-footer"><button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button></div>`:''}`;
 }
-function authorRow(name,count,tag){
- return `<div class="author-row"><div class="author-av">${ini2(name)}</div>
-   <div style="flex:1;min-width:0"><b>${esc(name)}</b><div class="author-tag">${tag}${count?' · '+count+' libri':''}</div></div></div>`;
-}
 // Arrotondamento a somma costante (largest remainder) per percentuali coerenti
 function largestRemainder(counts,total){
  if(!total)return counts.map(()=>0);
@@ -3920,7 +3802,9 @@ async function autoEnrichGenres(){
  try{
    const isCleanIt=g=>g&&(IT_VALID.has(g.toLowerCase())||Object.values(GENRE_IT).includes(g));
    // I generi scelti a mano sono intoccabili: l'automatismo non li riscrive.
-   const todo=books.filter(b=>!isManualGenre(b.t)&&(!isCleanIt(b.g)||GENERIC_GENRES.has(b.g))).slice(0,10);
+   // L'elenco si legge una volta sola: dentro il filtro rileggerebbe il localStorage per ogni libro.
+   const manual=manualGenres();
+   const todo=books.filter(b=>!manual.has(normKey(b.t))&&(!isCleanIt(b.g)||GENERIC_GENRES.has(b.g))).slice(0,10);
    let changed=false;
    for(const b of todo){
      let g='';
@@ -4069,29 +3953,6 @@ function goalBlock(goal,read,goalPct,goalPctBar,YR){
    </div>`;
 }
 /* ===== IL TUO ANNO DI LETTURA ===== */
-function yearSummaryCard(readYr,YR){
- if(!readYr.length){
-   return `<div class="card pad empty-state-card small">
-     <span class="icn-badge gold">${icon('sparkles')}</span>
-     <h3>Nessun libro completato nel ${YR}</h3>
-     <p>I tuoi generi e autori dell'anno compariranno qui.</p>
-   </div>`;
- }
- const topG=STATS.topGenre('year');
- const topAL=STATS.topAuthorsLabel('year');
- const pages=STATS.pagesReadYear();
- const avg=STATS.monthlyAverage();
- return `<div class="card pad">
-   <div class="stat-row-editorial">
-     <div class="sre-item"><div class="stat-n">${readYr.length}</div><div class="stat-l">Completati</div></div>
-     <div class="sre-item"><div class="stat-n">${fmtItDecimal(avg)}</div><div class="stat-l">Media/mese nel ${YR}</div></div>
-   </div>
-   ${(topG||topAL)?`<div class="sre-divider"></div><div class="stat-row-editorial">
-     ${topG?`<div class="sre-item wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
-     ${topAL?`<div class="sre-item wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
-   </div>`:''}
- </div>`;
-}
 function renderIncontriCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico gli incontri…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderIncontriCloud()});return}
  const up=upcomingMeetings();const next=up[0];
@@ -4141,7 +4002,7 @@ function maybeNotifyMeeting(m){
 }
 function mapsUrl(place){return 'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place)}
 /* ===== Luogo: autocomplete GRATIS (Photon/OpenStreetMap) + anteprima Leaflet ===== */
-let _placeTimer=null,_mtMap=null;
+let _placeTimer=null,_mtMap=null,_placeOutside=null;
 function placeLabel(p){p=p||{};const parts=[p.name,p.street?(p.street+(p.housenumber?' '+p.housenumber:'')):'',p.postcode,p.city||p.town||p.village||p.county,p.state,p.country];
  return parts.filter(Boolean).filter((v,i,a)=>a.indexOf(v)===i).join(', ');}
 function setupPlaceAutocomplete(){
@@ -4150,7 +4011,11 @@ function setupPlaceAutocomplete(){
  inp.addEventListener('input',()=>{const q=inp.value.trim();clearTimeout(_placeTimer);
    if(q.length<3){box.style.display='none';box.innerHTML='';return}
    _placeTimer=setTimeout(()=>fetchPlaces(q,box,inp),300);});
- document.addEventListener('click',e=>{if(box&&!box.contains(e.target)&&e.target!==inp)box.style.display='none'});
+ // Un solo listener sul document: senza rimuovere il precedente se ne accumulerebbe uno
+ // a ogni apertura del pannello, trattenendo nodi ormai eliminati (perdita di memoria).
+ if(_placeOutside)document.removeEventListener('click',_placeOutside);
+ _placeOutside=e=>{if(box&&!box.contains(e.target)&&e.target!==inp)box.style.display='none'};
+ document.addEventListener('click',_placeOutside);
 }
 async function fetchPlaces(q,box,inp){
  try{
@@ -4316,7 +4181,7 @@ function markNotifsSeen(items){
  try{localStorage.setItem('pagina_notif_seen',notifSig(items));updateBellDot();}catch(e){}
 }
 function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
-function closeModal(){$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}}
+function closeModal(){_modalKind=null;$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 /* ============ SUPABASE (account cloud) ============ */
@@ -4331,7 +4196,6 @@ try{
 let mode='demo';     // 'cloud' = account vero su Supabase, 'demo' = ospite locale
 let authUser=null;   // utente Supabase
 let profile=null;    // {name, username}
-let session=null;
 let pendingJoin=null;
 try{pendingJoin=new URLSearchParams(location.search).get('club')}catch(e){}
 
@@ -4518,9 +4382,8 @@ async function logout(){try{if(supa)await supa.auth.signOut()}catch(e){}localSto
 
 /* ---- dati: cloud (database) o demo (sul dispositivo) ---- */
 function dbToBook(r){const s=seedBooks.find(x=>x.t===r.title)||{};
- let tags=[];try{const t=JSON.parse(r.tags||'[]');if(Array.isArray(t))tags=t;}catch(e){}
  return {id:r.id,t:r.title,a:r.author,g:r.genre,pg:r.pages,status:r.status,prog:r.progress,rate:r.rating,
-   finishedYear:r.finished_year||null,updatedAt:r.updated_at||null,tags,
+   finishedYear:r.finished_year||null,updatedAt:r.updated_at||null,
    coverUrl:r.cover_url||'',trama:r.plot||s.trama||'',note:r.note||'',ch:s.ch||0,set:s.set||[],cur:s.cur||'',quote:s.quote||''}}
 async function cloudLoadBooks(){
  const {data,error}=await supa.from('books').select('*').eq('user_id',authUser.id).order('id');
