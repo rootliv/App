@@ -374,7 +374,8 @@ const ICONS={
  logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>',
  send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
  eye:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
- eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.2 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'
+ eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.2 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+ camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'
 };
 function icon(name,cls){return `<svg class="icn ${cls||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]||''}</svg>`;}
 function togglePwView(id,btn){
@@ -1737,7 +1738,7 @@ function openAvatarEditor(file){
         </div>
         <input id="avZoom" type="range" min="1" max="3" step="0.01" value="1" style="width:260px;margin:18px auto 0;display:block">
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px">
-          <button class="btn" id="avSave" onclick="saveAvatarEdited()">💾 Salva foto</button>
+          <button class="btn" id="avSave" onclick="saveAvatarEdited()">${icon('check')} Salva foto</button>
         </div>
       </div>`;
      openOverlay();
@@ -1839,8 +1840,8 @@ function openAvatarMenu(){
     ${url?`<img src="${esc(url)}" alt="" style="width:210px;height:210px;object-fit:cover;border-radius:26px;box-shadow:var(--shadow)">`
         :`<div style="width:210px;height:210px;margin:0 auto;border-radius:26px;background:linear-gradient(140deg,var(--plum),var(--coral));color:#fff;display:grid;place-items:center;font-family:'Fraunces';font-size:64px">${ini2(nm)}</div>`}
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px">
-      <button class="btn" onclick="chooseAvatar()">📷 ${url?'Cambia foto':'Carica foto'}</button>
-      ${url?`<button class="btn danger" onclick="removeAvatar()">🗑 Rimuovi foto</button>`:''}
+      <button class="btn" onclick="chooseAvatar()">${icon('camera')} ${url?'Cambia foto':'Carica foto'}</button>
+      ${url?`<button class="btn danger" onclick="removeAvatar()">${icon('trash')} Rimuovi foto</button>`:''}
     </div>
   </div>`;
  openOverlay();
@@ -3362,12 +3363,12 @@ async function saveProfile(){
    Service Role Key) è tutta server-side. */
 function openDeleteAccount(){
  $('#modal').innerHTML=`
-  <div class="modal-top"><b>🗑️ Elimina account</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
+  <div class="modal-top"><b>${icon('trash')} Elimina account</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="auth-err" id="daErr"></div>
     <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account.</p>
     <div class="field"><label>Password attuale</label><div class="pw-wrap"><input id="daPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')deleteAccount()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('daPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-    <button class="btn danger" id="daBtn" onclick="deleteAccount()">🗑️ Elimina definitivamente il mio account</button>
+    <button class="btn danger" id="daBtn" onclick="deleteAccount()">${icon('trash')} Elimina definitivamente il mio account</button>
   </div>`;
  openOverlay();
 }
