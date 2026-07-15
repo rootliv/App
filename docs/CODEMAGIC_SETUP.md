@@ -25,14 +25,35 @@ Questo APK è solo per provare l'app sul telefono, non è quello da pubblicare s
 3. Lancia il workflow **"Pàgina — Android (release firmato, per Play Store)"** →
    produce un file **.aab** da caricare su Google Play Console.
 
-## 3. Pubblicare su App Store (richiede Apple Developer Program, 99$/anno)
+## 3. Pubblicare su App Store / TestFlight (richiede Apple Developer Program, 99$/anno)
 
-1. Iscriviti a **https://developer.apple.com/programs/** (99$/anno).
-2. In Codemagic: **Team settings → Integrations → App Store Connect** → collega il tuo
-   account Apple (ti chiede una API key che generi da App Store Connect, la pagina di
-   Codemagic spiega dove trovarla).
-3. Lancia il workflow **"Pàgina — iOS (richiede Apple Developer Program)"** → produce
-   l'IPA e lo carica automaticamente su TestFlight.
+1. **Iscriviti al programma Apple**: vai su **https://developer.apple.com/programs/**,
+   accedi con un Apple ID e paga i 99$/anno. Apple verifica l'identita: a volte e
+   istantaneo, a volte ci mette fino a 24-48 ore. Questo e l'unico passaggio che non
+   dipende da noi due: aspetta la conferma via mail prima di andare avanti.
+2. **Crea una API key in App Store Connect**: su **https://appstoreconnect.apple.com** ->
+   **Users and Access -> Integrations -> App Store Connect API** -> tasto **+** -> dai un
+   nome a scelta, ruolo **App Manager** -> **Generate**. Poi:
+   - scarica subito il file della chiave (**Download API Key**) - si puo scaricare
+     una volta sola, salvalo da qualche parte sicuro;
+   - annota **Issuer ID** (scritto sopra la tabella) e il **Key ID** della chiave appena
+     creata.
+3. **Collega la chiave a Codemagic**: **Team settings -> Integrations -> Developer Portal
+   -> Manage keys -> Add key**. Chiamala esattamente **codemagic** (deve corrispondere al
+   nome gia scritto nel file di configurazione del progetto), incolla Issuer ID e Key ID,
+   carica il file della chiave scaricato al punto 2 -> **Save**.
+4. **Crea la scheda dell'app su App Store Connect**: **My Apps -> + -> New App** ->
+   piattaforma iOS, nome "Pagina", bundle ID **io.github.rootliv.pagina**. Se il bundle ID
+   non compare nell'elenco, registralo prima su
+   **developer.apple.com -> Certificates, Identifiers & Profiles -> Identifiers -> +**.
+5. **Lancia il workflow**: su Codemagic scegli **"Pagina - iOS (richiede Apple Developer
+   Program)"** -> **Start new build**. Gira su un Mac quindi ci mette di piu di Android
+   (anche 20-30 minuti). Se va a buon fine, l'IPA viene caricato automaticamente su
+   TestFlight: da li lo installi sul tuo iPhone tramite l'app TestFlight (gratis,
+   scaricala dall'App Store).
+
+Manda uno screenshot a ogni passaggio se qualcosa non e chiaro o non torna: ti dico io
+cosa cliccare.
 
 ## Note
 
