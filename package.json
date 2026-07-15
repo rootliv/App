@@ -1,7 +1,7 @@
 {
   "name": "pagina-app",
   "version": "1.0.0",
-  "description": "Pàgina — Club del libro e libreria personale. App mobile iOS/Android via Capacitor.",
+  "description": "P\u00e0gina \u2014 Club del libro e libreria personale. App mobile iOS/Android via Capacitor.",
   "private": true,
   "scripts": {
     "sync": "cap sync",
@@ -11,8 +11,7 @@
     "run:android": "cap run android",
     "add:ios": "cap add ios",
     "add:android": "cap add android",
-    "copy": "cap copy",
-    "assets": "capacitor-assets generate --iconBackgroundColor '#123829' --splashBackgroundColor '#123829'"
+    "copy": "cap copy"
   },
   "dependencies": {
     "@capacitor/app": "^6.0.0",
@@ -27,9 +26,13 @@
     "@capacitor/status-bar": "^6.0.1"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.1.2",
     "@capacitor/ios": "^6.1.2",
     "@capacitor/android": "^6.1.2"
+  },
+  "overrides": {
+    "tar": "^7.5.20",
+    "minimatch": "^10.2.5",
+    "uuid": "^14.0.1"
   }
 }
