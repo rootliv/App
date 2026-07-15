@@ -1289,6 +1289,8 @@ select:focus{outline:none;border-color:var(--brand-solid)}
   transition:.15s;box-shadow:var(--shadow-sm)}
 .buy a:hover{border-color:var(--sage);background:var(--hover);transform:translateY(-2px)}
 .buy .buy-ic{font-size:17px;line-height:1}
+.buy .buy-ic{display:inline-flex}
+.buy .buy-ic .icn{width:16px;height:16px}
 .buy .buy-lb{white-space:nowrap}
 @media(max-width:560px){.buy a{flex-direction:column;gap:5px;padding:11px 6px;font-size:12px}}
 
@@ -1400,3 +1402,12 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 #updBanner span{flex:1;line-height:1.35}
 #updBanner button{flex:none;background:#fff;color:var(--ink);border:none;border-radius:20px;
   padding:8px 14px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer}
+
+/* Copertina compatta di "Continua a leggere" in Home (.mb-cover, 76px): il testo del titolo
+   generato sopra la copertina (stesso .cvcap/.ct della Libreria) trabocca ed è illeggibile a
+   questa larghezza ridotta. Qui riduciamo padding/font e tronchiamo con i puntini invece di
+   lasciarlo sovrapporsi, senza toccare la resa nella griglia Libreria (dimensioni maggiori,
+   nessun problema li'). */
+.mb-cover .cvcap{padding:8px 8px 9px}
+.mb-cover .ct{font-size:10.5px;line-height:1.18;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+.mb-cover .ca{font-size:8px;margin-top:3px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
