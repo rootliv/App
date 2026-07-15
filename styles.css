@@ -1545,3 +1545,22 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 /* Chevron dell'incontro: icona vera, non il carattere "›" */
 .meet-go{display:grid;place-items:center}
 .meet-go .icn{width:18px;height:18px}
+
+/* v147 — "Nessun libro in lettura": pastiglia a sinistra, testo e azioni a destra.
+   Misure calibrate perché i due tasti stiano su una riga sola come nel riferimento. */
+.empty-reading{display:flex;align-items:center;gap:14px;padding:16px}
+.empty-reading .er-badge{width:52px;height:52px;background:var(--primary-muted)}
+.empty-reading .er-badge .icn{width:24px;height:24px;color:var(--primary)}
+.er-main{flex:1;min-width:0}
+.empty-reading h3{font-family:'Fraunces',serif;font-weight:600;font-size:16.5px;margin:0 0 4px;color:var(--ink)}
+.empty-reading p{font-size:13px;color:var(--ink-soft);margin:0 0 12px;line-height:1.5}
+.er-actions{display:flex;gap:8px;flex-wrap:wrap}
+.er-actions .btn{font-size:12.5px;padding:9px 12px;box-shadow:none}
+.er-actions .btn:not(.ghost){box-shadow:0 6px 14px -8px rgba(31,107,87,.55)}
+/* Schermi stretti: i tasti vanno a capo e si dividono la riga in parti uguali */
+@media(max-width:370px){
+  .empty-reading{gap:12px;padding:14px}
+  .empty-reading .er-badge{width:46px;height:46px}
+  .empty-reading .er-badge .icn{width:22px;height:22px}
+  .er-actions .btn{flex:1;justify-content:center;white-space:nowrap}
+}

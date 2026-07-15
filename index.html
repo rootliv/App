@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=146">
+<link rel="stylesheet" href="styles.css?v=147">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -286,6 +286,7 @@ const ICONS={
  edit:'<path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z"/><path d="M13.5 6.5l3 3"/>',
  check:'<path d="M20 6 9 17l-5-5"/>',
  book:'<path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M4 19a2 2 0 0 0 2 2h12"/>',
+ bookOpen:'<path d="M12 7.5V21"/><path d="M3 18.5a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 2.5 3 3 0 0 0-3-2.5z"/>',
  bookmark:'<path d="M6 3h12v18l-6-4-6 4z"/>',
  close:'<path d="M6 6l12 12M18 6 6 18"/>',
  chevron:'<path d="m9 6 6 6-6 6"/>',
@@ -1050,7 +1051,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v146 (home come da riferimento: Riprendi inline, statistiche in card unica, chevron icona)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v147 (stato vuoto lettura come da riferimento, icona libro aperto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3893,7 +3894,7 @@ function renderHomeCloud(){
 
  view.innerHTML=`
  <!-- 1) CONTINUA A LEGGERE -->
- <div class="sec-head-ic"><div class="sec-title-ic">${icon('book')}<span>Continua a leggere</span></div></div>
+ <div class="sec-head-ic"><div class="sec-title-ic">${icon('bookOpen')}<span>Continua a leggere</span></div></div>
  ${continueReadingCard(reading)}
 
  <!-- 2) PROSSIMO INCONTRO (solo se esiste): ha una scadenza, va visto presto -->
@@ -3936,13 +3937,15 @@ function homeErrorState(){
 /* ===== CONTINUA A LEGGERE ===== */
 function continueReadingCard(reading){
  if(!reading.length){
-   return `<div class="card pad empty-state-card">
-     <span class="icn-badge sage">${icon('book')}</span>
-     <h3>Nessun libro in lettura</h3>
-     <p>Aggiungi un libro o scegline uno dalla tua libreria.</p>
-     <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px">
-       <button class="btn" onclick="libTab='toread';go('libreria')">Scegli dalla libreria</button>
-       <button class="btn ghost" onclick="openAddBook()">Aggiungi libro</button>
+   return `<div class="card pad empty-reading">
+     <span class="icn-badge sage er-badge">${icon('bookOpen')}</span>
+     <div class="er-main">
+       <h3>Nessun libro in lettura</h3>
+       <p>Aggiungi un libro o scegline uno dalla tua libreria.</p>
+       <div class="er-actions">
+         <button class="btn" onclick="libTab='toread';go('libreria')">Scegli dalla libreria</button>
+         <button class="btn ghost" onclick="openAddBook()">Aggiungi libro</button>
+       </div>
      </div>
    </div>`;
  }
