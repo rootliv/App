@@ -44,6 +44,18 @@ username potrebbero non funzionare finché le funzioni `public_profiles` /
 `is_username_taken` non esistono sul database. Vanno lanciate insieme, sono nello stesso
 file.
 
+## 7. `20260715_push_notifications.sql` — nuovo, per le notifiche push Android
+
+Crea la tabella `device_tokens` (dove il telefono salva il proprio token dopo aver dato
+il permesso di notifiche) e un trigger che, quando arriva un nuovo invito a un club,
+chiama in automatico una funzione che invia la notifica push. **Prima di lanciarla**,
+sostituisci nel file `INCOLLA_QUI_LA_TUA_SERVICE_ROLE_KEY` con la tua vera service_role
+key (Dashboard -> Project Settings -> API). Indipendente dagli altri punti di questo
+elenco: puoi lanciarla anche se non hai ancora fatto il punto 6.
+
+Da sola non basta a far arrivare le notifiche: serve anche un progetto Firebase e la
+Edge Function collegata. Guida completa in `docs/NOTIFICHE_PUSH_SETUP.md`.
+
 ## Colonna mancante segnalata in sessioni precedenti
 
 Se non l'hai già fatto, serve anche (non è in un file di migration separato, va lanciata
