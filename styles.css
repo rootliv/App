@@ -1390,3 +1390,13 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .gb-go{flex:none;color:var(--ink-faint);display:grid;place-items:center}
 .gb-go .icn{width:17px;height:17px}
 .gb-none:hover .gb-go{color:var(--brand-solid)}
+
+/* Banner "nuova versione disponibile" — vedi index.html, _checkAppVersion().
+   Fisso in alto, sopra tutto (anche sopra la schermata di auth), rispetta il notch. */
+#updBanner{position:fixed;top:0;left:0;right:0;z-index:9998;display:flex;align-items:center;gap:10px;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px;background:var(--brand-grad);color:#fff;
+  font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.2);animation:pop .3s}
+#updBanner .icn{width:18px;height:18px;flex:none}
+#updBanner span{flex:1;line-height:1.35}
+#updBanner button{flex:none;background:#fff;color:var(--ink);border:none;border-radius:20px;
+  padding:8px 14px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer}

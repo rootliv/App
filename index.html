@@ -373,6 +373,7 @@ const ICONS={
  trash:'<path d="M4 7h16"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M10 11v6M14 11v6"/>',
  logout:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 8l4 4-4 4"/><path d="M19 12H9"/>',
  send:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+ refresh:'<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>',
  eye:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
  eyeOff:'<path d="M3 3l18 18"/><path d="M10.6 5.2A9.9 9.9 0 0 1 12 5c6.2 0 10 7 10 7a17.4 17.4 0 0 1-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.8 7 10 7a9.6 9.6 0 0 0 3.4-.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
  camera:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
@@ -4532,7 +4533,34 @@ function obGo(what){
    HTTP nel controllo del file sw.js stesso, forziamo un controllo attivo ogni volta che
    l'app torna in primo piano, e ricarichiamo automaticamente la pagina (una sola volta)
    non appena una versione nuova del SW prende il controllo, così l'utente vede subito
-   l'aggiornamento senza dover chiudere/riaprire manualmente più volte. ---- */
+   l'aggiornamento senza dover chiudere/riaprire manualmente più volte.
+   Bug noto di WebKit/iOS: su Safari (soprattutto app da home screen) reg.update() e
+   controllerchange a volte non scattano affatto, e l'app resta bloccata su una versione
+   vecchia senza che l'utente se ne accorga. Per questo affianchiamo un controllo
+   INDIPENDENTE dal ciclo di vita del service worker: leggiamo direttamente il testo di
+   sw.js (con cache-busting nell'URL, così nessuna cache intermedia può restituirne una
+   copia vecchia) e confrontiamo il numero di CACHE_VERSION con quello letto l'ultima
+   volta. Se è cambiato, mostriamo un banner visibile con un pulsante "Aggiorna": così,
+   anche quando il meccanismo automatico silenzioso non funziona, l'utente lo vede e può
+   forzare l'aggiornamento con un tocco. ---- */
+let _lastSwVer=null,_updBannerShown=false;
+function _showUpdateBanner(){
+ if(_updBannerShown)return;_updBannerShown=true;
+ const b=document.createElement('div');
+ b.id='updBanner';
+ b.innerHTML=icon('refresh')+'<span>È disponibile una versione più recente dell\'app.</span><button type="button" onclick="location.reload()">Aggiorna</button>';
+ document.body.appendChild(b);
+}
+async function _checkAppVersion(){
+ try{
+   const r=await fetch('sw.js?_='+Date.now(),{cache:'no-store'});
+   const txt=await r.text();
+   const m=txt.match(/CACHE_VERSION\s*=\s*'([^']+)'/);
+   if(!m)return;
+   if(_lastSwVer===null){_lastSwVer=m[1];return}
+   if(m[1]!==_lastSwVer)_showUpdateBanner();
+ }catch(e){}
+}
 if('serviceWorker' in navigator){
  let _swReloaded=false;
  navigator.serviceWorker.addEventListener('controllerchange',()=>{
@@ -4540,12 +4568,13 @@ if('serviceWorker' in navigator){
    location.reload();
  });
  window.addEventListener('load',()=>{
+   _checkAppVersion();
    navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
      if(!reg)return;
      try{reg.update()}catch(e){}
      // Ogni volta che l'app torna visibile (riaperta dalla home, cambio tab), controlla di nuovo.
-     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{reg.update()}catch(e){}}});
-     window.addEventListener('focus',()=>{try{reg.update()}catch(e){}});
+     document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){try{reg.update()}catch(e){}_checkAppVersion();}});
+     window.addEventListener('focus',()=>{try{reg.update()}catch(e){}_checkAppVersion();});
    }).catch(()=>{/* non bloccare l'app se fallisce */});
  });
 }
