@@ -1987,10 +1987,10 @@ function openClubModal(){
     </div>
     <div class="field"><label>Nome del club</label><input id="ncName" placeholder="Es. Le Pagine Erranti"></div>
     <div class="field"><label>Descrizione <span class="muted" style="font-weight:400">(facoltativa)</span></label><input id="ncDesc" maxlength="60" placeholder="Una breve frase che presenta il club"></div>
-    <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">${icon('plus')} Crea club</button>
+    <button class="btn" id="createClubBtn" style="width:100%;justify-content:center;margin-top:4px" onclick="createClub()">${icon('plus')} Crea club</button>
     <hr style="margin:22px 0">
     <h3 style="font-size:15px;margin-bottom:10px">${icon('lock')} Unisciti con un codice</h3>
-    <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" onclick="joinClub()">Unisciti</button></div>
+    <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" id="joinClubBtn" onclick="joinClub()">Unisciti</button></div>
     <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
   </div>`;
  openOverlay();
@@ -2010,23 +2010,47 @@ function openClubModalWithPhoto(){
  const ph=$('#ncPhoto');if(ph&&_newClubImg)ph.innerHTML=`<img src="${_newClubImg}" alt=""><div class="nc-photo-cam">${icon('edit')}</div>`;
 }
 function clubMsg(m,ok){const e=$('#clubMsg');if(e){e.textContent=m;e.classList.add('show');e.style.color=ok?'var(--sage)':'';e.style.background=ok?'#e3f1e8':''}}
+let _creatingClub=false;
 async function createClub(){
+ if(_creatingClub)return; // impedisce due invii in corsa (doppio tocco/rete lenta) che creerebbero due club identici
  const name=$('#ncName').value.trim();if(!name)return clubMsg('Inserisci il nome del club.');
  const desc=$('#ncDesc').value.trim().slice(0,60);
  const payload={name,emoji:'📖',description:desc,owner:authUser.id};
  if(_newClubImg)payload.image=_newClubImg;
- const {data,error}=await supa.from('clubs').insert(payload).select('*').single();
- if(error)return clubMsg('Errore: '+error.message);
- await supa.from('club_members').insert({club_id:data.id,user_id:authUser.id,role:'admin'});
- _newClubImg=null;clubsLoaded=false;clubSel=data.id;closeModal();go('club');
+ _creatingClub=true;
+ const btn=$('#createClubBtn');const btnTxt=btn?btn.innerHTML:'';
+ if(btn){btn.disabled=true;btn.innerHTML='Creo il club…'}
+ try{
+   const {data,error}=await supa.from('clubs').insert(payload).select('*').single();
+   if(error){clubMsg('Errore: '+error.message);return}
+   const {error:memberErr}=await supa.from('club_members').insert({club_id:data.id,user_id:authUser.id,role:'admin'});
+   if(memberErr){clubMsg('Club creato, ma non sei ancora registrato come admin: '+memberErr.message+'. Riprova ad aprirlo.');return}
+   _newClubImg=null;clubsLoaded=false;clubSel=data.id;closeModal();go('club');
+ }finally{
+   _creatingClub=false;
+   if(btn){btn.disabled=false;btn.innerHTML=btnTxt;}
+ }
 }
+let _joiningClub=false;
 async function joinClub(){
+ if(_joiningClub)return; // impedisce due invii in corsa sullo stesso codice
  const code=($('#joinCode').value||'').trim();const id=clubCodeToId(code);
  if(!code||!id)return clubMsg('Codice non valido.');
- const {data:cl}=await supa.from('clubs').select('id,name').eq('id',id).maybeSingle();
- if(!cl)return clubMsg('Nessun club trovato con questo codice.');
- await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
- clubsLoaded=false;clubSel=id;closeModal();go('club');
+ _joiningClub=true;
+ const btn=$('#joinClubBtn');const btnTxt=btn?btn.innerHTML:'';
+ if(btn){btn.disabled=true;btn.textContent='Mi unisco…'}
+ try{
+   const {data:cl}=await supa.from('clubs').select('id,name').eq('id',id).maybeSingle();
+   if(!cl){clubMsg('Nessun club trovato con questo codice.');return}
+   const {error}=await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
+   // 23505 = vincolo di unicità club_id+user_id già violato: sei già membro, non è un errore vero,
+   // procedo comunque invece di mostrare un messaggio tecnico per un'azione che di fatto è già riuscita.
+   if(error&&error.code!=='23505'){clubMsg('Errore: '+error.message);return}
+   clubsLoaded=false;clubSel=id;closeModal();go('club');
+ }finally{
+   _joiningClub=false;
+   if(btn){btn.disabled=false;btn.innerHTML=btnTxt;}
+ }
 }
 function openBookSearch(title,pickFn,clubId){
  $('#modal').innerHTML=`
@@ -2094,7 +2118,8 @@ async function removeMyProposal(clubId){
  if(!confirm('Vuoi togliere la tua proposta? Dopo potrai proporne un\'altra.'))return;
  const {data:mine}=await supa.from('proposals').select('id').eq('club_id',clubId).eq('user_id',authUser.id).maybeSingle();
  if(mine){try{await supa.from('votes').delete().eq('club_id',clubId).eq('proposal_id',mine.id)}catch(e){}}
- await supa.from('proposals').delete().eq('club_id',clubId).eq('user_id',authUser.id);
+ const {error}=await supa.from('proposals').delete().eq('club_id',clubId).eq('user_id',authUser.id);
+ if(error){alert('Errore di rete, la proposta non è stata tolta: '+error.message);return}
  loadAndRenderProposals(clubId);
 }
 
@@ -2158,19 +2183,26 @@ async function startRotation(clubId){
  if(c.selection_mode==='voting'&&!confirm('C\'è una votazione in corso. Passare al sorteggio a turni annullerà proposte e voti. Continuare?'))return;
  const members=await loadMembers(clubId);
  let pool=members.map(m=>m.id).filter(id=>!((c.cycle_choosers||[]).includes(id)));
- if(!pool.length){pool=members.map(m=>m.id);await supa.from('clubs').update({cycle_choosers:[]}).eq('id',clubId)}
+ if(!pool.length){
+   pool=members.map(m=>m.id);
+   const {error:resetErr}=await supa.from('clubs').update({cycle_choosers:[]}).eq('id',clubId);
+   if(resetErr){alert('Errore di rete, riprova: '+resetErr.message);return}
+ }
  if(!pool.length){alert('Nessun membro nel club.');return}
  const pick=pool[Math.floor(Math.random()*pool.length)];
- await supa.from('clubs').update({selection_mode:'rotation',current_chooser:pick}).eq('id',clubId);
+ const {error}=await supa.from('clubs').update({selection_mode:'rotation',current_chooser:pick}).eq('id',clubId);
+ if(error){alert('Errore di rete, il sorteggio non è stato salvato: '+error.message);return}
  clubsLoaded=false;go('club');
 }
 async function cancelSelection(clubId){
- await supa.from('clubs').update({selection_mode:null,current_chooser:null}).eq('id',clubId);
+ const {error}=await supa.from('clubs').update({selection_mode:null,current_chooser:null}).eq('id',clubId);
+ if(error){alert('Errore di rete, riprova: '+error.message);return}
  clubsLoaded=false;go('club');
 }
 async function resetRotation(clubId){
  if(!confirm('Azzerare il giro? Tutti i membri torneranno sorteggiabili dall\'inizio.'))return;
- await supa.from('clubs').update({cycle_choosers:[],selection_mode:null,current_chooser:null}).eq('id',clubId);
+ const {error}=await supa.from('clubs').update({cycle_choosers:[],selection_mode:null,current_chooser:null}).eq('id',clubId);
+ if(error){alert('Errore di rete, riprova: '+error.message);return}
  clubsLoaded=false;go('club');
 }
 async function startVoting(clubId){
@@ -2178,7 +2210,8 @@ async function startVoting(clubId){
  if(c.selection_mode==='rotation'&&!confirm('C\'è un sorteggio a turni in corso. Passare alla votazione annullerà il turno corrente. Continuare?'))return;
  await supa.from('proposals').delete().eq('club_id',clubId);
  await supa.from('votes').delete().eq('club_id',clubId);
- await supa.from('clubs').update({selection_mode:'voting',current_chooser:null}).eq('id',clubId);
+ const {error}=await supa.from('clubs').update({selection_mode:'voting',current_chooser:null}).eq('id',clubId);
+ if(error){alert('Errore di rete, la votazione non è stata avviata: '+error.message);return}
  clubsLoaded=false;go('club');
 }
 async function loadAndRenderProposals(clubId){
@@ -2212,7 +2245,8 @@ async function loadAndRenderProposals(clubId){
 async function castVote(clubId,proposalId){
  const {data:p}=await supa.from('proposals').select('user_id').eq('id',proposalId).maybeSingle();
  if(p&&p.user_id===authUser.id){alert('Non puoi votare il libro che hai proposto tu.');return}
- await supa.from('votes').upsert({club_id:clubId,user_id:authUser.id,proposal_id:proposalId},{onConflict:'club_id,user_id'});
+ const {error}=await supa.from('votes').upsert({club_id:clubId,user_id:authUser.id,proposal_id:proposalId},{onConflict:'club_id,user_id'});
+ if(error){alert('Errore di rete, il voto non è stato registrato: '+error.message);return}
  loadAndRenderProposals(clubId);
 }
 async function closeVoting(clubId){
@@ -2222,7 +2256,8 @@ async function closeVoting(clubId){
  const {data:votes}=await supa.from('votes').select('*').eq('club_id',clubId);
  const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
  let win=props[0];props.forEach(p=>{if((counts[p.id]||0)>(counts[win.id]||0))win=p});
- await supa.from('clubs').update({current_title:win.title,current_author:win.author,current_cover:win.cover,selection_mode:null,current_chooser:null}).eq('id',clubId);
+ const {error}=await supa.from('clubs').update({current_title:win.title,current_author:win.author,current_cover:win.cover,selection_mode:null,current_chooser:null}).eq('id',clubId);
+ if(error){alert('Errore di rete, la votazione non è stata chiusa: '+error.message);return}
  await supa.from('proposals').delete().eq('club_id',clubId);
  await supa.from('votes').delete().eq('club_id',clubId);
  await addClubBookToLibrary(win.title,win.author,win.cover);
@@ -3181,7 +3216,12 @@ async function sendClubInvite(clubId,uid,btn){
 async function respondInvite(inviteId,clubId,accept){
  try{
    await supa.from('club_invites').update({status:accept?'accepted':'declined'}).eq('id',inviteId);
-   if(accept){await supa.from('club_members').insert({club_id:clubId,user_id:authUser.id,role:'membro'});clubsLoaded=false;}
+   if(accept){
+     const {error}=await supa.from('club_members').insert({club_id:clubId,user_id:authUser.id,role:'membro'});
+     // 23505 = eri già membro (es. invito accettato due volte di fretta): non è un errore da mostrare.
+     if(error&&error.code!=='23505'){alert('Errore: '+error.message);return}
+     clubsLoaded=false;
+   }
    renderHomeCloud();
  }catch(e){alert('Errore: '+e.message);}
 }

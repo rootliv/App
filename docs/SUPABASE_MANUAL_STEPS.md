@@ -56,6 +56,13 @@ elenco: puoi lanciarla anche se non hai ancora fatto il punto 6.
 Da sola non basta a far arrivare le notifiche: serve anche un progetto Firebase e la
 Edge Function collegata. Guida completa in `docs/NOTIFICHE_PUSH_SETUP.md`.
 
+## 8. `20260716_club_members_unique.sql` — DA LANCIARE (priorità alta)
+
+Impedisce a un lettore di comparire due volte come membro dello stesso club (prima non
+c'era nessun vincolo: un doppio tocco su "Unisciti" o "Accetta invito" poteva creare una
+riga duplicata). La migration prima ripulisce eventuali duplicati già presenti nel
+database, poi aggiunge il vincolo. Indipendente dagli altri punti.
+
 ## Colonna mancante segnalata in sessioni precedenti
 
 Se non l'hai già fatto, serve anche (non è in un file di migration separato, va lanciata
