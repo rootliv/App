@@ -86,7 +86,7 @@ sorteggio resta comunque libero di farlo — è l'unico caso in cui un membro no
 legittimamente su questi campi. Foto e descrizione del club restano modificabili da tutti
 i membri, come deciso in precedenza.
 
-## 10. `20260718_security_phase2.sql` — DA LANCIARE (priorità molto alta)
+## 10. `20260718_security_phase2.sql` — ESEGUITA (confermato il 16/07)
 
 Chiude tre varchi scoperti fotografando le regole reali del database (punto 11 qui sotto):
 regole "vecchie" scritte a mano prima di questo elenco, mai tolte quando sono arrivate
