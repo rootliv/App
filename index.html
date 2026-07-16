@@ -37,6 +37,16 @@ function toggleTheme(){var d=document.documentElement;var dark=d.getAttribute('d
   else{d.setAttribute('data-theme','dark');try{localStorage.setItem('pagina_theme','dark')}catch(e){}}
   var b=document.getElementById('themeBtn');if(b)b.innerHTML=d.getAttribute('data-theme')==='dark'?THEME_ICON_SUN:THEME_ICON_MOON;}
 window.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('themeBtn');if(b)b.innerHTML=document.documentElement.getAttribute('data-theme')==='dark'?THEME_ICON_SUN:THEME_ICON_MOON;});
+/* Attiva con Invio/Spazio qualsiasi controllo role="button" che non sia un <button> vero
+   (card libro, avatar club, ecc.): senza questo, chi naviga da tastiera o screen reader
+   può mettere il focus sull'elemento ma non "premerlo". */
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter'&&e.key!==' '&&e.key!=='Spacebar')return;
+  const el=document.activeElement;
+  if(el&&el.getAttribute&&el.getAttribute('role')==='button'&&el.tagName!=='BUTTON'){
+    e.preventDefault();el.click();
+  }
+});
 </script>
 </head>
 <body>
@@ -72,7 +82,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       </ul>
     </div>
     <div class="auth-form">
-      <h2 id="authTitle">Bentornata 👋</h2>
+      <h2 id="authTitle">Bentornati 👋</h2>
       <div class="lead" id="authLead">Accedi per riprendere a leggere.</div>
       <div class="tabs" id="authTabs" style="margin-bottom:22px">
         <button id="tabLogin" class="active" onclick="authTab('login')">Accedi</button>
@@ -91,7 +101,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
         <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off"></div>
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
         <div class="field"><label>Password</label><div class="pw-wrap"><input id="rPass" type="password" placeholder="Almeno 10 caratteri" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-        <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rConfirmHint" style="display:block;margin-top:5px;font-size:12px"></small></div>
         <button type="submit" class="btn gold" style="width:100%;justify-content:center">Crea il mio account</button>
       </form>
 
@@ -105,8 +115,8 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       <form id="formRecovery" style="display:none" onsubmit="event.preventDefault();completePasswordRecovery();return false;">
         <p class="muted" style="font-size:13px;margin-bottom:16px">Scegli una nuova password per il tuo account.</p>
         <div class="field"><label>Nuova password</label><div class="pw-wrap"><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-        <div class="field"><label>Conferma nuova password</label><div class="pw-wrap"><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button type="submit" class="btn" id="rcBtn" style="width:100%;justify-content:center">🔑 Imposta nuova password</button>
+        <div class="field"><label>Conferma nuova password</label><div class="pw-wrap"><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rcConfirmHint" style="display:block;margin-top:5px;font-size:12px"></small></div>
+        <button type="submit" class="btn" id="rcBtn" style="width:100%;justify-content:center"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Imposta nuova password</button>
       </form>
 
       <div class="auth-note"><span class="icn-badge sage"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span>I tuoi dati sono protetti da un account personale e sincronizzati in sicurezza sul cloud.</span></div>
@@ -124,7 +134,7 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div class="side-foot-user" onclick="toggleSidebar(false);go('profilo')" title="Vai al profilo">
+      <div class="side-foot-user" role="button" tabindex="0" onclick="toggleSidebar(false);go('profilo')" title="Vai al profilo" aria-label="Vai al profilo">
         <div class="av" id="meAv">EM</div>
         <div class="side-foot-id"><b id="meName">&nbsp;</b><small id="meSub">&nbsp;</small></div>
       </div>
@@ -306,7 +316,7 @@ function coverEl(i,t,a,badge,url,statusPair){const su=safeImgUrl(url);
  return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
 function bookCard(b){
  const st=b.status==='reading'?['In lettura','reading']:b.status==='read'?['Letto','read']:['Da leggere','toread'];
- return`<div class="book" onclick="openBook(${b.id})">
+ return`<div class="book" role="button" tabindex="0" aria-label="Apri «${esc(b.t)}»" onclick="openBook(${b.id})">
    ${coverEl(b.id,b.t,b.a,null,b.coverUrl,st)}
    <div class="ledge"></div>
    <div class="meta"><b class="clamp2">${esc(b.t)}</b><span class="clamp1">${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:(b.status==='read'?`<button class="rate-cta" onclick="event.stopPropagation();openBook(${b.id});setTimeout(scrollToRate,150)">Valuta</button>`:'')}${b.status==='reading'?`<div class="card-prog" title="${b.prog||0}% letto"><i style="width:${b.prog||0}%"></i></div>`:''}</div>
@@ -1638,17 +1648,22 @@ function pendingItems(){
  const items=[];
  // Notifiche social già caricate (inviti accettati, nuovi follower)
  (socialNotifs||[]).forEach(n=>items.push(n));
+ const wantVoto=notifPrefOn('voto'),wantIncontro=notifPrefOn('incontro');
+ // Nota su .p: NON va pre-escapato qui con esc() — renderNotifCloud() lo fa già una volta
+ // sola al momento di disegnarlo. Farlo anche qui raddoppiava l'escaping e, per club o libri
+ // con un apostrofo nel nome (es. "Cent'anni di solitudine"), mostrava letteralmente "&#39;"
+ // invece del carattere.
  myClubs.forEach(c=>{
-   if(c.selection_mode==='voting')items.push({ic:'sparkles',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+esc(c.name)+': proponi e vota il prossimo libro.',go:'club',cid:c.id,key:'vote-'+c.id});
-   if(c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'sparkles',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+esc(c.name)+' è il tuo turno: scegli il libro.',go:'club',cid:c.id,key:'rot-'+c.id});
+   if(wantVoto&&c.selection_mode==='voting')items.push({ic:'sparkles',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+c.name+': proponi e vota il prossimo libro.',go:'club',cid:c.id,key:'vote-'+c.id});
+   if(wantVoto&&c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'sparkles',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+c.name+' è il tuo turno: scegli il libro.',go:'club',cid:c.id,key:'rot-'+c.id});
  });
- upcomingMeetings().slice(0,2).forEach(m=>{
+ if(wantIncontro)upcomingMeetings().slice(0,2).forEach(m=>{
    const dd=daysTo(m.date);
    const when=dd===0?'oggi':(dd===1?'domani':'tra '+dd+' giorni');
    const dt=fmtDateParts(m.date);
-   items.push({ic:'calendar',bg:'#e1edf6',t:'Incontro '+when,p:esc(m.title||'Incontro')+' · '+dt.d+' '+dt.m+(m.time?(' · '+esc(m.time)):'')+' · '+esc(clubName(m.club_id)),go:'incontri',key:'meet-'+m.id});
+   items.push({ic:'calendar',bg:'#e1edf6',t:'Incontro '+when,p:(m.title||'Incontro')+' · '+dt.d+' '+dt.m+(m.time?(' · '+m.time):'')+' · '+clubName(m.club_id),go:'incontri',key:'meet-'+m.id});
  });
- myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'book',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+esc(c.current_title)+'".',go:'diario',key:'diario-'+c.id}));
+ myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'book',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+c.current_title+'".',go:'diario',key:'diario-'+c.id}));
  return items;
 }
 let socialNotifs=[];
@@ -1893,7 +1908,7 @@ function renderClubCloud(){
 
   <div class="club-banner">
    <div class="club-banner-head">
-     <div class="club-av" onclick="changeClubImage(${c.id})" title="Cambia foto del club">${c.image?`<img src="${esc(safeImgUrl(c.image)||'')}" alt="">`:`<span>${ini2(c.name||'📖')}</span>`}</div>
+     <div class="club-av" role="button" tabindex="0" onclick="changeClubImage(${c.id})" title="Cambia foto del club" aria-label="Cambia foto del club">${c.image?`<img src="${esc(safeImgUrl(c.image)||'')}" alt="">`:`<span>${ini2(c.name||'📖')}</span>`}</div>
      <div style="flex:1;min-width:0">
        <div class="club-eyebrow">Club del libro</div>
        <h2>${esc(c.name)}</h2>
@@ -1904,7 +1919,7 @@ function renderClubCloud(){
      <p id="clubDescText" class="club-desc">${c.description?esc(c.description):'<span class="club-desc-empty">Aggiungi una descrizione</span>'}</p>
      <button class="club-desc-edit" onclick="editClubDesc(${c.id})" aria-label="Modifica descrizione del club">${icon('edit')}<span>Modifica</span></button>
    </div>
-   <div class="avstack" id="clubAvs" onclick="openInviteHub(${c.id})" style="cursor:pointer" title="Membri e inviti"></div>
+   <div class="avstack" id="clubAvs" role="button" tabindex="0" onclick="openInviteHub(${c.id})" style="cursor:pointer" title="Membri e inviti" aria-label="Membri e inviti del club"></div>
   </div>
 
   <div class="panel feat" style="margin-top:2px">
@@ -1915,7 +1930,7 @@ function renderClubCloud(){
 
   <div class="panel" style="margin-top:16px">
    <div class="panel-title">${icon('calendar')} Prossimo incontro</div>
-   ${nextMeet?`<div class="meet-row" onclick="clubSel=${c.id};go('incontri')">
+   ${nextMeet?`<div class="meet-row" role="button" tabindex="0" onclick="clubSel=${c.id};go('incontri')" aria-label="Vai al calendario incontri">
      <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
      <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.place?' · '+esc(nextMeet.place):''}</div></div>
      <span class="meet-go">${icon('chevron')}</span>
@@ -1959,7 +1974,7 @@ function openClubModal(){
   <div class="modal-top"><b>Club del libro</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="nc-hero">
-      <div class="nc-photo" id="ncPhoto" onclick="pickNewClubPhoto()">
+      <div class="nc-photo" id="ncPhoto" role="button" tabindex="0" onclick="pickNewClubPhoto()" aria-label="Scegli una foto per il club">
         <span id="ncPhotoPlaceholder">${icon('camera')}</span>
         <div class="nc-photo-cam">＋</div>
       </div>
@@ -2201,6 +2216,7 @@ async function castVote(clubId,proposalId){
 async function closeVoting(clubId){
  const {data:props}=await supa.from('proposals').select('*').eq('club_id',clubId);
  if(!props||!props.length){alert('Nessuna proposta da votare.');return}
+ if(!confirm('Chiudere la votazione? Verrà scelto il libro più votato e tutte le altre proposte e i voti andranno persi. Non si può annullare.'))return;
  const {data:votes}=await supa.from('votes').select('*').eq('club_id',clubId);
  const counts={};(votes||[]).forEach(v=>counts[v.proposal_id]=(counts[v.proposal_id]||0)+1);
  let win=props[0];props.forEach(p=>{if((counts[p.id]||0)>(counts[win.id]||0))win=p});
@@ -2866,7 +2882,7 @@ function renderMappaCloud(){
  <div id="detectLive" aria-live="polite" class="sr-only"></div>
  ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
  <div class="card pad">
-   <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')">
+   <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" role="button" tabindex="0" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')" aria-label="Mostra ${esc(nm)} sulla mappa">
      <span class="place-flag">${flag||icon('globe')}</span>
      <div class="place-main"><div class="place-name">${esc(nm)}</div><div class="place-bar"><i style="width:${pctW}%"></i></div></div>
      <span class="place-count">${items.length}</span>
@@ -3014,7 +3030,7 @@ async function renderFollowingList(){
      const uname=esc((u.username||u.name||'').replace(/'/g,''));
      const pub=!!u.public_library;
      return `<div class="reader-card ${pub?'is-open':'is-locked'}">
-       <${pub?'button':'div'} class="rc-main" ${pub?`onclick="viewUserLibrary('${u.id}','${uname}')" aria-label="Apri la libreria di @${uname}"`:''}>
+       <${pub?'button':'div'} class="rc-main" ${pub?`onclick="viewUserLibrary('${u.id}','${uname}',true)" aria-label="Apri la libreria di @${uname}"`:''}>
          <span class="rc-av">${avFill(u.name||u.username||'?',u.avatar)}</span>
          <span class="rc-txt">
            <span class="rc-name">@${esc(u.username||u.name||'lettore')}</span>
@@ -3062,7 +3078,7 @@ async function doSearchUsers(q){
      const following=myFollowing.includes(u.id);
      return `<div class="user-row">
        <div class="user-av">${ini2(u.name||u.username||'?')}</div>
-       <div style="flex:1;min-width:0" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}')">
+       <div style="flex:1;min-width:0" role="button" tabindex="0" onclick="viewUserLibrary('${u.id}','${esc((u.name||u.username||'').replace(/'/g,''))}',${!!u.public_library})" aria-label="Apri la libreria di ${esc((u.name||u.username||'lettore'))}">
          <b>${esc(u.name||u.username)}</b>
          <div class="muted" style="font-size:12px">@${esc(u.username||'')} ${u.public_library?'· '+icon('globe')+' pubblica':'· '+icon('lock')+' privata'}</div>
        </div>
@@ -3078,15 +3094,20 @@ async function toggleFollow(uid,btn){
    else{await supa.from('follows').insert({follower_id:authUser.id,followed_id:uid});myFollowing.push(uid);if(btn){btn.innerHTML=icon('check')+' Segui già';btn.classList.add('ghost');}}
  }catch(e){alert('Errore: '+e.message);}
 }
-async function viewUserLibrary(uid,name){
+/* Prima mostravamo "vuota o privata" sia quando la libreria non aveva libri sia quando era
+   privata: un vicolo cieco ambiguo. Chi chiama questa funzione sa già se la libreria è
+   pubblica (l'ha appena visto scritto accanto al nome), quindi lo passiamo esplicitamente e
+   distinguiamo i due casi invece di indovinare dalla risposta del server. */
+async function viewUserLibrary(uid,name,isPublic){
  $('#modal').innerHTML=`<div class="modal-top"><b>${icon('library')} Libreria di ${esc(name)}</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div><div class="modal-body"><div class="srch-empty">Carico…</div></div>`;openOverlay();
+ const body=$('#modal .modal-body');
+ if(isPublic===false){body.innerHTML=`<div class="srch-empty">${esc(name)} non ha reso pubblica la sua libreria.</div>`;return}
  try{
    const {data}=await supa.from('books').select('*').eq('user_id',uid);
-   const body=$('#modal .modal-body');
-   if(!data||!data.length){body.innerHTML='<div class="srch-empty">Questa libreria è vuota o privata.</div>';return}
+   if(!data||!data.length){body.innerHTML=`<div class="srch-empty">${esc(name)} non ha ancora aggiunto libri.</div>`;return}
    const bk=data.map(dbToBook);
    body.innerHTML=`<div class="shelf case">${bk.map(b=>`<div class="book"><div style="width:100%">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div><div class="meta"><b>${esc(b.t)}</b><span>${esc(b.a)}</span>${(b.rate&&b.status==='read')?`<div class="stars">${stars(b.rate)}</div>`:''}</div></div>`).join('')}</div>`;
- }catch(e){$('#modal .modal-body').innerHTML='<div class="srch-empty">Non puoi vedere questa libreria (privata o non la segui).</div>';}
+ }catch(e){body.innerHTML='<div class="srch-empty">Non riesco a caricare questa libreria: riprova più tardi.</div>';}
 }
 /* Inviti ai club */
 async function loadMyInvites(){
@@ -3381,7 +3402,13 @@ function openDeleteAccount(){
   <div class="modal-top"><b>${icon('trash')} Elimina account</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
     <div class="auth-err" id="daErr"></div>
-    <p style="font-size:13.5px;line-height:1.6;margin-bottom:14px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account.</p>
+    <p style="font-size:13.5px;line-height:1.6;margin-bottom:10px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account. Nello specifico:</p>
+    <ul style="font-size:12.5px;line-height:1.6;color:var(--ink-soft);margin:0 0 16px;padding-left:18px">
+      <li>La tua libreria, le tue note, proposte e voti vengono cancellati per sempre.</li>
+      <li>Esci da tutti i club di cui fai parte.</li>
+      <li>Nei club che hai creato: se ci sono altri membri, l'amministrazione passa automaticamente a uno di loro e il club continua a esistere per gli altri; se sei l'unico membro, il club viene eliminato insieme a incontri, note e proposte collegate.</li>
+      <li>Il tuo profilo (nome e username) smette di essere visibile a chiunque.</li>
+    </ul>
     <div class="field"><label>Password attuale</label><div class="pw-wrap"><input id="daPass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')deleteAccount()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('daPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
     <button class="btn danger" id="daBtn" onclick="deleteAccount()">${icon('trash')} Elimina definitivamente il mio account</button>
   </div>`;
@@ -3397,7 +3424,7 @@ async function deleteAccount(){
    const {data,error}=await supa.functions.invoke('delete-account',{body:{password:pass}});
    if(error||!data||data.error){
      daShowErr((data&&data.error)||'Password non corretta o errore del server. Riprova.');
-     if(btn){btn.disabled=false;btn.textContent='🗑️ Elimina definitivamente il mio account'}
+     if(btn){btn.disabled=false;btn.innerHTML=icon('trash')+' Elimina definitivamente il mio account'}
      return;
    }
    try{await supa.auth.signOut()}catch(err){}
@@ -3407,7 +3434,7 @@ async function deleteAccount(){
    location.href=location.pathname;
  }catch(err){
    daShowErr('Errore di rete: riprova.');
-   if(btn){btn.disabled=false;btn.textContent='🗑️ Elimina definitivamente il mio account'}
+   if(btn){btn.disabled=false;btn.innerHTML=icon('trash')+' Elimina definitivamente il mio account'}
  }
 }
 
@@ -3719,9 +3746,9 @@ function renderProfiloPage(){
 
  view.innerHTML=`
  <div class="me-hero compact">
-   <div class="me-av" onclick="openAvatarMenu()">${av?`<img src="${esc(av)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}</div>
+   <div class="me-av" role="button" tabindex="0" onclick="openAvatarMenu()" aria-label="Cambia foto profilo">${av?`<img src="${esc(av)}" alt="">`:`<span>${ini2(p.name||'?')}</span>`}</div>
    <div class="me-id">
-     <div class="me-name me-name-edit" onclick="openUsernameEdit()" title="Tocca per cambiare username">${esc(p.name)||'Lettore'}<span class="me-name-pen">${icon('edit')}</span></div>
+     <div class="me-name me-name-edit" role="button" tabindex="0" onclick="openUsernameEdit()" title="Tocca per cambiare username" aria-label="Cambia nome utente">${esc(p.name)||'Lettore'}<span class="me-name-pen">${icon('edit')}</span></div>
      <div class="me-sub">${(p.username&&p.name&&p.name.toLowerCase()!==p.username.toLowerCase())?'@'+esc(p.username)+' · ':''}Iscritto dal ${yr}</div>
      <div class="me-motto" onclick="editMotto()" title="Modifica la tua frase">
        <span class="me-motto-ic">${icon('book')}</span>
@@ -4146,13 +4173,28 @@ function openNotifItem(key,cid,go){
  if(cid)clubSel=cid;
  window.go(go);
 }
+/* Preferenze di notifica: SOLO "incontro" e "voto" hanno oggi una vera notifica dietro
+   (rispettivamente promemoria incontri e proposte/voto in corso), quindi solo questi due
+   interruttori possono avere un effetto reale e vengono filtrati in pendingItems().
+   "promemoria" (promemoria di lettura) e "libro"/"nota" (nuovo libro scelto, nuova nota da
+   altri membri) non hanno ancora nessuna logica che generi quel tipo di notifica: mostrarli
+   come un interruttore funzionante sarebbe un controllo finto, quindi restano disattivi con
+   l'etichetta "Presto disponibile" finché la funzione non esiste davvero. */
+function loadNotifPrefs(){try{return Object.assign({incontro:true,voto:true},JSON.parse(localStorage.getItem('pagina_notif_prefs')||'{}'))}catch(e){return{incontro:true,voto:true}}}
+function saveNotifPrefs(p){try{localStorage.setItem('pagina_notif_prefs',JSON.stringify(p))}catch(e){}}
+function notifPrefOn(key){return loadNotifPrefs()[key]!==false}
+function toggleNotifPref(el,key){
+ const p=loadNotifPrefs();p[key]=!notifPrefOn(key);saveNotifPrefs(p);
+ el.classList.toggle('on');el.setAttribute('aria-checked',el.classList.contains('on'));
+ if(clubsLoaded)renderNotifCloud(); // rispecchia subito il filtro in "Per te adesso"
+}
 function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
  const items=pendingItems();
  markNotifsSeen(items); // aprendo la pagina, il PUNTINO della campanella si azzera (segnale aggregato)
  const readKeys=readNotifKeys(); // stato letto/non letto per singola notifica (indipendente dal puntino)
  const curioOn=(function(){try{const s=loadCurioState();return (s.notifPref!==undefined)?!!s.notifPref:!!s.notif}catch(e){return false}})();
- const opts=[['Promemoria di lettura',null],['Incontro imminente',null],['Nuovo libro scelto',null],['Nuova nota disponibile',null],['Votazione aperta',null],['Curiosità settimanale','curio']];
+ const opts=[['Promemoria di lettura','promemoria',false],['Incontro imminente','incontro',true],['Nuovo libro scelto','libro',false],['Nuova nota disponibile','nota',false],['Votazione aperta','voto',true],['Curiosità settimanale','curio',true]];
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1.4;min-width:300px">
@@ -4170,12 +4212,16 @@ function renderNotifCloud(){
    </div>
    <div class="card pad" style="flex:1;min-width:260px">
      <h3 style="font-size:16px;margin-bottom:6px">Cosa vuoi ricevere</h3>
-     ${opts.map(([o,key])=>{
-       const on=key==='curio'?curioOn:true;
-       const id='ntf-'+(key||o.replace(/\s+/g,''));
+     ${opts.map(([o,key,wired])=>{
+       const on=key==='curio'?curioOn:(wired?notifPrefOn(key):false);
+       const id='ntf-'+key;
+       if(!wired)return `<div class="set-row">
+         <label for="${id}" style="flex:1;color:var(--ink-faint)">${esc(o)} <span class="badge-tint info" style="font-size:10px;margin-left:4px">Presto disponibile</span></label>
+         <button type="button" id="${id}" role="switch" aria-checked="false" aria-disabled="true" aria-label="${esc(o)}: non ancora disponibile" class="toggle" disabled style="opacity:.4;cursor:not-allowed"></button>
+       </div>`;
        return `<div class="set-row">
          <label for="${id}" style="flex:1;cursor:pointer">${esc(o)}</label>
-         <button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(o)}" class="toggle ${on?'on':''}" onclick="${key==='curio'?'toggleCurioNotif(this)':"this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"}"></button>
+         <button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(o)}" class="toggle ${on?'on':''}" onclick="${key==='curio'?'toggleCurioNotif(this)':`toggleNotifPref(this,'${key}')`}"></button>
        </div>`;
      }).join('')}
    </div>
@@ -4233,8 +4279,8 @@ let profile=null;    // {name, username}
 let pendingJoin=null;
 try{pendingJoin=new URLSearchParams(location.search).get('club')}catch(e){}
 
-function showErr(m){authReset();const e=$('#authErr');if(e){e.style.color='';e.style.background='';e.textContent=m;e.classList.add('show')}}
-function showAuthMsg(m){const e=$('#authErr');if(e){e.style.color='#2e6b45';e.style.background='#e3f1e8';e.textContent=m;e.classList.add('show')}}
+function showErr(m){authReset();const e=$('#authErr');if(e){e.style.color='';e.style.background='';e.textContent=m;e.classList.add('show');e.scrollIntoView({behavior:'smooth',block:'center'})}}
+function showAuthMsg(m){const e=$('#authErr');if(e){e.style.color='#2e6b45';e.style.background='#e3f1e8';e.textContent=m;e.classList.add('show');e.scrollIntoView({behavior:'smooth',block:'center'})}}
 function clearErr(){const e=$('#authErr');if(e){e.classList.remove('show');e.style.color='';e.style.background=''}}
 function authReset(){
  const r=document.querySelector('#formReg .btn');if(r){r.disabled=false;r.textContent='Crea il mio account'}
@@ -4247,10 +4293,11 @@ function authTab(t){
  const rc=$('#formRecovery');if(rc)rc.style.display='none';
  $('#tabLogin').classList.toggle('active',t==='login');$('#tabReg').classList.toggle('active',t==='reg');
  $('#authTabs').style.display=t==='forgot'?'none':'flex';
- $('#authTitle').textContent=t==='login'?'Bentornata 👋':t==='reg'?'Crea il tuo account':'Password dimenticata?';
+ $('#authTitle').textContent=t==='login'?'Bentornati 👋':t==='reg'?'Crea il tuo account':'Password dimenticata?';
  $('#authLead').textContent=t==='login'?'Accedi per riprendere a leggere.':t==='reg'?'Bastano pochi secondi per iniziare.':'Ti mandiamo un link sicuro via email.';
  clearErr();
  if(t==='reg'&&!authTab._hintBound){authTab._hintBound=true;passwordHint('rPass','rPassHint',()=>({email:($('#rEmail')||{}).value,username:($('#rUser')||{}).value}));}
+ if(t==='reg'&&!authTab._confirmHintBound){authTab._confirmHintBound=true;passwordConfirmHint('rPass','rConfirm','rConfirmHint');}
 }
 
 /* ---- Password dimenticata: invio email di reset ----
@@ -4296,6 +4343,7 @@ function showPasswordRecoveryScreen(){
  $('#authLead').textContent='Sei quasi arrivata: scegli una password robusta.';
  clearErr();
  if(!showPasswordRecoveryScreen._hintBound){showPasswordRecoveryScreen._hintBound=true;passwordHint('rcPass','rcHint',()=>({}));}
+ if(!showPasswordRecoveryScreen._confirmHintBound){showPasswordRecoveryScreen._confirmHintBound=true;passwordConfirmHint('rcPass','rcConfirm','rcConfirmHint');}
 }
 async function completePasswordRecovery(){
  clearErr();
@@ -4306,14 +4354,14 @@ async function completePasswordRecovery(){
  const btn=$('#rcBtn');if(btn){btn.disabled=true;btn.textContent='Aggiorno…'}
  try{
    const {error}=await supa.auth.updateUser({password:neu});
-   if(error){showErr(traduciErrore(error.message));if(btn){btn.disabled=false;btn.textContent='🔑 Imposta nuova password'}return}
+   if(error){showErr(traduciErrore(error.message));if(btn){btn.disabled=false;btn.innerHTML=icon('lock')+' Imposta nuova password'}return}
    passwordRecoveryActive=false;
    try{await supa.auth.signOut()}catch(e){}
    alert('Password aggiornata! Ora accedi con la nuova password.');
    location.href=location.origin+location.pathname;
  }catch(e){
    showErr('Errore di rete: riprova.');
-   if(btn){btn.disabled=false;btn.textContent='🔑 Imposta nuova password'}
+   if(btn){btn.disabled=false;btn.innerHTML=icon('lock')+' Imposta nuova password'}
  }
 }
 /* ---- Policy password robusta: min 10 caratteri, minuscola, maiuscola, cifra, simbolo ----
@@ -4325,6 +4373,19 @@ async function completePasswordRecovery(){
    il Password Verification Hook anti brute-force.
 */
 const PASSWORD_MIN_LEN=10;
+function pwSymbolOk(pass){return /[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~\\]/.test(pass)}
+/* Le due regole "contestuali" (non deve contenere email/username, non deve essere un pattern
+   comune) restano fuori dalla checklist a 5 voci perché non sono requisiti di FORMATO ma di
+   CONTENUTO: mostrarle come casella a parte, sotto la lista, invece che nascoste dentro un
+   solo messaggio alla volta come prima. */
+function pwContextIssue(pass,extra){
+ extra=extra||{};pass=String(pass||'');
+ const low=pass.toLowerCase();
+ if(extra.email&&low.includes(String(extra.email).toLowerCase().split('@')[0])&&extra.email.length>2)return 'Non deve contenere la tua email/username.';
+ if(extra.username&&extra.username.length>2&&low.includes(String(extra.username).toLowerCase()))return 'Non deve contenere la tua email/username.';
+ if(/(.)\1{3,}/.test(pass)||/1234|abcd|password|qwerty/i.test(pass))return 'Password troppo comune o ripetitiva: sceglila meno prevedibile.';
+ return '';
+}
 function passwordIssues(pass,extra){
  extra=extra||{};
  const issues=[];
@@ -4333,20 +4394,47 @@ function passwordIssues(pass,extra){
  if(!/[a-z]/.test(pass))issues.push('Almeno una lettera minuscola.');
  if(!/[A-Z]/.test(pass))issues.push('Almeno una lettera maiuscola.');
  if(!/[0-9]/.test(pass))issues.push('Almeno una cifra.');
- if(!/[!@#$%^&*()_+\-=\[\]{};':"|<>?,./`~\\]/.test(pass))issues.push('Almeno un simbolo (es. ! @ # % & *).');
- const low=pass.toLowerCase();
- if(extra.email&&low.includes(String(extra.email).toLowerCase().split('@')[0])&&extra.email.length>2)issues.push('Non deve contenere la tua email/username.');
- if(extra.username&&extra.username.length>2&&low.includes(String(extra.username).toLowerCase()))issues.push('Non deve contenere la tua email/username.');
- if(/(.)\1{3,}/.test(pass)||/1234|abcd|password|qwerty/i.test(pass))issues.push('Password troppo comune o ripetitiva: sceglila meno prevedibile.');
+ if(!pwSymbolOk(pass))issues.push('Almeno un simbolo (es. ! @ # % & *).');
+ const ctx=pwContextIssue(pass,extra);if(ctx)issues.push(ctx);
  return issues;
+}
+/* Checklist con le 5 regole di FORMATO, tutte visibili insieme con la spunta che si accende
+   man mano: prima mostravamo solo il primo requisito mancante, un problema alla volta, che
+   costringeva a scoprirli per tentativi successivi invece di vederli tutti da subito. */
+function passwordChecklist(pass){
+ pass=String(pass||'');
+ return [
+   ['10+ caratteri',pass.length>=PASSWORD_MIN_LEN],
+   ['maiuscola',/[A-Z]/.test(pass)],
+   ['minuscola',/[a-z]/.test(pass)],
+   ['cifra',/[0-9]/.test(pass)],
+   ['simbolo',pwSymbolOk(pass)]
+ ];
 }
 function passwordHint(inputId,hintId,extraGetter){
  const el=$('#'+inputId);const h=$('#'+hintId);if(!el||!h)return;
- const upd=()=>{const v=el.value;if(!v){h.textContent='Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.';h.style.color='';return}
-   const issues=passwordIssues(v,extraGetter?extraGetter():{});
-   if(!issues.length){h.textContent='✓ Password robusta.';h.style.color='var(--sage,#5f8d6c)';}
-   else{h.textContent=issues[0];h.style.color='var(--coral,#e08a5d)';}};
+ const upd=()=>{
+   const v=el.value;
+   const checks=passwordChecklist(v);
+   const allOk=checks.every(c=>c[1]);
+   const chips=checks.map(([label,ok])=>`<span class="pw-chk${ok?' ok':''}">${ok?'✓':'○'} ${label}</span>`).join('');
+   const ctx=v?pwContextIssue(v,extraGetter?extraGetter():{}):'';
+   h.innerHTML=`<span class="pw-chk-row">${chips}</span>`+(ctx?`<span class="pw-chk-ctx">${esc(ctx)}</span>`:(allOk&&v?`<span class="pw-chk-ctx ok">✓ Password robusta.</span>`:''));
+ };
  el.addEventListener('input',upd);upd();
+}
+/* Feedback live anche sul campo "Conferma password": prima si scopriva un errore di
+   corrispondenza solo premendo il pulsante di invio, spesso senza nemmeno vedere subito il
+   messaggio (vedi anche lo scroll automatico aggiunto a showErr). */
+function passwordConfirmHint(passId,confirmId,hintId){
+ const passEl=$('#'+passId),confEl=$('#'+confirmId),h=$('#'+hintId);if(!passEl||!confEl||!h)return;
+ const upd=()=>{
+   const cv=confEl.value;
+   if(!cv){h.textContent='';h.style.color='';return}
+   if(cv===passEl.value){h.textContent='✓ Le password coincidono.';h.style.color='var(--sage,#5f8d6c)';}
+   else{h.textContent='Le password non coincidono ancora.';h.style.color='var(--coral,#e08a5d)';}
+ };
+ confEl.addEventListener('input',upd);passEl.addEventListener('input',upd);
 }
 function traduciErrore(m){m=(m||'').toLowerCase();
  if(m.includes('already')&&m.includes('regist'))return 'Esiste già un account con questa email. Prova ad accedere.';
