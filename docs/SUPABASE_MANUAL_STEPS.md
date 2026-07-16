@@ -29,7 +29,7 @@ Funzione che verifica se un libro è già stato letto da un membro del club.
 membership del chiamante). Se lanci la 6 dopo, va bene lo stesso rilanciare anche questa
 prima — `create or replace function` sovrascrive senza errori.
 
-## 6. `20260712_security_phase1.sql` — DA LANCIARE (priorità alta)
+## 6. `20260712_security_phase1.sql` — ESEGUITA (confermato il 16/07)
 La più recente e la più importante rimasta in sospeso. Contiene:
 - restrizione della lettura dei profili (email non più visibile ad altri utenti);
 - vista `public_profiles` per le ricerche;
