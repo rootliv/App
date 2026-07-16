@@ -99,7 +99,7 @@ document.addEventListener('keydown',function(e){
 
       <form id="formReg" style="display:none" onsubmit="event.preventDefault();register();return false;">
         <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off"></div>
-        <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
+        <div class="field"><label>Email</label><input id="rEmail" type="text" inputmode="email" autocapitalize="off" autocomplete="email" placeholder="nome@email.it"></div>
         <div class="field"><label>Password</label><div class="pw-wrap"><input id="rPass" type="password" placeholder="Almeno 10 caratteri" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
         <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rConfirmHint" style="display:block;margin-top:5px;font-size:12px"></small></div>
         <button type="submit" class="btn gold" style="width:100%;justify-content:center">Crea il mio account</button>
@@ -107,7 +107,7 @@ document.addEventListener('keydown',function(e){
 
       <form id="formForgot" style="display:none" onsubmit="event.preventDefault();sendPasswordReset();return false;">
         <p class="muted" style="font-size:13px;margin-bottom:16px">Inserisci l'email del tuo account: se esiste, ti mandiamo un link sicuro e monouso per reimpostare la password.</p>
-        <div class="field"><label>Email</label><input id="fgEmail" type="email" placeholder="nome@email.it"></div>
+        <div class="field"><label>Email</label><input id="fgEmail" type="text" inputmode="email" autocapitalize="off" autocomplete="email" placeholder="nome@email.it"></div>
         <button type="submit" class="btn" id="fgBtn" style="width:100%;justify-content:center">Invia link di reset</button>
         <div style="text-align:center;margin-top:16px"><a href="#" onclick="authTab('login');return false" style="font-size:12.5px;color:var(--ink-soft)">← Torna al login</a></div>
       </form>
@@ -1541,8 +1541,12 @@ function editMotto(){
 async function saveMotto(){
  const v=((document.getElementById('mottoInput')||{}).value||'').trim().slice(0,80);
  if(!profile.data)profile.data={};profile.data.motto=v;
- if(mode==='cloud'&&supa){try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}}
- else save();
+ if(mode==='cloud'&&supa){
+   try{
+     const {error}=await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id);
+     if(error){alert('Errore di rete, la frase non è stata salvata. Riprova: '+error.message);return}
+   }catch(e){alert('Errore di rete, la frase non è stata salvata. Riprova.');return}
+ } else save();
  closeModal();renderProfiloPage();
 }
 function editGoal(){
@@ -1561,8 +1565,12 @@ function editGoal(){
 async function saveGoal(){
  const v=+((document.getElementById('goalInput')||{}).value)||0;
  if(!profile.data)profile.data={};profile.data.goal=v;
- if(mode==='cloud'&&supa){try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}}
- else save();
+ if(mode==='cloud'&&supa){
+   try{
+     const {error}=await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id);
+     if(error){alert('Errore di rete, l\'obiettivo non è stato salvato. Riprova: '+error.message);return}
+   }catch(e){alert('Errore di rete, l\'obiettivo non è stato salvato. Riprova.');return}
+ } else save();
  closeModal();go('home');
 }
 async function enrichGenreFromWiki(title,author){
@@ -1881,8 +1889,12 @@ async function saveAvatar(url){
 async function removeAvatar(){
  if(!profile||!profile.data||!profile.data.avatar)return;
  if(!confirm('Rimuovere la foto profilo?'))return;
+ const prevAvatar=profile.data.avatar;
  delete profile.data.avatar;
- try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){}
+ try{
+   const {error}=await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id);
+   if(error){profile.data.avatar=prevAvatar;alert('Errore di rete, la foto non è stata rimossa. Riprova: '+error.message);return}
+ }catch(e){profile.data.avatar=prevAvatar;alert('Errore di rete, la foto non è stata rimossa. Riprova.');return}
  applyMyAvatar();closeModal();if(current==='profilo')renderHomeCloud();
 }
 function renderClubCloud(){
