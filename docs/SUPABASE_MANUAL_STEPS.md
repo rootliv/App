@@ -102,7 +102,7 @@ quelle nuove più restrittive, che le rendevano inefficaci:
   club a cui non apparteneva), perché nessuna regola controllava il valore del ruolo
   scelto, solo che stesse modificando la propria riga.
 
-## 11. `20260719_visibility_hardening.sql` — DA LANCIARE
+## 11. `20260719_visibility_hardening.sql` — ESEGUITA (confermato il 16/07)
 
 Restringe l'elenco membri e gli incontri dei club a chi ne fa davvero parte: prima
 qualsiasi utente autenticato poteva vedere chi è iscritto a un club qualunque, o leggere
