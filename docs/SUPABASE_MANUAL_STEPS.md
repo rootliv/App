@@ -86,7 +86,23 @@ sorteggio resta comunque libero di farlo — è l'unico caso in cui un membro no
 legittimamente su questi campi. Foto e descrizione del club restano modificabili da tutti
 i membri, come deciso in precedenza.
 
-## 10. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
+## 10. `20260718_security_phase2.sql` — DA LANCIARE (priorità molto alta)
+
+Chiude tre varchi scoperti fotografando le regole reali del database (punto 11 qui sotto):
+regole "vecchie" scritte a mano prima di questo elenco, mai tolte quando sono arrivate
+quelle nuove più restrittive, che le rendevano inefficaci:
+
+- una regola su `profiles` permetteva ancora a chiunque autenticato di leggere la riga
+  intera di ogni profilo (il fix del punto 6 in pratica non aveva effetto reale finché
+  questa restava attiva insieme alla nuova);
+- la protezione anti-spoiler delle note (dal punto 2) non era mai stata installata
+  davvero: mancavano sia la tabella `reading_progress` sia la regola giusta, e la vecchia
+  regola permissiva l'avrebbe comunque resa inutile anche installandola senza toglierla;
+- un membro qualsiasi di un club poteva scriversi da solo come amministratore (anche di un
+  club a cui non apparteneva), perché nessuna regola controllava il valore del ruolo
+  scelto, solo che stesse modificando la propria riga.
+
+## 11. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
 
 Alcune regole di sicurezza del database (chi può leggere/modificare libri, club, proposte,
 voti) sono state scritte direttamente nel pannello Supabase in un momento precedente
