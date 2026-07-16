@@ -1411,3 +1411,9 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .mb-cover .cvcap{padding:8px 8px 9px}
 .mb-cover .ct{font-size:10.5px;line-height:1.18;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
 .mb-cover .ca{font-size:8px;margin-top:3px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Pulsante hamburger "acceso" quando si e' in una sezione raggiungibile solo dal menu
+   (Incontri, Lettori, Notifiche, Diario, Piano di lettura, Mappa): in questi casi nessuna
+   icona della barra in basso e' evidenziata, quindi diamo qui l'unico segnale "sei qui".
+   Scoperto solo su #mtogBtn: non tocca la campanella delle notifiche (stessa classe .bell). */
+#mtogBtn.active{background:var(--primary);border-color:var(--primary);color:#fff}

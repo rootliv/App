@@ -80,34 +80,34 @@ window.addEventListener('DOMContentLoaded',function(){var b=document.getElementB
       </div>
       <div class="auth-err" id="authErr"></div>
 
-      <div id="formLogin">
+      <form id="formLogin" onsubmit="event.preventDefault();login();return false;">
         <div class="field"><label>Email o username</label><input id="lId" placeholder="nome@email.it oppure @username"></div>
-        <div class="field"><label>Password</label><div class="pw-wrap"><input id="lPass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('lPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <div class="field"><label>Password</label><div class="pw-wrap"><input id="lPass" type="password" placeholder="••••••••"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('lPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <div style="text-align:right;margin:-6px 0 14px"><a href="#" onclick="authTab('forgot');return false" style="font-size:12.5px;color:var(--plum);font-weight:600">Password dimenticata?</a></div>
-        <button class="btn" style="width:100%;justify-content:center" onclick="login()">Accedi</button>
-      </div>
+        <button type="submit" class="btn" style="width:100%;justify-content:center">Accedi</button>
+      </form>
 
-      <div id="formReg" style="display:none">
-        <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off" onkeydown="if(event.key==='Enter')register()"></div>
+      <form id="formReg" style="display:none" onsubmit="event.preventDefault();register();return false;">
+        <div class="field"><label>Username</label><input id="rUser" placeholder="Es. elena_libri" autocapitalize="off"></div>
         <div class="field"><label>Email</label><input id="rEmail" type="email" placeholder="nome@email.it"></div>
-        <div class="field"><label>Password</label><div class="pw-wrap"><input id="rPass" type="password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-        <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password" onkeydown="if(event.key==='Enter')register()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="btn gold" style="width:100%;justify-content:center" onclick="register()">Crea il mio account</button>
-      </div>
+        <div class="field"><label>Password</label><div class="pw-wrap"><input id="rPass" type="password" placeholder="Almeno 10 caratteri" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rPassHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Conferma password</label><div class="pw-wrap"><input id="rConfirm" type="password" placeholder="Ripeti la password" autocomplete="new-password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <button type="submit" class="btn gold" style="width:100%;justify-content:center">Crea il mio account</button>
+      </form>
 
-      <div id="formForgot" style="display:none">
+      <form id="formForgot" style="display:none" onsubmit="event.preventDefault();sendPasswordReset();return false;">
         <p class="muted" style="font-size:13px;margin-bottom:16px">Inserisci l'email del tuo account: se esiste, ti mandiamo un link sicuro e monouso per reimpostare la password.</p>
-        <div class="field"><label>Email</label><input id="fgEmail" type="email" placeholder="nome@email.it" onkeydown="if(event.key==='Enter')sendPasswordReset()"></div>
-        <button class="btn" id="fgBtn" style="width:100%;justify-content:center" onclick="sendPasswordReset()">Invia link di reset</button>
+        <div class="field"><label>Email</label><input id="fgEmail" type="email" placeholder="nome@email.it"></div>
+        <button type="submit" class="btn" id="fgBtn" style="width:100%;justify-content:center">Invia link di reset</button>
         <div style="text-align:center;margin-top:16px"><a href="#" onclick="authTab('login');return false" style="font-size:12.5px;color:var(--ink-soft)">← Torna al login</a></div>
-      </div>
+      </form>
 
-      <div id="formRecovery" style="display:none">
+      <form id="formRecovery" style="display:none" onsubmit="event.preventDefault();completePasswordRecovery();return false;">
         <p class="muted" style="font-size:13px;margin-bottom:16px">Scegli una nuova password per il tuo account.</p>
-        <div class="field"><label>Nuova password</label><div class="pw-wrap"><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
-        <div class="field"><label>Conferma nuova password</label><div class="pw-wrap"><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password" onkeydown="if(event.key==='Enter')completePasswordRecovery()"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="btn" id="rcBtn" style="width:100%;justify-content:center" onclick="completePasswordRecovery()">🔑 Imposta nuova password</button>
-      </div>
+        <div class="field"><label>Nuova password</label><div class="pw-wrap"><input id="rcPass" type="password" autocomplete="new-password" placeholder="Almeno 10 caratteri"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcPass',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="muted" id="rcHint" style="display:block;margin-top:5px;font-size:12px">Almeno 10 caratteri, con maiuscola, minuscola, cifra e simbolo.</small></div>
+        <div class="field"><label>Conferma nuova password</label><div class="pw-wrap"><input id="rcConfirm" type="password" autocomplete="new-password" placeholder="Ripeti la nuova password"><button type="button" class="pw-eye" aria-label="Mostra/nascondi password" onclick="togglePwView('rcConfirm',this)"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <button type="submit" class="btn" id="rcBtn" style="width:100%;justify-content:center">🔑 Imposta nuova password</button>
+      </form>
 
       <div class="auth-note"><span class="icn-badge sage"><svg class="icn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><span>I tuoi dati sono protetti da un account personale e sincronizzati in sicurezza sul cloud.</span></div>
     </div>
@@ -519,6 +519,11 @@ function go(id){
  if(id==='club'){const n=(myClubs&&myClubs.length)||0;sub=n?(n+' '+(n===1?'club':'club')+' · libri condivisi'):'Crea o unisciti a un club';}
  $('#pageSub').textContent=sub;
  document.querySelectorAll('#nav button,#botnav button').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
+ // Nelle sezioni raggiungibili solo dal menu (Incontri, Lettori, Notifiche, Diario,
+ // Piano di lettura, Mappa) nessuna icona della barra in basso resta accesa: senza
+ // un segnale alternativo l'utente perde ogni indizio di 'dove sono'. Accendiamo il
+ // pulsante del menu stesso in quel caso.
+ const mtog=document.getElementById('mtogBtn');if(mtog)mtog.classList.toggle('active',!p.inBotNav);
  view.classList.remove('fade');void view.offsetWidth;view.classList.add('fade');
  renders[id]();
  document.getElementById('sidebar').classList.remove('show');
