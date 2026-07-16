@@ -102,7 +102,13 @@ quelle nuove più restrittive, che le rendevano inefficaci:
   club a cui non apparteneva), perché nessuna regola controllava il valore del ruolo
   scelto, solo che stesse modificando la propria riga.
 
-## 11. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
+## 11. `20260719_visibility_hardening.sql` — DA LANCIARE
+
+Restringe l'elenco membri e gli incontri dei club a chi ne fa davvero parte: prima
+qualsiasi utente autenticato poteva vedere chi è iscritto a un club qualunque, o leggere
+data/luogo degli incontri di club a cui non appartiene.
+
+## 12. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
 
 Alcune regole di sicurezza del database (chi può leggere/modificare libri, club, proposte,
 voti) sono state scritte direttamente nel pannello Supabase in un momento precedente
