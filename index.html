@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=153">
+<link rel="stylesheet" href="styles.css?v=154">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -88,7 +88,7 @@ document.addEventListener('keydown',function(e){
         <button id="tabLogin" class="active" onclick="authTab('login')">Accedi</button>
         <button id="tabReg" onclick="authTab('reg')">Registrati</button>
       </div>
-      <div class="auth-err" id="authErr"></div>
+      <div class="auth-err" id="authErr" role="alert"></div>
 
       <form id="formLogin" onsubmit="event.preventDefault();login();return false;">
         <div class="field"><label>Email o username</label><input id="lId" placeholder="nome@email.it oppure @username"></div>
@@ -169,7 +169,7 @@ document.addEventListener('keydown',function(e){
 
 <!-- MODAL -->
 <div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
-  <div class="modal" id="modal"></div>
+  <div class="modal" id="modal" role="dialog" aria-modal="true" tabindex="-1"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -313,7 +313,7 @@ async function shareBook(id){
 function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
 function coverEl(i,t,a,badge,url,statusPair){const su=safeImgUrl(url);
  const statusHtml=statusPair?`<div class="status-badge ${statusPair[1]}">${statusPair[0]}</div>`:'';
- return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
+ return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" loading="lazy" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
 function bookCard(b){
  const st=b.status==='reading'?['In lettura','reading']:b.status==='read'?['Letto','read']:['Da leggere','toread'];
  return`<div class="book" role="button" tabindex="0" aria-label="Apri «${esc(b.t)}»" onclick="openBook(${b.id})">
@@ -615,7 +615,7 @@ async function aiSearchCards(query){
  let res=[];try{res=await doSearch(query)}catch(e){}
  if(!res.length)return '';searchResults=res;
  return '<div style="margin-top:10px">'+res.slice(0,6).map((s,i)=>`<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)">
-   ${s.coverUrl?`<img src="${esc(s.coverUrl)}" style="width:40px;height:58px;object-fit:cover;border-radius:5px;flex:none" onerror="this.style.visibility='hidden'">`:`<div style="width:40px;height:58px;border-radius:5px;flex:none;${coverStyle(i)}"></div>`}
+   ${s.coverUrl?`<img src="${esc(s.coverUrl)}" alt="${esc(s.t||'')}" loading="lazy" style="width:40px;height:58px;object-fit:cover;border-radius:5px;flex:none" onerror="this.style.visibility='hidden'">`:`<div style="width:40px;height:58px;border-radius:5px;flex:none;${coverStyle(i)}"></div>`}
    <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(s.t)}</b><div class="muted" style="font-size:12px">${esc(s.a)}${s.year?' · '+s.year:''}</div></div>
    <button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>
  </div>`).join('')+'</div>';
@@ -884,7 +884,7 @@ function openBook(id){
         <p id="tramaText" class="trama-text${(tramaLong&&!_tramaOpen)?' clamp':''}">${esc(b.trama)}</p>
         ${tramaLong?`<button class="trama-more" onclick="toggleTrama(${b.id})">${_tramaOpen?'Mostra meno':'Mostra di più'} <span class="tm-chev">${_tramaOpen?'⌃':'⌄'}</span></button>`:''}
       `:`<div class="bd-sec-title">${icon('book')} Trama</div><p class="muted" style="font-size:14px">Trama non ancora disponibile.</p>`}
-      ${hasSet?`<div class="bd-subrow"><span class="bd-lab">${icon('globe')} Ambientazione</span><p>${b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', ')}</p></div>`:''}
+      ${hasSet?`<div class="bd-subrow"><span class="bd-lab">${icon('globe')} Ambientazione</span><p>${esc(b.set.map(s=>`${s.city||''} ${s.city?'('+s.c+')':s.c}`).join(', '))}</p></div>`:''}
       ${b.cur?`<div class="bd-subrow"><span class="bd-lab">${icon('sparkles')} Curiosità</span><p>${esc(b.cur)}</p></div>`:''}
       ${b.quote?`<div class="quote" style="margin-top:14px">${esc(b.quote)}</div>`:''}
     </div>`:''}
@@ -1454,7 +1454,7 @@ function renderResults(btnFor){
  const box=$('#searchResults');if(!box)return;
  if(!searchResults.length){box.innerHTML='<div class="srch-empty">⚠️ Nessun risultato (o nessuna connessione). Prova con un altro titolo.</div>';return}
  box.innerHTML=searchResults.map((s,i)=>`<div class="srch-item">
-   ${s.coverUrl?`<img class="th" src="${esc(s.coverUrl)}" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
+   ${s.coverUrl?`<img class="th" src="${esc(s.coverUrl)}" alt="${esc(s.t||'')}" loading="lazy" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
    <div style="flex:1;min-width:0"><b>${esc(s.t)}</b><div class="mt">${esc(s.a)}${s.year?' · '+esc(s.year):''}${s.pg?' · '+esc(s.pg)+' pag.':''}</div></div>
    ${btnFor(i)}
  </div>`).join('');
@@ -1736,7 +1736,7 @@ async function loadMembers(clubId){
      avatar:p.avatar||''};});
 }
 function ini2(n){return esc(((n||'?').split(' ').map(x=>x[0]).slice(0,2).join('')||'?').toUpperCase())}
-function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';document.body.appendChild(t)}
+function toast(msg,icon){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.className='toast';t.setAttribute('role','status');t.setAttribute('aria-live','polite');document.body.appendChild(t)}
  t.innerHTML='<span>'+(icon||'✓')+'</span>'+esc(msg);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2200)}
 /* AI sempre attiva (nessun interruttore). Se il provider non risponde, ripiego base silenzioso. */
 function aiOn(){return true}
@@ -1910,7 +1910,7 @@ function renderClubCloud(){
 
   <div class="club-banner">
    <div class="club-banner-head">
-     <div class="club-av" role="button" tabindex="0" onclick="changeClubImage(${c.id})" title="Cambia foto del club" aria-label="Cambia foto del club">${c.image?`<img src="${esc(safeImgUrl(c.image)||'')}" alt="">`:`<span>${ini2(c.name||'📖')}</span>`}</div>
+     <div class="club-av" role="button" tabindex="0" onclick="changeClubImage(${c.id})" title="Cambia foto del club" aria-label="Cambia foto del club">${c.image?`<img src="${esc(safeImgUrl(c.image)||'')}" alt="" loading="lazy">`:`<span>${ini2(c.name||'📖')}</span>`}</div>
      <div style="flex:1;min-width:0">
        <div class="club-eyebrow">Club del libro</div>
        <h2>${esc(c.name)}</h2>
@@ -1991,7 +1991,7 @@ function openClubModal(){
     <hr style="margin:22px 0">
     <h3 style="font-size:15px;margin-bottom:10px">${icon('lock')} Unisciti con un codice</h3>
     <div class="chatbox" style="margin-top:0"><input id="joinCode" placeholder="Codice invito (es. 18Z3)" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:2px"><button class="btn ghost" id="joinClubBtn" onclick="joinClub()">Unisciti</button></div>
-    <div id="clubMsg" class="auth-err" style="margin-top:12px"></div>
+    <div id="clubMsg" class="auth-err" style="margin-top:12px" role="alert"></div>
   </div>`;
  openOverlay();
 }
@@ -3443,7 +3443,7 @@ function openDeleteAccount(){
  $('#modal').innerHTML=`
   <div class="modal-top"><b>${icon('trash')} Elimina account</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>
   <div class="modal-body">
-    <div class="auth-err" id="daErr"></div>
+    <div class="auth-err" id="daErr" role="alert"></div>
     <p style="font-size:13.5px;line-height:1.6;margin-bottom:10px">Inserisci la tua password per eliminare <b>definitivamente</b> l'account. Nello specifico:</p>
     <ul style="font-size:12.5px;line-height:1.6;color:var(--ink-soft);margin:0 0 16px;padding-left:18px">
       <li>La tua libreria, le tue note, proposte e voti vengono cancellati per sempre.</li>
@@ -4169,7 +4169,7 @@ function openMeetingModal(id){
       <div id="mtMap" class="mt-map" style="display:none"></div></div>
     <div class="field"><label>Link videochiamata (facoltativo)</label><input id="mtLink" placeholder="https://meet.google.com/…" value="${m?esc(m.link||''):''}"></div>
     <button class="btn" onclick="saveMeeting(${m?m.id:0})">${m?'Salva modifiche':'Salva incontro'}</button>
-    <div id="mtMsg" class="auth-err" style="margin-top:12px"></div>
+    <div id="mtMsg" class="auth-err" style="margin-top:12px" role="alert"></div>
   </div>`;
  openOverlay();
  setupPlaceAutocomplete();
@@ -4296,9 +4296,21 @@ function updateBellDot(){
 function markNotifsSeen(items){
  try{localStorage.setItem('pagina_notif_seen',notifSig(items));updateBellDot();}catch(e){}
 }
-function openOverlay(){$('#overlay').classList.add('open');document.body.style.overflow='hidden'}
-function closeModal(){_modalKind=null;$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+let _modalReturnFocus=null;
+function _modalFocusables(){const m=$('#modal');if(!m)return[];return Array.prototype.slice.call(m.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(el=>el.offsetParent!==null);}
+function openOverlay(){_modalReturnFocus=document.activeElement;$('#overlay').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>{const f=_modalFocusables();if(f.length)f[0].focus();else{const m=$('#modal');if(m)m.focus();}},30);}
+function closeModal(){_modalKind=null;$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}try{if(_modalReturnFocus&&document.body.contains(_modalReturnFocus))_modalReturnFocus.focus();}catch(e){}_modalReturnFocus=null;}
+document.addEventListener('keydown',e=>{
+  if(!$('#overlay').classList.contains('open'))return;
+  if(e.key==='Escape'){closeModal();return;}
+  if(e.key==='Tab'){
+    const f=_modalFocusables();
+    if(!f.length)return;
+    const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  }
+});
 
 /* ============ SUPABASE (account cloud) ============ */
 const SUPABASE_URL='https://ogcgfemadhtzzhdjkjda.supabase.co';
