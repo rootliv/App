@@ -957,7 +957,7 @@ function bookStatusCard(b){
    if(b.pg){
      const pr=STATS.readingProgress(b);
      return `<div class="bd-card bd-status">
-       <div class="bds-top"><span class="bds-title">La tua lettura</span><span class="bds-pct">${pr.pct}%</span></div>
+       <div class="bds-top"><span class="bds-title">La tua lettura</span><span class="bds-pct" id="bdsPct">${pr.pct}%</span></div>
        <div class="bookmark-track" id="bmTrack" onclick="bmClick(event,${b.id},${b.pg})">
          <div class="bookmark-fill" id="bmFill" style="width:${pr.pct}%"></div>
          <div class="bookmark-tag" id="bmTag" style="left:${Math.min(100,pr.pct)}%">🔖</div>
@@ -1085,10 +1085,11 @@ function setPage(id,total,page){const b=book(id);if(!b)return;
  const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(b.t));if(club){curDiaryClub=curDiaryClub||club.id;syncReadingPos(b.t,Math.max(1,page));}
  if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');openBook(id);setTimeout(scrollToRate,80);return;}
  b.prog=pct;persistBook(id,{progress:pct});
- const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
+ const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage'),pctEl=$('#bdsPct');
  if(fill)fill.style.width=pct+'%';
  if(tag)tag.style.left=Math.min(100,pct)+'%';
  if(inp)inp.value=page;
+ if(pctEl)pctEl.textContent=pct+'%';
 }
 function bmClick(ev,id,total){
  const track=$('#bmTrack');if(!track)return;
@@ -1103,10 +1104,11 @@ function bmDragSetup(id,total){
  const posFromX=(clientX)=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(clientX-r.left)/r.width));};
  const moveTo=(frac,save)=>{
    const page=frac>=0.995?total:Math.round(total*frac);const pct=Math.round(frac*100);
-   const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage');
+   const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage'),pctEl=$('#bdsPct');
    if(fill){fill.style.transition='none';fill.style.width=pct+'%';}
    if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}
    if(inp)inp.value=page;
+   if(pctEl)pctEl.textContent=pct+'%';
    if(save)setPage(id,total,page);
  };
  const start=(clientX)=>{_bmDrag={id,total};moveTo(posFromX(clientX),false);};
