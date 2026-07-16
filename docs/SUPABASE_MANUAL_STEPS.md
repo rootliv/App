@@ -76,6 +76,28 @@ Serve per l'anno di lettura dei libri (funzione "Libreria per anno", "Il tuo ann
 lettura" in Home e Profilo). Senza questa colonna, l'app funziona ma l'anno di
 completamento dei libri non si salva in modo permanente.
 
+## 9. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
+
+Alcune regole di sicurezza del database (chi può leggere/modificare libri, club, proposte,
+voti) sono state scritte direttamente nel pannello Supabase in un momento precedente
+all'uso di questo elenco, quindi non esistono come file di migration qui nel repository:
+non è possibile verificarle leggendo il codice.
+
+Per fotografarle ed eventualmente sistemarle, lancia questa query nel SQL Editor (sola
+lettura, non modifica nulla) e copia il risultato:
+
+```sql
+select schemaname, tablename, policyname, cmd, roles, qual, with_check
+from pg_policies
+where schemaname = 'public'
+order by tablename, cmd;
+```
+
+Incolla il risultato in chat: da lì si può controllare se `books`, `clubs`, `proposals`
+e `votes` hanno regole di scrittura (insert/update/delete) corrette — in particolare se
+un lettore può modificare o cancellare solo le proprie righe — e si può preparare una
+migration "di fotografia" da salvare qui nel repository per tenerne traccia stabilmente.
+
 ## Come procedere, passo per passo da mobile
 
 1. Apri il sito di Supabase dal browser del telefono, accedi al progetto.

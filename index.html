@@ -521,6 +521,7 @@ function toggleSidebar(show){
    scrim.classList.remove('show');
  }
 }
+let _navFromPopstate=false,_firstNavDone=false;
 function go(id){
  current=id;const p=pages.find(x=>x.id===id);
  $('#pageTitle').textContent=p.title;
@@ -540,7 +541,24 @@ function go(id){
  document.body.classList.remove('sidebar-open');
  window.scrollTo(0,0);
  try{updateBellDot()}catch(e){}
+ // Cronologia del browser: solo per l'uso via web/PWA (nell'app nativa il tasto Indietro
+ // fisico è già gestito a parte in native.js e non passa da qui). Senza questo, passare da
+ // una sezione all'altra non aggiungeva mai una voce alla cronologia: il tasto Indietro del
+ // browser usciva subito dall'app invece di tornare alla sezione precedente.
+ if(!_navFromPopstate){
+   try{
+     if(!_firstNavDone){_firstNavDone=true;history.replaceState({pageId:id},'')}
+     else if(!history.state||history.state.pageId!==id){history.pushState({pageId:id},'')}
+   }catch(e){}
+ }
 }
+window.addEventListener('popstate',function(e){
+ const id=e.state&&e.state.pageId;
+ if(!id||!pages.find(x=>x.id===id))return;
+ if(typeof authUser==='undefined'||!authUser)return; // non ancora loggato: niente da navigare
+ _navFromPopstate=true;
+ try{go(id)}finally{_navFromPopstate=false}
+});
 
 /* ============ RENDERERS ============ */
 const renders={};

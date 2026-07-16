@@ -94,7 +94,7 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .app{display:flex;min-height:100vh}
 
 /* ===== SIDEBAR ===== */
-.sidebar{width:240px;position:fixed;inset:14px auto 14px 14px;border-radius:18px;
+.sidebar{width:min(240px,92vw);position:fixed;inset:14px auto 14px 14px;border-radius:18px;
   background:var(--surface);border:1px solid var(--line);
   color:var(--ink);display:flex;flex-direction:column;padding:20px 14px;z-index:60;
   box-shadow:var(--shadow)}
