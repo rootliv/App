@@ -76,7 +76,17 @@ Serve per l'anno di lettura dei libri (funzione "Libreria per anno", "Il tuo ann
 lettura" in Home e Profilo). Senza questa colonna, l'app funziona ma l'anno di
 completamento dei libri non si salva in modo permanente.
 
-## 9. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
+## 9. `20260717_club_admin_only_selection.sql` — DA LANCIARE (priorità alta)
+
+Impedisce a un membro qualsiasi (non admin) di avviare/annullare il sorteggio o la
+votazione del club, o di forzarne la chiusura, chiamando le funzioni a mano invece che
+dal pulsante (che già le mostra solo agli admin in interfaccia, ma finora il database non
+lo controllava davvero). Chi in quel momento ha il turno di scegliere il libro nel
+sorteggio resta comunque libero di farlo — è l'unico caso in cui un membro normale scrive
+legittimamente su questi campi. Foto e descrizione del club restano modificabili da tutti
+i membri, come deciso in precedenza.
+
+## 10. Verifica delle regole di sicurezza (RLS) — nessun file da lanciare, solo da leggere
 
 Alcune regole di sicurezza del database (chi può leggere/modificare libri, club, proposte,
 voti) sono state scritte direttamente nel pannello Supabase in un momento precedente
