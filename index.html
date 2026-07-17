@@ -454,7 +454,10 @@ const STATS={
    const pcts=largestRemainder(rows.map(r=>r[1]),total);
    return {rows,pcts,total,classified:this.classifiedRead().length};
  },
- genreStats(scope){const src=(scope==='year')?this.readThisYear():books;
+ // Conta solo i libri LETTI: la statistica si chiama "più letto" e deve concordare
+ // con le barre "I tuoi generi" (che usano read()). Contando anche i da-leggere poteva
+ // dichiarare "più letto" il genere di un libro mai aperto.
+ genreStats(scope){const src=(scope==='year')?this.readThisYear():this.read();
    return topCount(src.map(b=>normGenre(b.g)).filter(Boolean),12);},
  authorStats(scope){const src=(scope==='year')?this.readThisYear():this.read();
    // Normalizza il nome (spazi, maiuscole) per il conteggio, mantenendo la forma
@@ -467,7 +470,19 @@ const STATS={
      tally[key]=(tally[key]||0)+1;
    });
    return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([key,n])=>[canon[key],n]);},
- topGenre(scope){const g=this.genreStats(scope);return g.length?g[0][0]:null;},
+ // Significativa SOLO se almeno un genere compare in 2+ libri. Con un libro per genere
+ // non esiste un "più letto": l'ordinamento a pari merito lascia l'ordine di inserimento,
+ // quindi "vincerebbe" il primo libro della libreria — un'etichetta arbitraria, non un dato.
+ topGenresLabel(scope){
+   const g=this.genreStats(scope);
+   if(!g.length)return null;
+   const max=g[0][1];
+   if(max<2)return null;
+   const tied=g.filter(x=>x[1]===max);
+   if(tied.length===1)return {label:'Genere più letto',text:tied[0][0]};
+   if(tied.length===2)return {label:'Generi più letti',text:tied[0][0]+' e '+tied[1][0]};
+   return {label:'Generi più letti',text:tied[0][0]+' e altri '+(tied.length-1)};
+ },
  topAuthor(scope){const a=this.authorStats(scope);return a.length?a[0][0]:null;},
  // Gestisce l'ex-aequo: restituisce {label, names} — se un solo massimo, un nome;
  // se più autori a pari merito, elenco con "e altri N".
@@ -1077,9 +1092,11 @@ async function enrichBook(b){
 function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;
  if(st==='read'){b.prog=100;if(!b.finishedYear)b.finishedYear=new Date().getFullYear();}
  if(st==='reading')b.prog=0; // riportare in lettura azzera il segnalibro
- // azzera anche la posizione condivisa del diario per questo titolo
- if(st==='reading'){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');if(m[b.t]){m[b.t]=1;localStorage.setItem(posKey(),JSON.stringify(m));}}catch(e){}}
  persistBook(id,{status:st,progress:b.prog,finished_year:(st==='read'?b.finishedYear:null)});
+ // Il diario deve seguire: "letto" porta il segno a fine libro, "in lettura" lo riporta a inizio.
+ // Prima veniva toccato solo il salvataggio locale e il server restava indietro.
+ try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');if(m[b.t]){m[b.t]=(st==='read'&&b.pg)?b.pg:1;localStorage.setItem(posKey(),JSON.stringify(m));}}catch(e){}
+ syncReadingPos(b.t,(st==='read'&&b.pg)?b.pg:1);
  if(st==='read'){openBook(id);setTimeout(scrollToRate,80);}
  else{closeModal();go(current);}
 }
@@ -1098,11 +1115,10 @@ function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(to
 function setPage(id,total,page){const b=book(id);if(!b)return;
  total=parseInt(total)||b.pg||0;page=Math.max(0,Math.min(total,parseInt(page)||0));
  const pct=total?Math.round((page/total)*100):0;
- // sincronizza la posizione condivisa (diario) di questo titolo
- try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[b.t]=Math.max(1,page);localStorage.setItem(posKey(),JSON.stringify(m));}catch(e){}
- const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(b.t));if(club){curDiaryClub=curDiaryClub||club.id;syncReadingPos(b.t,Math.max(1,page));}
- if((page>=total||pct>=100)&&total>0){b.prog=100;b.status='read';persistBook(id,{progress:100,status:'read'});toast('Libro completato! 🎉');openBook(id);setTimeout(scrollToRate,80);return;}
- b.prog=pct;persistBook(id,{progress:pct});
+ // Un solo punto di scrittura: aggiorna il libro (la fonte) e rispecchia la pagina
+ // nel diario del club, se questo titolo è il libro del mese di un tuo club.
+ setBookPos(b.t,Math.max(1,page));
+ if((page>=total||pct>=100)&&total>0){toast('Libro completato! 🎉');openBook(id);setTimeout(scrollToRate,80);return;}
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage'),pctEl=$('#bdsPct');
  if(fill)fill.style.width=pct+'%';
  if(tag)tag.style.left=Math.min(100,pct)+'%';
@@ -1146,7 +1162,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v153 (audit: XSS nei nomi membri, memory leak, race condition, codice morto)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v154 (genere: niente vincitore arbitrario; segnalibro e diario con fonte unica)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2334,14 +2350,36 @@ async function handlePendingJoin(){
 /* ---- Diario condiviso cloud ---- */
 let curDiaryTitle='',curDiaryClub=null,editNoteId=null;
 function posKey(){return 'pagina_bookpos_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')} // posizione PER UTENTE
-function bookPos(title){try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}}
+/* FONTE UNICA della posizione di lettura: il libro in libreria (pagine + progresso %),
+   che vive sul server e quindi vale su ogni dispositivo. Prima la posizione stava solo
+   nel salvataggio locale: da un altro telefono il diario ripartiva da pagina 1 mentre la
+   libreria diceva 57%. La pagina si ricava con la stessa formula che usa la libreria
+   (STATS.readingProgress), così i due schermi mostrano SEMPRE lo stesso numero.
+   Il salvataggio locale resta solo come ripiego per un libro del club che non hai in libreria. */
+function bookPos(title){
+ const b=(books||[]).find(x=>normKey(x.t)===normKey(title));
+ if(b&&b.pg)return Math.max(0,Math.min(b.pg,Math.round(b.pg*(+b.prog||0)/100)));
+ try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}
+}
+/* Unico punto che SCRIVE la posizione: aggiorna il libro in libreria (la fonte) e
+   rispecchia la pagina sul server per la regola anti-spoiler. */
 function setBookPos(title,p){
  p=Math.max(1,p|0);
- try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=p;localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}
- // Sincronizza col libro in libreria: se esiste e conosco le pagine, aggiorno il progresso %.
- const b=books.find(x=>normKey(x.t)===normKey(title));
- if(b&&b.pg){const pct=Math.min(100,Math.round(p/b.pg*100));
-   if(pct!==b.prog){b.prog=pct;if(b.status==='toread')b.status='reading';if(pct>=100)b.status='read';persistBook(b.id,{progress:b.prog,status:b.status});}}
+ const b=(books||[]).find(x=>normKey(x.t)===normKey(title));
+ if(b&&b.pg){
+   const page=Math.min(b.pg,p);
+   const pct=Math.min(100,Math.round(page/b.pg*100));
+   if(pct!==b.prog||b.status==='toread'){
+     b.prog=pct;
+     if(b.status==='toread')b.status='reading';
+     if(pct>=100)b.status='read';
+     persistBook(b.id,{progress:b.prog,status:b.status});
+   }
+ }else{
+   // Libro del club non presente in libreria (o senza pagine): resta il ripiego locale.
+   try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');m[title]=p;localStorage.setItem(posKey(),JSON.stringify(m))}catch(e){}
+ }
+ syncReadingPos(title,p);
 }
 function diaryMinPos(){const own=(cloudNotes||[]).filter(n=>n.user_id===(authUser&&authUser.id));return own.length?Math.max(1,...own.map(n=>+n.position||0)):1}
 /* Segnalibro del diario: click e trascinamento, coerente col dettaglio libro. Aggiorna la
@@ -2351,7 +2389,7 @@ function diaryTrackClick(ev,title,total,mn){
  const r=track.getBoundingClientRect();
  const frac=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));
  const page=Math.max(mn,Math.round(total*frac));
- setBookPos(title,page);syncReadingPos(title,page);paintDiary(curDiaryClub);
+ setBookPos(title,page);paintDiary(curDiaryClub);
 }
 let _diaryDrag=null,_diaryMove=null,_diaryUp=null,_diaryMovePrev=null,_diaryUpPrev=null;
 function diaryDragSetup(title,total,mn){
@@ -2359,7 +2397,7 @@ function diaryDragSetup(title,total,mn){
  const posFromX=cx=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(cx-r.left)/r.width));};
  const live=(frac)=>{const pct=Math.round(frac*100);const fill=$('#diaryFill'),tag=$('#diaryTag');
    if(fill){fill.style.transition='none';fill.style.width=pct+'%';}if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}};
- const commit=(frac)=>{const page=Math.max(mn,Math.round(total*frac));setBookPos(title,page);syncReadingPos(title,page);paintDiary(curDiaryClub);};
+ const commit=(frac)=>{const page=Math.max(mn,Math.round(total*frac));setBookPos(title,page);paintDiary(curDiaryClub);};
  track.onmousedown=e=>{e.preventDefault();_diaryDrag=1;live(posFromX(e.clientX));};
  _diaryMove=e=>{if(_diaryDrag)live(posFromX(e.clientX));};
  _diaryUp=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX(e.clientX));}};
@@ -2372,18 +2410,26 @@ function diaryDragSetup(title,total,mn){
  track.ontouchmove=e=>{if(_diaryDrag){live(posFromX(e.touches[0].clientX));e.preventDefault();}};
  track.ontouchend=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX((e.changedTouches[0]||{}).clientX||0));}};
 }
-/* Scrive la pagina di lettura nel DB: è ciò che la RLS anti-spoiler usa per decidere quali
-   note altrui l'utente può leggere. Dopo l'avanzamento ricarichiamo le note dal server, così
-   quelle appena sbloccate arrivano davvero (prima non erano nemmeno state scaricate). */
+/* Rispecchia sul server la pagina raggiunta: è ciò che la regola anti-spoiler usa per
+   decidere quali note altrui puoi leggere.
+   Due correzioni importanti rispetto a prima:
+   1) il club si trova DAL TITOLO. Prima si usava "l'ultimo diario aperto": con due o più
+      club, aggiornando dalla libreria un libro di un altro club la pagina finiva nel club
+      sbagliato, e quello giusto non sbloccava mai le note.
+   2) si scrive SEMPRE il titolo del club (current_title), non quello della tua copia in
+      libreria: la regola abbina reading_progress.book_title a notes.book_title, e bastava
+      una maiuscola diversa perché non combaciassero mai. */
 let _syncPosT=null;
 function syncReadingPos(title,pos){
- if(mode!=='cloud'||!supa||!curDiaryClub)return;
- const club=myClubs.find(c=>c.id===curDiaryClub);if(!club)return;
+ if(mode!=='cloud'||!supa||!authUser)return;
+ const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(title));
+ if(!club)return;
  clearTimeout(_syncPosT);
  _syncPosT=setTimeout(async()=>{
    try{
-     await supa.from('reading_progress').upsert({user_id:authUser.id,club_id:club.id,book_title:title,position:Math.max(1,pos|0),updated_at:new Date().toISOString()},{onConflict:'user_id,club_id,book_title'});
-     await loadClubNotes(club);renderNotesList();
+     await supa.from('reading_progress').upsert({user_id:authUser.id,club_id:club.id,book_title:club.current_title,position:Math.max(1,pos|0),updated_at:new Date().toISOString()},{onConflict:'user_id,club_id,book_title'});
+     // Ricarica le note solo se stai guardando proprio quel diario.
+     if(curDiaryClub===club.id){await loadClubNotes(club);renderNotesList();}
    }catch(e){}
  },350);
 }
@@ -3815,7 +3861,7 @@ function renderProfiloPage(){
  const derivedAuthors=STATS.authorStats('all').filter(a=>a[1]>1&&!manualAuthors.some(m=>m.toLowerCase()===a[0].toLowerCase()));
  // Statistiche riepilogo
  const nRead=STATS.read().length, nYr=STATS.readThisYear().length, pages=STATS.pagesRead();
- const topG=STATS.topGenre('all'), topAL=STATS.topAuthorsLabel('all');
+ const topGL=STATS.topGenresLabel('all'), topAL=STATS.topAuthorsLabel('all');
 
  view.innerHTML=`
  <div class="me-hero compact">
@@ -3835,8 +3881,8 @@ function renderProfiloPage(){
    <div class="stat-cell"><div class="stat-n">${nRead}</div><div class="stat-l">Letti in totale</div></div>
    <div class="stat-cell"><div class="stat-n">${nYr}</div><div class="stat-l">Letti nel ${YR}</div></div>
  </div>
- ${(topG||topAL)?`<div class="stat-strip">
-   ${topG?`<div class="stat-cell wide"><div class="stat-l">Genere più letto</div><div class="stat-v clamp2">${esc(topG)}</div></div>`:''}
+ ${(topGL||topAL)?`<div class="stat-strip">
+   ${topGL?`<div class="stat-cell wide"><div class="stat-l">${topGL.label}</div><div class="stat-v clamp2">${esc(topGL.text)}</div></div>`:''}
    ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
  </div>`:''}
 
