@@ -4265,7 +4265,7 @@ function renderNotifCloud(){
  const items=pendingItems();
  markNotifsSeen(items); // aprendo la pagina, il PUNTINO della campanella si azzera (segnale aggregato)
  const readKeys=readNotifKeys(); // stato letto/non letto per singola notifica (indipendente dal puntino)
- const curioOn=(function(){try{const s=loadCurioState();return (s.notifPref!==undefined)?!!s.notifPref:!!s.notif}catch(e){return false}})();
+ const curioOn=(function(){try{const s=loadCurioState();if(s.notifPref!==undefined)return !!s.notifPref;if(s.notif!==undefined)return !!s.notif;return true}catch(e){return true}})(); // default acceso, coerente con incontro/voto
  const opts=[['Promemoria di lettura','promemoria',false],['Incontro imminente','incontro',true],['Nuovo libro scelto','libro',false],['Nuova nota disponibile','nota',false],['Votazione aperta','voto',true],['Curiosità settimanale','curio',true]];
  view.innerHTML=`
  <div class="row">
