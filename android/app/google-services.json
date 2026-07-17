@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800832700155",
+    "project_id": "pagina-bc68e",
+    "storage_bucket": "pagina-bc68e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800832700155:android:96f462415c71dec856ba5e",
+        "android_client_info": {
+          "package_name": "io.github.rootliv.pagina"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGGU927rooUrQdGHJytk6HoWXMkcFwVUw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
