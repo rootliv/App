@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=154">
+<link rel="stylesheet" href="styles.css?v=155">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1017,8 +1017,28 @@ let _tramaOpen=false,_notesOpen=false;
 function toggleTrama(id){_tramaOpen=!_tramaOpen;openBook(id);}
 function toggleNotes(id){_notesOpen=!_notesOpen;openBook(id);}
 function removeBook(id){
- if(!confirm('Rimuovere questo libro dalla tua libreria?'))return;
- const rb=book(id);
+ const rb=book(id);if(!rb)return;
+ // Se è il libro del mese di un tuo club NON blocco l'eliminazione: solo l'admin può
+ // cambiare il libro del club, quindi il blocco ti lascerebbe in un vicolo cieco con un
+ // libro che non vuoi. Ti dico però esattamente cosa perdi e cosa no.
+ const inClubs=(myClubs||[]).filter(c=>normKey(c.current_title||'')===normKey(rb.t));
+ let msg='Rimuovere questo libro dalla tua libreria?';
+ if(inClubs.length){
+   const nomi=inClubs.map(c=>'«'+(c.name||'club')+'»').join(' e ');
+   msg='«'+rb.t+'» è il libro del mese di '+nomi+'.\n\n'
+     +'Se lo togli dalla libreria, il diario condiviso perde il numero di pagine: la barra del segnalibro sparisce e resta solo il numero di pagina da scrivere a mano.\n\n'
+     +'Le tue note e la pagina a cui sei restano.\n\n'
+     +'Vuoi rimuoverlo lo stesso?';
+ }
+ if(!confirm(msg))return;
+ // La posizione di lettura vive nel libro (fonte unica): se il libro se ne va, la
+ // salviamo nel ripiego locale, altrimenti il diario ripartirebbe da pagina 1.
+ if(inClubs.length){try{
+   const page=Math.max(1,Math.round((rb.pg||0)*(+rb.prog||0)/100));
+   const m=JSON.parse(localStorage.getItem(posKey())||'{}');
+   inClubs.forEach(c=>{m[c.current_title]=page;});
+   localStorage.setItem(posKey(),JSON.stringify(m));
+ }catch(e){}}
  if(mode==='cloud'&&supa)supa.from('books').delete().eq('id',id).then(()=>{},()=>{});
  books=books.filter(b=>b.id!==id);if(mode==='demo')save();
  // Il libro esce anche dalla mappa: l'ambientazione rilevata è salvata a parte
@@ -1162,7 +1182,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v154 (genere: niente vincitore arbitrario; segnalibro e diario con fonte unica)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v155 (avviso eliminazione libro del club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
