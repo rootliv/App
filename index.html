@@ -3520,6 +3520,7 @@ let curioOverride=0;
 function curioKey(){return 'pagina_curio_v1_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
 function loadCurioState(){try{return JSON.parse(localStorage.getItem(curioKey())||'{}')||{}}catch(e){return {}}}
 function saveCurioState(s){try{localStorage.setItem(curioKey(),JSON.stringify(s))}catch(e){}}
+function curioNotifWanted(s){if(s.notifPref!==undefined)return !!s.notifPref;if(s.notif!==undefined)return !!s.notif;return true} // default acceso, coerente con incontro/voto
 function curioDayIndex(){const d=new Date();return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()))/86400000)}
 // chiave/indice SETTIMANALI: la curiosità resta stabile per tutta la settimana e cambia la successiva
 function curioWeekIndex(){return Math.floor((curioDayIndex()+3)/7)} // +3: settimane allineate al lunedì (epoch = giovedì)
@@ -3760,7 +3761,7 @@ async function renderCuriosity(){
    st=loadCurioState();st.week=wk;st.payload=payload;st.seen=false;
    st.history=(st.history||[]);st.history.unshift({w:wk,k:payload.key});st.history=st.history.slice(0,30);
    saveCurioState(st);
-   if(st.notif&&('Notification' in window)&&Notification.permission==='granted'&&st.notifiedWeek!==wk){
+   if(curioNotifWanted(st)&&('Notification' in window)&&Notification.permission==='granted'&&st.notifiedWeek!==wk){
      try{new Notification('📚 La tua curiosità della settimana è pronta',{body:payload.category+' · '+payload.title})}catch(e){}
      st.notifiedWeek=wk;saveCurioState(st);
    }
@@ -4245,19 +4246,22 @@ function openNotifItem(key,cid,go){
  if(cid)clubSel=cid;
  window.go(go);
 }
-/* Preferenze di notifica: SOLO "incontro" e "voto" hanno oggi una vera notifica dietro
-   (rispettivamente promemoria incontri e proposte/voto in corso), quindi solo questi due
-   interruttori possono avere un effetto reale e vengono filtrati in pendingItems().
-   "promemoria" (promemoria di lettura) e "libro"/"nota" (nuovo libro scelto, nuova nota da
-   altri membri) non hanno ancora nessuna logica che generi quel tipo di notifica: mostrarli
-   come un interruttore funzionante sarebbe un controllo finto, quindi restano disattivi con
-   l'etichetta "Presto disponibile" finché la funzione non esiste davvero. */
-function loadNotifPrefs(){try{return Object.assign({incontro:true,voto:true},JSON.parse(localStorage.getItem('pagina_notif_prefs')||'{}'))}catch(e){return{incontro:true,voto:true}}}
+/* Preferenze di notifica. "incontro"/"voto" filtrano solo la card "Per te adesso" (nessun
+   invio server dietro). "promemoria" (lettura) è locale sul dispositivo, gestita in
+   scripts/native.js. "libro"/"nota" governano invece un invio push VERO lato server (vedi
+   migration 20260720_notif_libro_nota.sql): per non essere un controllo finto, il valore va
+   sincronizzato anche sulle colonne notif_libro/notif_nota di profiles, che i trigger del
+   database controllano prima di inviare. */
+function loadNotifPrefs(){try{return Object.assign({incontro:true,voto:true,promemoria:true,libro:true,nota:true},JSON.parse(localStorage.getItem('pagina_notif_prefs')||'{}'))}catch(e){return{incontro:true,voto:true,promemoria:true,libro:true,nota:true}}}
 function saveNotifPrefs(p){try{localStorage.setItem('pagina_notif_prefs',JSON.stringify(p))}catch(e){}}
 function notifPrefOn(key){return loadNotifPrefs()[key]!==false}
 function toggleNotifPref(el,key){
  const p=loadNotifPrefs();p[key]=!notifPrefOn(key);saveNotifPrefs(p);
  el.classList.toggle('on');el.setAttribute('aria-checked',el.classList.contains('on'));
+ if((key==='libro'||key==='nota')&&mode==='cloud'&&supa&&authUser){
+   const col=key==='libro'?'notif_libro':'notif_nota';
+   supa.from('profiles').update({[col]:p[key]}).eq('id',authUser.id).then(()=>{}).catch(()=>{});
+ }
  if(clubsLoaded)renderNotifCloud(); // rispecchia subito il filtro in "Per te adesso"
 }
 function renderNotifCloud(){
@@ -4265,8 +4269,8 @@ function renderNotifCloud(){
  const items=pendingItems();
  markNotifsSeen(items); // aprendo la pagina, il PUNTINO della campanella si azzera (segnale aggregato)
  const readKeys=readNotifKeys(); // stato letto/non letto per singola notifica (indipendente dal puntino)
- const curioOn=(function(){try{const s=loadCurioState();if(s.notifPref!==undefined)return !!s.notifPref;if(s.notif!==undefined)return !!s.notif;return true}catch(e){return true}})(); // default acceso, coerente con incontro/voto
- const opts=[['Promemoria di lettura','promemoria',false],['Incontro imminente','incontro',true],['Nuovo libro scelto','libro',false],['Nuova nota disponibile','nota',false],['Votazione aperta','voto',true],['Curiosità settimanale','curio',true]];
+ const curioOn=(function(){try{return curioNotifWanted(loadCurioState())}catch(e){return true}})();
+ const opts=[['Promemoria di lettura','promemoria',true],['Incontro imminente','incontro',true],['Nuovo libro scelto','libro',true],['Nuova nota disponibile','nota',true],['Votazione aperta','voto',true],['Curiosità settimanale','curio',true]];
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1.4;min-width:300px">

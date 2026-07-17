@@ -73,13 +73,13 @@
     if (P.App) {
       P.App.addListener('appStateChange', ({ isActive }) => {
         try {
-          if (!window.supa || !window.supa.auth) return;
-          if (isActive) window.supa.auth.startAutoRefresh();
-          else window.supa.auth.stopAutoRefresh();
+          if (!supa || !supa.auth) return;
+          if (isActive) supa.auth.startAutoRefresh();
+          else supa.auth.stopAutoRefresh();
         } catch (e) {}
       });
       // L'app potrebbe essere stata riaperta dopo ore: prova subito un refresh.
-      setTimeout(() => { try { window.supa && window.supa.auth && window.supa.auth.startAutoRefresh(); } catch (e) {} }, 500);
+      setTimeout(() => { try { supa && supa.auth && supa.auth.startAutoRefresh(); } catch (e) {} }, 500);
     }
   } catch (e) {}
 
@@ -160,9 +160,9 @@
       P.PushNotifications.addListener('registration', async (token) => {
         // Salva il token nel profilo dell'utente su Supabase (se loggato).
         try {
-          if (window.supa && window.authUser && token && token.value) {
-            await window.supa.from('device_tokens').upsert({
-              user_id: window.authUser.id,
+          if (supa && authUser && token && token.value) {
+            await supa.from('device_tokens').upsert({
+              user_id: authUser.id,
               token: token.value,
               platform: platform
             }, { onConflict: 'token' });
@@ -187,7 +187,7 @@
   let pushDone = false;
   const pushTimer = setInterval(() => {
     if (pushDone) { clearInterval(pushTimer); return; }
-    if (window.authUser && window.mode === 'cloud') {
+    if (authUser && mode === 'cloud') {
       pushDone = true;
       clearInterval(pushTimer);
       registerPush();
@@ -201,9 +201,9 @@
   try { notifiedMeetings = JSON.parse(localStorage.getItem('pagina_native_meet_notif') || '{}'); } catch (e) {}
   function scheduleMeetingReminders() {
     try {
-      if (!Array.isArray(window.myMeetings)) return;
+      if (!Array.isArray(myMeetings)) return;
       const now = Date.now();
-      window.myMeetings.forEach((m) => {
+      myMeetings.forEach((m) => {
         if (!m.date) return;
         const when = new Date(m.date + (m.time ? 'T' + m.time : 'T09:00')).getTime();
         const remindAt = when - 24 * 3600 * 1000; // 24h prima
@@ -226,6 +226,39 @@
   const meetTimer = setInterval(scheduleMeetingReminders, 8000);
   setTimeout(() => { window.NativeNotify.ensurePermission(); }, 3000);
   setTimeout(() => clearInterval(meetTimer), 120000);
+
+  /* ---- 7b. Promemoria di lettura: un avviso al giorno se c'è un libro "in lettura",
+     gated dal toggle "Promemoria di lettura" in Notifiche (notifPrefOn è una function
+     declaration in index.html, quindi è già disponibile su window; books/authUser/mode
+     invece sono variabili "let" e vanno lette come identificatori nudi, condivisi tra
+     i due <script> classici della stessa pagina, non via window.). ---- */
+  let lastReadingReminderDay = '';
+  try { lastReadingReminderDay = localStorage.getItem('pagina_native_reading_reminder_day') || ''; } catch (e) {}
+  function scheduleReadingReminder() {
+    try {
+      if (typeof window.notifPrefOn !== 'function' || !window.notifPrefOn('promemoria')) return;
+      if (!Array.isArray(books)) return;
+      const reading = books.find((b) => b.status === 'reading');
+      if (!reading) return;
+      const now = new Date();
+      const todayKey = now.toISOString().slice(0, 10);
+      if (lastReadingReminderDay === todayKey) return; // già programmato oggi
+      let at = new Date(now);
+      at.setHours(20, 0, 0, 0); // 20:00 locali
+      if (at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+      const nid = 900000000 + (now.getFullYear() % 100) * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+      window.NativeNotify.schedule(
+        nid,
+        '📖 Un po\' di lettura?',
+        'Stai leggendo "' + (reading.t || 'il tuo libro') + '": qualche pagina oggi?',
+        at.getTime()
+      );
+      lastReadingReminderDay = todayKey;
+      try { localStorage.setItem('pagina_native_reading_reminder_day', todayKey); } catch (e) {}
+    } catch (e) {}
+  }
+  const readReminderTimer = setInterval(scheduleReadingReminder, 9000);
+  setTimeout(() => clearInterval(readReminderTimer), 120000);
 
   console.log('[Pàgina] bridge nativo attivo su', platform);
 })();
