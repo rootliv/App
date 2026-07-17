@@ -44,7 +44,7 @@ username potrebbero non funzionare finché le funzioni `public_profiles` /
 `is_username_taken` non esistono sul database. Vanno lanciate insieme, sono nello stesso
 file.
 
-## 7. `20260715_push_notifications.sql` — nuovo, per le notifiche push Android
+## 7. `20260715_push_notifications.sql` — ESEGUITA (confermato il 17/07)
 
 Crea la tabella `device_tokens` (dove il telefono salva il proprio token dopo aver dato
 il permesso di notifiche) e un trigger che, quando arriva un nuovo invito a un club,
@@ -76,7 +76,7 @@ Serve per l'anno di lettura dei libri (funzione "Libreria per anno", "Il tuo ann
 lettura" in Home e Profilo). Senza questa colonna, l'app funziona ma l'anno di
 completamento dei libri non si salva in modo permanente.
 
-## 9. `20260717_club_admin_only_selection.sql` — DA LANCIARE (priorità alta)
+## 9. `20260717_club_admin_only_selection.sql` — ESEGUITA (confermato il 17/07)
 
 Impedisce a un membro qualsiasi (non admin) di avviare/annullare il sorteggio o la
 votazione del club, o di forzarne la chiusura, chiamando le funzioni a mano invece che
@@ -129,6 +129,14 @@ Incolla il risultato in chat: da lì si può controllare se `books`, `clubs`, `p
 e `votes` hanno regole di scrittura (insert/update/delete) corrette — in particolare se
 un lettore può modificare o cancellare solo le proprie righe — e si può preparare una
 migration "di fotografia" da salvare qui nel repository per tenerne traccia stabilmente.
+
+## 13. `20260720_notif_libro_nota.sql` — ESEGUITA (confermato il 17/07)
+
+Sblocca le notifiche "Nuovo libro scelto" e "Nuova nota disponibile" (anti-spoiler):
+aggiunge `notif_libro`/`notif_nota` su `profiles` e due trigger che chiamano
+`send-push` come per gli inviti ai club. **Prima di lanciarla**, sostituisci
+`INCOLLA_QUI_LA_TUA_SERVICE_ROLE_KEY` (in entrambe le funzioni) con la vera
+service_role key.
 
 ## Come procedere, passo per passo da mobile
 
