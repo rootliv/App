@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=158">
+<link rel="stylesheet" href="styles.css?v=159">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -943,7 +943,7 @@ function fixMapSize(m){
 renders.incontri=()=>renderIncontriCloud();
 renders.lettori=()=>renderLettoriCloud();
 
-renders.notifiche=()=>renderNotifCloud();
+renders.notifiche=()=>{if(mode==='cloud')loadNotifs().then(renderNotifCloud);else renderNotifCloud();};
 
 /* ============ MODALS ============ */
 let _modalKind=null;   // cosa mostra il modale adesso: evita che una risposta di rete tardiva lo sostituisca
@@ -1257,7 +1257,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v158 (badge card: Club - nome)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v159 (notifiche vere: storico dal DB, letto/non letto affidabile, niente interruttori finti)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1792,31 +1792,34 @@ function fmtDateParts(d){const p=String(d).slice(0,10).split('-');const M=['GEN'
 function daysTo(d){return Math.round((new Date(String(d).slice(0,10))-new Date(todayStr()))/86400000)}
 function upcomingMeetings(){const t=todayStr();return (myMeetings||[]).filter(m=>m.date&&String(m.date).slice(0,10)>=t).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
 function clubName(id){const c=myClubs.find(x=>x.id===id);return c?(c.emoji||'📖')+' '+c.name:'Club'}
+/* Le "azioni in sospeso" ora sono le notifiche reali dalla tabella `notifications`.
+   Manteniamo il nome per compatibilità con updateBellDot(). */
 function pendingItems(){
- const items=[];
- // Notifiche social già caricate (inviti accettati, nuovi follower)
- (socialNotifs||[]).forEach(n=>items.push(n));
- const wantVoto=notifPrefOn('voto'),wantIncontro=notifPrefOn('incontro');
- // Nota su .p: NON va pre-escapato qui con esc() — renderNotifCloud() lo fa già una volta
- // sola al momento di disegnarlo. Farlo anche qui raddoppiava l'escaping e, per club o libri
- // con un apostrofo nel nome (es. "Cent'anni di solitudine"), mostrava letteralmente "&#39;"
- // invece del carattere.
- myClubs.forEach(c=>{
-   if(wantVoto&&c.selection_mode==='voting')items.push({ic:'sparkles',bg:'#f3e6c4',t:'Votazione aperta',p:'In '+c.name+': proponi e vota il prossimo libro.',go:'club',cid:c.id,key:'vote-'+c.id});
-   if(wantVoto&&c.selection_mode==='rotation'&&c.current_chooser===authUser.id)items.push({ic:'sparkles',bg:'#f6d9c7',t:'Tocca a te scegliere',p:'In '+c.name+' è il tuo turno: scegli il libro.',go:'club',cid:c.id,key:'rot-'+c.id});
- });
- if(wantIncontro)upcomingMeetings().slice(0,2).forEach(m=>{
-   const dd=daysTo(m.date);
-   const when=dd===0?'oggi':(dd===1?'domani':'tra '+dd+' giorni');
-   const dt=fmtDateParts(m.date);
-   items.push({ic:'calendar',bg:'#e1edf6',t:'Incontro '+when,p:(m.title||'Incontro')+' · '+dt.d+' '+dt.m+(m.time?(' · '+m.time):'')+' · '+clubName(m.club_id),go:'incontri',key:'meet-'+m.id});
- });
- myClubs.filter(c=>c.current_title).slice(0,1).forEach(c=>items.push({ic:'book',bg:'#dcebe0',t:'Diario condiviso',p:'Aggiungi una nota su "'+c.current_title+'".',go:'diario',key:'diario-'+c.id}));
- return items;
+ return (notifRows||[]).map(n=>({
+   id:n.id, ic:NOTIF_ICON[n.kind]||'bell',
+   t:n.title, p:n.body||'',
+   go:NOTIF_GO[n.kind]||'club', cid:n.club_id||null,
+   read:!!n.read_at, when:n.created_at, key:'db-'+n.id
+ }));
 }
-let socialNotifs=[];
-/* Carica notifiche "sociali": inviti che HO mandato e sono stati accettati, e nuovi follower.
-   Confronta con ciò che ho già visto (localStorage) per non ripeterle all'infinito. */
+let notifRows=[];   // notifiche VERE, dalla tabella `notifications`: storico + letto/non letto reale
+const NOTIF_ICON={invite:'club',invite_accepted:'club',follower:'profile',book:'book',note:'edit',meeting:'calendar',vote:'sparkles'};
+const NOTIF_GO={invite:'lettori',invite_accepted:'lettori',follower:'lettori',book:'club',note:'diario',meeting:'incontri',vote:'club'};
+
+/* Carica le notifiche reali dell'utente dalla tabella `notifications`.
+   Ogni riga è un evento accaduto davvero (invito, follower, libro scelto, nota, …),
+   scritto dai trigger lato database. Qui NON si costruisce più uno "stato attuale":
+   si legge un elenco vero, con data e stato letto/non letto. */
+async function loadNotifs(){
+ if(mode!=='cloud'||!supa||!authUser){notifRows=[];return;}
+ try{
+   const {data,error}=await supa.from('notifications')
+     .select('id,kind,title,body,club_id,read_at,created_at')
+     .order('created_at',{ascending:false}).limit(60);
+   notifRows=error?[]:(data||[]);
+ }catch(e){notifRows=[];}
+}
+function unreadNotifCount(){return (notifRows||[]).filter(n=>!n.read_at).length;}
 // Legge i profili pubblici. Usa la vista sicura public_profiles se esiste; se il DB
 // risponde con errore (es. migration di sicurezza non ancora applicata), ripiega sulla
 // tabella profiles limitandosi comunque alle sole colonne non sensibili. Così l'app
@@ -1833,42 +1836,6 @@ async function pubProfiles(cols,ids){
  const fbCols=safeCols.replace(/\bavatar\b/,'data');
  const {data}=await supa.from('profiles').select(fbCols).in('id',ids);
  return (data||[]).map(p=>{if(p&&p.data&&typeof p.data==='object'){p.avatar=p.data.avatar||'';}return p;});
-}
-async function loadSocialNotifs(){
- if(mode!=='cloud'||!supa){socialNotifs=[];return;}
- const out=[];
- try{
-   // INVITI RICEVUTI da accettare (i più importanti: in cima)
-   const {data:rec}=await supa.from('club_invites').select('id,club_id,inviter_id,status').eq('invitee_id',authUser.id).eq('status','pending');
-   if(rec&&rec.length){
-     const cids=[...new Set(rec.map(i=>i.club_id))];const uids=[...new Set(rec.map(i=>i.inviter_id))];
-     const cmap={},umap={};
-     try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const pr=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.username||p.name);}catch(e){}
-     rec.forEach(i=>out.push({ic:'club',bg:'#f3e6c4',t:'Invito a un club',p:(umap[i.inviter_id]||'Un lettore')+' ti ha invitato in '+(cmap[i.club_id]||'un club')+'.',go:'lettori',key:'rec-'+i.id}));
-   }
- }catch(e){}
- try{
-   // inviti accettati che ho mandato io
-   const {data:inv}=await supa.from('club_invites').select('id,club_id,invitee_id,status').eq('inviter_id',authUser.id).eq('status','accepted');
-   if(inv&&inv.length){
-     const cids=[...new Set(inv.map(i=>i.club_id))];const uids=[...new Set(inv.map(i=>i.invitee_id))];
-     const cmap={},umap={};
-     try{const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);(cl||[]).forEach(c=>cmap[c.id]=c.name);}catch(e){}
-     try{const pr=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.username||p.name);}catch(e){}
-     inv.forEach(i=>out.push({ic:'check',bg:'#dcebe0',t:'Invito accettato',p:(umap[i.invitee_id]||'Un lettore')+' è entrato in '+(cmap[i.club_id]||'un club')+'.',go:'club',cid:i.club_id,key:'inv-'+i.id}));
-   }
- }catch(e){}
- try{
-   // nuovi follower
-   const {data:fol}=await supa.from('follows').select('follower_id,created_at').eq('followed_id',authUser.id).order('created_at',{ascending:false}).limit(20);
-   if(fol&&fol.length){
-     const uids=[...new Set(fol.map(f=>f.follower_id))];const umap={};
-     try{const pr=await pubProfiles('id,name,username',uids);(pr||[]).forEach(p=>umap[p.id]=p.username||p.name);}catch(e){}
-     fol.forEach(f=>out.push({ic:'profile',bg:'#e1edf6',t:'Nuovo follower',p:(umap[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',go:'lettori',key:'fol-'+f.follower_id}));
-   }
- }catch(e){}
- socialNotifs=out;
 }
 async function loadMembers(clubId){
  const {data:mem}=await supa.from('club_members').select('user_id,role').eq('club_id',clubId);
@@ -4686,12 +4653,15 @@ async function deleteMeeting(id){
  if(error){alert('Errore: '+error.message);return}
  await cloudLoadMeetings();go('incontri');
 }
-function readNotifKeys(){try{return new Set(JSON.parse(localStorage.getItem('pagina_notif_read_keys')||'[]'))}catch(e){return new Set()}}
-function markNotifKeyRead(key){try{const s=readNotifKeys();s.add(key);localStorage.setItem('pagina_notif_read_keys',JSON.stringify([...s]))}catch(e){}}
-function openNotifItem(key,cid,go){
- markNotifKeyRead(key);
- const row=document.querySelector('[data-notif-key="'+CSS.escape(key)+'"]');
- if(row){row.classList.remove('unread');row.blur();}
+async function openNotifItem(id,cid,go){
+ const n=(notifRows||[]).find(x=>x.id===id);
+ if(n&&!n.read_at){
+   n.read_at=new Date().toISOString();
+   const row=document.querySelector('[data-notif-id="'+id+'"]');
+   if(row){row.classList.remove('unread');const d=row.querySelector('.notif-dot');if(d)d.remove();}
+   updateBellDot();
+   try{await supa.from('notifications').update({read_at:n.read_at}).eq('id',id);}catch(e){}
+ }
  if(cid)clubSel=cid;
  window.go(go);
 }
@@ -4714,36 +4684,33 @@ function toggleNotifPref(el,key){
  if(clubsLoaded)renderNotifCloud(); // rispecchia subito il filtro in "Per te adesso"
 }
 function renderNotifCloud(){
- if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;renderNotifCloud()});return}
+ if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;loadNotifs().then(renderNotifCloud)});return}
  const items=pendingItems();
- markNotifsSeen(items); // aprendo la pagina, il PUNTINO della campanella si azzera (segnale aggregato)
- const readKeys=readNotifKeys(); // stato letto/non letto per singola notifica (indipendente dal puntino)
+ const unread=items.filter(i=>!i.read).length;
+ // Preferenze: mostriamo SOLO gli interruttori realmente collegati a un invio (niente finti).
+ const opts=[['Nuovo libro scelto','libro'],['Nuova nota nel diario','nota'],['Curiosità settimanale','curio']];
  const curioOn=(function(){try{return curioNotifWanted(loadCurioState())}catch(e){return true}})();
- const opts=[['Promemoria di lettura','promemoria',true],['Incontro imminente','incontro',true],['Nuovo libro scelto','libro',true],['Nuova nota disponibile','nota',true],['Votazione aperta','voto',true],['Curiosità settimanale','curio',true]];
  view.innerHTML=`
  <div class="row">
    <div class="card pad" style="flex:1.4;min-width:300px">
-     <h3 style="font-size:16px;margin-bottom:6px">Per te adesso</h3>
+     <div class="notif-head">
+       <h3 style="font-size:16px;margin:0">Le tue notifiche</h3>
+       ${unread?`<button type="button" class="link-btn sm" onclick="markAllNotifsRead()">Segna tutte come lette</button>`:''}
+     </div>
      ${items.length?items.map(it=>{
-       const key=it.key||(it.t+it.p);
-       const unread=!readKeys.has(key);
-       return `<button type="button" class="notif ${unread?'unread':''}" data-notif-key="${esc(key)}" onclick="openNotifItem('${esc(key)}',${it.cid||'null'},'${it.go}')" aria-label="${unread?'Non letta: ':''}${esc(it.t)}. ${esc(it.p)}">
+       return `<button type="button" class="notif ${it.read?'':'unread'}" data-notif-id="${it.id}" onclick="openNotifItem(${it.id},${it.cid||'null'},'${it.go}')" aria-label="${it.read?'':'Non letta: '}${esc(it.t)}. ${esc(it.p)}">
          <span class="ni">${icon(it.ic)}</span>
-         <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p></span>
-         ${unread?'<span class="notif-dot" aria-hidden="true"></span>':''}
-         <span class="notif-open">Apri</span>
+         <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p><time class="notif-when">${notifWhen(it.when)}</time></span>
+         ${it.read?'':'<span class="notif-dot" aria-hidden="true"></span>'}
        </button>`;
-     }).join(''):'<div class="muted" style="font-size:13.5px;padding:8px 0">Nessuna novità per ora.</div>'}
+     }).join(''):'<div class="empty-mini" style="margin-top:6px"><span class="icn-badge sage">'+icon('bell')+'</span><div><b>Nessuna notifica</b><p>Quando un club sceglie un libro, qualcuno commenta o ti segue, lo vedrai qui.</p></div></div>'}
    </div>
    <div class="card pad" style="flex:1;min-width:260px">
      <h3 style="font-size:16px;margin-bottom:6px">Cosa vuoi ricevere</h3>
-     ${opts.map(([o,key,wired])=>{
-       const on=key==='curio'?curioOn:(wired?notifPrefOn(key):false);
+     <div class="muted" style="font-size:12px;margin-bottom:12px">Attiva o disattiva le notifiche per tipo di evento.</div>
+     ${opts.map(([o,key])=>{
+       const on=key==='curio'?curioOn:notifPrefOn(key);
        const id='ntf-'+key;
-       if(!wired)return `<div class="set-row">
-         <label for="${id}" style="flex:1;color:var(--ink-faint)">${esc(o)} <span class="badge-tint info" style="font-size:10px;margin-left:4px">Presto disponibile</span></label>
-         <button type="button" id="${id}" role="switch" aria-checked="false" aria-disabled="true" aria-label="${esc(o)}: non ancora disponibile" class="toggle" disabled style="opacity:.4;cursor:not-allowed"></button>
-       </div>`;
        return `<div class="set-row">
          <label for="${id}" style="flex:1;cursor:pointer">${esc(o)}</label>
          <button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(o)}" class="toggle ${on?'on':''}" onclick="${key==='curio'?'toggleCurioNotif(this)':`toggleNotifPref(this,'${key}')`}"></button>
@@ -4751,6 +4718,24 @@ function renderNotifCloud(){
      }).join('')}
    </div>
  </div>`;
+ markNotifsSeen(items); // aprendo la pagina, il puntino aggregato si azzera
+}
+/* "2 min fa", "3 h fa", "ieri", "12 lug" — quando è arrivata la notifica */
+function notifWhen(iso){
+ try{const d=new Date(iso);const s=Math.floor((Date.now()-d)/1000);
+   if(s<60)return 'ora';
+   if(s<3600)return Math.floor(s/60)+' min fa';
+   if(s<86400)return Math.floor(s/3600)+' h fa';
+   if(s<172800)return 'ieri';
+   return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+ }catch(e){return ''}
+}
+async function markAllNotifsRead(){
+ const ids=(notifRows||[]).filter(n=>!n.read_at).map(n=>n.id);
+ if(!ids.length)return;
+ notifRows.forEach(n=>{if(!n.read_at)n.read_at=new Date().toISOString();});
+ renderNotifCloud();updateBellDot();
+ try{await supa.from('notifications').update({read_at:new Date().toISOString()}).in('id',ids);}catch(e){}
 }
 function toggleCurioNotif(el){
  const on=el.classList.contains('on');
@@ -4764,21 +4749,16 @@ function toggleCurioNotif(el){
    });}catch(e){}
  }
 }
-/* Puntino campanella: acceso finché ci sono novità non ancora "viste" (aperte). */
-function notifSig(items){return (items||[]).map(it=>it.t+'|'+it.p).sort().join('§');}
+/* Puntino campanella: acceso finché esistono notifiche NON LETTE (stato reale, dal DB). */
 function updateBellDot(){
  try{
-   const items=(typeof pendingItems==='function')?pendingItems():[];
-   const seen=localStorage.getItem('pagina_notif_seen')||'';
-   const has=items.length>0 && notifSig(items)!==seen;
-   const dot=document.querySelector('.bell .dot');if(dot)dot.style.display=has?'block':'none';
+   const n=(typeof unreadNotifCount==='function')?unreadNotifCount():0;
+   const dot=document.querySelector('.bell .dot');if(dot)dot.style.display=n>0?'block':'none';
    const btn=document.getElementById('bellBtn');
-   if(btn)btn.setAttribute('aria-label',has?('Notifiche, '+items.length+' non lette'):'Notifiche');
+   if(btn)btn.setAttribute('aria-label',n>0?('Notifiche, '+n+' non lette'):'Notifiche');
  }catch(e){}
 }
-function markNotifsSeen(items){
- try{localStorage.setItem('pagina_notif_seen',notifSig(items));updateBellDot();}catch(e){}
-}
+function markNotifsSeen(){ updateBellDot(); }
 let _modalReturnFocus=null;
 function _modalFocusables(){const m=$('#modal');if(!m)return[];return Array.prototype.slice.call(m.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(el=>el.offsetParent!==null);}
 function openOverlay(){_modalReturnFocus=document.activeElement;$('#overlay').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>{const f=_modalFocusables();if(f.length)f[0].focus();else{const m=$('#modal');if(m)m.focus();}},30);}
@@ -5086,7 +5066,7 @@ function startApp(target){
  buildNav();go(target||'home');
  enrichCovers();
  maybeShowOnboarding();
- if(mode==='cloud'){loadSocialNotifs().then(()=>{try{updateBellDot()}catch(e){}});}
+ if(mode==='cloud'){loadNotifs().then(()=>{try{updateBellDot()}catch(e){}});}
 }
 
 /* ---- Onboarding primo accesso: appare una sola volta, per accompagnare l'utente nuovo che

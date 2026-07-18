@@ -1512,3 +1512,7 @@ select:focus{outline:none;border-color:var(--brand-solid)}
 .mb-meet .icn{width:15px;height:15px;flex:none}
 .mb-meet:active{opacity:.7}
 .me-book-v2.is-club .mb-sub{margin-top:0}
+
+/* v159 — Sezione notifiche vera: storico con data e stato letto/non letto */
+.notif-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.notif-when{display:block;font-size:11px;color:var(--ink-faint);margin-top:4px}
