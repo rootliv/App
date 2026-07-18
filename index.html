@@ -3961,11 +3961,32 @@ function curioReadTime(text){
 function curioSkeleton(){return '<div class="card pad curio-skel"><div class="skel skel-line" style="width:38%"></div><div class="skel skel-line" style="width:85%;margin-top:12px"></div><div class="skel skel-line sm" style="width:60%;margin-top:8px"></div></div>'}
 function curioEmptyCard(){return '<div class="card pad empty-state-card"><span class="icn-badge sage">'+icon('sparkles')+'</span><h3>Ancora nessuna curiosità</h3><p>Aggiungi un libro alla tua libreria per riceverne una ogni settimana, personalizzata e senza spoiler.</p><button class="btn" style="margin-top:6px" onclick="openAddBook()">'+icon('plus')+' Aggiungi un libro</button></div>'}
 function curioErrorCard(){return '<div class="card pad empty-state-card"><span class="icn-badge gold">'+icon('sparkles')+'</span><h3>Non riesco a prepararla ora</h3><p>Controlla la connessione e riprova.</p><button class="btn ghost" style="margin-top:6px" onclick="renderCuriosity()">Riprova</button></div>'}
+// Spiega perché QUESTO libro, questa settimana: risponde alla sensazione di
+// arbitrarietà quando l'utente ha più libri attivi, senza moltiplicare le
+// curiosità ufficiali (che resta una sola, di proposito).
+function curioBookContextLine(row){
+ if(!row.book_title)return '';
+ const b=row.book_id?book(row.book_id):null;
+ let tail='dalla tua libreria';
+ if(b){
+   if(b.status==='reading')tail='che stai leggendo';
+   else if(b.status==='read')tail='che hai finito da poco';
+   else{
+     try{
+       const meet=(typeof upcomingMeetings==='function')?(upcomingMeetings()[0]||null):null;
+       const club=meet?(myClubs||[]).find(c=>c.id===meet.club_id):null;
+       if(club&&club.current_title&&normKey(club.current_title)===normKey(b.t))tail='il libro del tuo club';
+     }catch(e){}
+   }
+ }
+ return 'Questa settimana, a proposito di «'+esc(row.book_title)+'» '+tail;
+}
 function paintCurioPreview(row){
  const box=$('#curioCard');if(!box)return;
  weeklyCurioRow=row;
+ const ctxLine=curioBookContextLine(row);
  box.innerHTML='<div class="card pad curio-preview" role="button" tabindex="0" onclick="openCurioDetail()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCurioDetail()}" aria-label="Apri la curiosità della settimana: '+esc(row.title)+'">'
-  +(row.book_title?('<div class="curio-preview-book">'+icon('book')+' <span>'+esc(row.book_title)+(row.book_author?(' · '+esc(row.book_author)):'')+'</span></div>'):'')
+  +(ctxLine?('<div class="curio-preview-book">'+ctxLine+'</div>'):'')
   +'<div class="curio-preview-top">'
     +'<span class="pill sage curio-preview-cat">'+esc(row.category)+'</span>'
     +(row.saved?'<span class="curio-saved-dot" aria-label="Salvata">'+icon('bookmark')+'</span>':'')
@@ -3976,25 +3997,27 @@ function paintCurioPreview(row){
     +'<span class="muted curio-preview-time">'+icon('clock')+' '+curioReadTime(row.content)+'</span>'
     +'<span class="btn sm curio-scopri-btn">Scopri '+icon('chevron')+'</span>'
   +'</div>'
- +'</div>';
+ +'</div>'
+ +'<div class="curio-alt-link"><button type="button" class="link-btn" onclick="openCurioDetail(true)">Parla di un altro libro?</button></div>';
 }
 function curioSourceLine(sourceName,sourceUrl){
  if(!sourceName)return '';
  if(sourceUrl)return '<a href="'+esc(sourceUrl)+'" target="_blank" rel="noopener" class="curio-source-link">Fonte: '+esc(sourceName)+'</a>';
  return '<span class="curio-source-txt">Fonte: '+esc(sourceName)+'</span>';
 }
-function openCurioDetail(){
+function openCurioDetail(autoExtra){
  const row=weeklyCurioRow;if(!row)return;
  weeklyCurioExtra=null;
  _modalKind='curio:'+row.id;
  renderCurioDetailModal(row);
  openOverlay();
  if(!row.seen_at){row.seen_at=new Date().toISOString();saveWeeklyCurioCache(row);markWeeklyCuriositySeen(row.id);}
+ if(autoExtra)loadCurioExtra();
 }
 function renderCurioDetailModal(row){
  const m=$('#modal');if(!m)return;
  m.innerHTML=
-  '<div class="modal-top"><b>'+icon('sparkles')+' Da non perdere questa settimana</b><div class="mt-actions"><button class="mt-share" onclick="shareCurio()" title="Condividi" aria-label="Condividi">'+icon('share')+'</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>'
+  '<div class="modal-top"><b>'+icon('sparkles')+' Curiosità della settimana</b><div class="mt-actions"><button class="mt-share" onclick="shareCurio()" title="Condividi" aria-label="Condividi">'+icon('share')+'</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>'
   +'<div class="modal-body">'
     +'<span class="pill sage">'+esc(row.category)+'</span>'
     +(row.spoiler_level==='light'?'<span class="badge-tint info curio-spoiler-badge">Contiene dettagli sulla trama</span>':'')
@@ -4398,7 +4421,7 @@ function renderHomeCloud(){
  </div>
 
  <!-- 4) CURIOSITÀ DELLA SETTIMANA — spunto piacevole, in chiusura -->
- <div class="sec-head-ic" id="curioHead"><div class="sec-title-ic">${icon('sparkles')}<span>Da non perdere questa settimana</span></div></div>
+ <div class="sec-head-ic" id="curioHead"><div class="sec-title-ic">${icon('sparkles')}<span>Curiosità della settimana</span></div></div>
  <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->

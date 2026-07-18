@@ -1016,8 +1016,10 @@ body.sidebar-open .topsearch-res{display:none!important}
 .curio-preview{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .curio-preview:hover{border-color:var(--coral-soft)}
 .curio-preview:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
-.curio-preview-book{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:10px}
-.curio-preview-book .icn{width:12px;height:12px}
+.curio-preview-book{font-size:12.5px;font-style:italic;color:var(--ink-soft);margin-bottom:10px;line-height:1.4}
+.curio-alt-link{text-align:center;margin-top:6px}
+.curio-alt-link .link-btn{color:var(--ink-faint);font-size:12px;font-weight:600;min-height:36px}
+.curio-alt-link .link-btn:hover{color:var(--ink-soft)}
 .curio-preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .curio-saved-dot{color:var(--primary);display:inline-flex}
 .curio-saved-dot .icn{width:16px;height:16px}
