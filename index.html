@@ -3712,85 +3712,124 @@ async function wikidataFacts(qid){
 // --- fonti verificabili, provate PRIMA dell'AI: se una non raggiunge una soglia
 // minima di qualità/lunghezza viene scartata, non forzata. La fonte precisa (nome +
 // URL, quando esiste) viene sempre salvata insieme al contenuto. ---
-async function weeklyCuriosityFromVerifiedSources(b,avoidCategories){
+// --- Raccolta "fatti grezzi" da fonti verificabili: NON sono testo da mostrare,
+// sono materia prima per l'editor (AI). Solo i fatti già brevi e "di per sé
+// editoriali" (Wikidata, titolo originale, genere curato, luogo mappa) portano
+// anche una versione "standalone" pronta, usata SOLO se l'AI non è disponibile.
+// Bio dell'autore ed estratti "dietro le quinte" NON hanno mai una versione
+// standalone: senza editor AI non vengono mai mostrati (niente più aria da
+// Wikipedia/biografia in Home).
+async function gatherEditorFacts(b,avoidCategories){
  avoidCategories=avoidCategories||new Set();
  const author=b.a||'',title=b.t||'';
  const spoilersOk=(b.status==='read');
+ const facts=[];
 
- async function tryFatti(){
-   const w=await findBookWiki(b);if(!w)return null;
-   const qid=await wikiQid(w.title);if(!qid)return null;
-   const f=await wikidataFacts(qid);if(!f)return null;
-   const wdUrl='https://www.wikidata.org/wiki/'+qid;
-   const variants=[];
-   if(f.adaptations.length){const a=f.adaptations[0];variants.push(['Adattamenti','Da «'+title+'» è stato tratto un adattamento per lo schermo'+(a.year?(' nel '+a.year):'')+'.','Da «'+title+'» è stato tratto un adattamento per lo schermo'+(a.year?(' nel '+a.year):'')+': «'+a.label+'».']);}
-   if(f.awards.length)variants.push(['Riconoscimenti','«'+title+'» ha ottenuto un riconoscimento letterario.','«'+title+'» ha ottenuto un riconoscimento letterario: '+f.awards.slice(0,2).join(', ')+'.']);
-   if(f.pubYear)variants.push(['Pubblicazione','Pubblicato per la prima volta nel '+f.pubYear+'.','«'+title+'» è stato pubblicato per la prima volta nel '+f.pubYear+(f.genres.length?(', tra le opere di '+f.genres[0].toLowerCase()):'')+'.']);
-   if(!variants.length)return null;
-   const v=variants.find(x=>!avoidCategories.has(x[0]))||variants[0];
-   return mkWeeklyCuriosity(b,v[0],title,v[1],v[2],'Wikidata',wdUrl,'none');
- }
- async function tryAutore(){
-   if(!author)return null;
-   const aKey=normKey(author);
-   const hits=await wikiSearchHits(author,5);
-   const pick=hits.find(h=>normKey(h.title)===aKey)||hits.find(h=>aKey&&normKey(h.title).includes(aKey));
-   if(!pick)return null;
-   const ex=await wikiPageExtract(pick.title);if(!validTrama(ex))return null;
-   const sents=curioSentences(ex);if(!sents.length)return null;
-   const txt=sents.slice(0,2).join(' ');
-   if(!txt||txt.length<40)return null; // troppo corto: non sufficientemente utile/verificabile
-   const url='https://it.wikipedia.org/wiki/'+encodeURIComponent(pick.title.replace(/ /g,'_'));
-   return mkWeeklyCuriosity(b,'Autore',author,sents[0],txt,'Wikipedia',url,'none');
- }
- async function tryContesto(){
-   const w=await findBookWiki(b);if(!w)return null;
-   const url='https://it.wikipedia.org/wiki/'+encodeURIComponent(w.title.replace(/ /g,'_'));
-   if(spoilersOk){
-     const sents=curioSentences(w.extract);const txt=sents.slice(0,3).join(' ');
-     if(!txt||txt.length<40)return null;
-     return mkWeeklyCuriosity(b,'Dietro le quinte',title,sents[0]||title,txt,'Wikipedia',url,'light');
+ try{
+   const w=await findBookWiki(b);
+   if(w){
+     const wUrl='https://it.wikipedia.org/wiki/'+encodeURIComponent(w.title.replace(/ /g,'_'));
+     const qid=await wikiQid(w.title);
+     if(qid){
+       const f=await wikidataFacts(qid);
+       const wdUrl='https://www.wikidata.org/wiki/'+qid;
+       if(f){
+         if(f.adaptations.length){
+           const a=f.adaptations[0];
+           const txt='Da «'+title+'» è stato tratto un adattamento per lo schermo'+(a.year?(' nel '+a.year):'')+': «'+a.label+'».';
+           facts.push({category:'Adattamenti',fact:txt,sourceName:'Wikidata',sourceUrl:wdUrl,
+             standalone:{title:'Adattamenti',teaser:'Da «'+title+'» è stato tratto un adattamento per lo schermo.',content:txt}});
+         }
+         if(f.awards.length){
+           const txt='«'+title+'» ha ottenuto un riconoscimento letterario: '+f.awards.slice(0,2).join(', ')+'.';
+           facts.push({category:'Riconoscimenti',fact:txt,sourceName:'Wikidata',sourceUrl:wdUrl,
+             standalone:{title:'Riconoscimenti',teaser:'«'+title+'» ha ottenuto un riconoscimento letterario.',content:txt}});
+         }
+         if(f.pubYear){
+           const txt='«'+title+'» è stato pubblicato per la prima volta nel '+f.pubYear+(f.genres.length?(', tra le opere di '+f.genres[0].toLowerCase()):'')+'.';
+           facts.push({category:'Pubblicazione',fact:txt,sourceName:'Wikidata',sourceUrl:wdUrl,
+             standalone:{title:'Pubblicazione',teaser:'Pubblicato per la prima volta nel '+f.pubYear+'.',content:txt}});
+         }
+       }
+     }
+     const rawSents=(spoilersOk?curioSentences(w.extract):curioSafeSentences(w.extract)).slice(0,6);
+     const raw=rawSents.join(' ');
+     if(raw&&raw.length>40)facts.push({category:'Dietro le quinte',fact:raw,sourceName:'Wikipedia',sourceUrl:wUrl,standalone:null});
    }
-   const safe=curioSafeSentences(w.extract);if(!safe.length)return null;
-   const extra=safe.slice(1).find(s=>/\b(pubblicat|success|premi|tradot|edizion|ispirat|ambientat|scritt|accoglienz|vendut|bestseller|critica|adatt)\b/i.test(s));
-   const txt=[safe[0],extra].filter(Boolean).slice(0,2).join(' ');
-   if(!txt||txt.length<40)return null;
-   return mkWeeklyCuriosity(b,'Dietro le quinte',title,safe[0],txt,'Wikipedia',url,'none');
+ }catch(e){/* fonte non disponibile ora */}
+
+ try{
+   if(author){
+     const aKey=normKey(author);
+     const hits=await wikiSearchHits(author,5);
+     const pick=hits.find(h=>normKey(h.title)===aKey)||hits.find(h=>aKey&&normKey(h.title).includes(aKey));
+     if(pick){
+       const ex=await wikiPageExtract(pick.title);
+       if(validTrama(ex)){
+         const raw=curioSentences(ex).slice(0,6).join(' ');
+         if(raw&&raw.length>40)facts.push({category:'Autore',fact:raw,sourceName:'Wikipedia',
+           sourceUrl:'https://it.wikipedia.org/wiki/'+encodeURIComponent(pick.title.replace(/ /g,'_')),standalone:null});
+       }
+     }
+   }
+ }catch(e){/* fonte non disponibile ora */}
+
+ if(b.originalTitle&&normKey(b.originalTitle)!==normKey(title)){
+   const txt='In lingua originale «'+title+'» si intitola «'+b.originalTitle+'». I titoli vengono spesso riadattati in traduzione per renderli più efficaci sul mercato italiano.';
+   facts.push({category:'Traduzioni',fact:txt,sourceName:'Metadati del libro',sourceUrl:'',
+     standalone:{title:'Titolo originale',teaser:'In lingua originale si intitola «'+b.originalTitle+'».',content:txt}});
  }
- function tryTitolo(){
-   if(!b.originalTitle||normKey(b.originalTitle)===normKey(title))return null;
-   return mkWeeklyCuriosity(b,'Traduzioni','Titolo originale','In lingua originale si intitola «'+b.originalTitle+'».',
-     'In lingua originale «'+title+'» si intitola «'+b.originalTitle+'». I titoli vengono spesso riadattati in traduzione per renderli più efficaci sul mercato italiano.',
-     'Metadati del libro','','none');
- }
- function tryGenere(){
-   const gt=genreFact(b.g);if(!gt)return null;
-   return mkWeeklyCuriosity(b,'Genere',b.g||'Genere',gt,gt,'Pàgina — nota editoriale','','none');
- }
- function tryLuogo(){
-   const locs=(typeof bookLocs==='function')?bookLocs():{};
-   const e=locs[normKey(b.t)];if(!e||e.lat==null)return null;
-   const nm=normCountry(e.country);
-   return mkWeeklyCuriosity(b,'Luoghi','Un luogo reale','«'+title+'» è ambientato a '+(e.place||nm)+'.',
-     '«'+title+'» è ambientato a '+(e.place||nm)+(nm?(', '+nm):'')+' — un luogo reale che puoi esplorare nella tua mappa del mondo.',
-     'Mappa del mondo (Pàgina)','','none');
+ const gt=genreFact(b.g);
+ if(gt)facts.push({category:'Genere',fact:gt,sourceName:'Pàgina — nota editoriale',sourceUrl:'',
+   standalone:{title:b.g||'Genere',teaser:gt,content:gt}});
+
+ const locs=(typeof bookLocs==='function')?bookLocs():{};
+ const eLoc=locs[normKey(b.t)];
+ if(eLoc&&eLoc.lat!=null){
+   const nm=normCountry(eLoc.country);
+   const txt='«'+title+'» è ambientato a '+(eLoc.place||nm)+(nm?(', '+nm):'')+' — un luogo reale che puoi esplorare nella tua mappa del mondo.';
+   facts.push({category:'Luoghi',fact:txt,sourceName:'Mappa del mondo (Pàgina)',sourceUrl:'',
+     standalone:{title:'Un luogo reale',teaser:'«'+title+'» è ambientato a '+(eLoc.place||nm)+'.',content:txt}});
  }
 
- const order=[['fatti',tryFatti],['autore',tryAutore],['contesto',tryContesto],['titolo',tryTitolo],['genere',tryGenere],['luogo',tryLuogo]];
- const fresh=order.filter(([cat])=>!avoidCategories.has(cat));
- const stale=order.filter(([cat])=>avoidCategories.has(cat));
- for(const [,fn] of fresh.concat(stale)){
-   try{const c=await fn();if(c)return c;}catch(e){/* fonte non disponibile ora: prova la prossima */}
- }
- return null;
+ // preferisci le categorie non usate di recente nell'ordine di invio all'editor,
+ // ma non escludere nulla: meglio riproporre una categoria che non dare scelta all'AI
+ facts.sort((a,c)=>(avoidCategories.has(a.category)?1:0)-(avoidCategories.has(c.category)?1:0));
+ return facts;
 }
 
-// --- ultima risorsa: AI via Edge Function (mai chiavi/prompt lato client) ---
-// Categorie "esotiche": niente fonte verificabile in app per queste (nessuna proprietà
-// Wikidata per "musica citata" o "quadro collegato"), quindi qui l'AI non riformula un
-// fatto verificato ma genera da zero. Per questo sono SEMPRE etichettate come AI non
-// verificata (mai come Wikidata/Wikipedia), e il prompt le tratta con più cautela
-// anti-invenzione. Scelta esplicita: coprono varietà che le fonti verificate non danno.
+// --- l'AI fa da EDITOR: sceglie il fatto più interessante tra quelli raccolti e lo
+// riscrive completamente (mai un riassunto, mai il testo grezzo). Sempre via Edge
+// Function, mai chiavi/prompt lato client. ---
+async function weeklyCuriosityEdited(b,facts){
+ if(!facts||!facts.length)return null;
+ if(!aiOn())return null;
+ if(typeof supa==='undefined'||!supa||typeof mode==='undefined'||mode!=='cloud')return null;
+ if(window.__aiCurioOff)return null;
+ const spoilersOk=(b.status==='read');
+ const factsForApi=facts.slice(0,6).map(f=>({category:f.category,fact:curioClip(f.fact,320),sourceName:f.sourceName||''}));
+ try{
+   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||'',allowSpoilers:spoilersOk,facts:factsForApi}});
+   if(error){if((error.message||'').match(/not found|404/i))window.__aiCurioOff=true;return null;}
+   if(!data||!data.testo)return null;
+   let t=stripHtml(data.testo);
+   if(!validTrama(t))return null;
+   if(!spoilersOk&&SPOILER_RE.test(t))return null;
+   const category=data.categoria||(facts[0]&&facts[0].category)||'Curiosità';
+   const chosen=facts.find(f=>f.category===category)||facts[0];
+   const titleOut=stripHtml(data.titolo||category);
+   const teaserOut=stripHtml(data.teaser||t);
+   const srcName=(chosen&&chosen.sourceName)?(chosen.sourceName+' — riscritto dall\'AI'):'Fonti verificate — riscritto dall\'AI';
+   return mkWeeklyCuriosity(b,category,titleOut,teaserOut,t,srcName,(chosen&&chosen.sourceUrl)||'',spoilersOk?'light':'none');
+ }catch(e){return null}
+}
+// --- ripiego SENZA AI: solo fatti già di per sé "editoriali" (brevi, mai un estratto
+// grezzo di Wikipedia). Se l'unico materiale disponibile è bio/estratto, qui non c'è
+// nulla da mostrare: si passa alla categoria "di sapore" o al messaggio generico. ---
+function standaloneVerifiedFallback(facts){
+ const ok=(facts||[]).find(f=>f.standalone);
+ return ok?ok:null;
+}
 const AI_FLAVOR_CATEGORIES=['Intervista','Musica collegata','Arte collegata','Documento storico'];
 function pickAiFlavor(avoidCategories){
  avoidCategories=avoidCategories||new Set();
@@ -3810,7 +3849,10 @@ async function weeklyCuriosityFromAI(b,categoryHint){
    let t=stripHtml(data.testo);
    if(!validTrama(t))return null;
    if(!spoilersOk&&SPOILER_RE.test(t))return null;
-   return mkWeeklyCuriosity(b,(data.categoria||categoryHint||'Curiosità'),b.t,t,t,'AI (contenuto generato, non verificato)','',spoilersOk?'light':'none');
+   const category=data.categoria||categoryHint||'Curiosità';
+   const titleOut=stripHtml(data.titolo||category);
+   const teaserOut=stripHtml(data.teaser||t);
+   return mkWeeklyCuriosity(b,category,titleOut,teaserOut,t,'AI (contenuto generato, non verificato)','',spoilersOk?'light':'none');
  }catch(e){return null}
 }
 function weeklyCuriosityBookFallback(b){
@@ -3822,15 +3864,23 @@ function weeklyCuriosityBookFallback(b){
  return mkWeeklyCuriosity(b,'Libreria',b.t,'Aprilo per scoprirne di più','«'+b.t+'» di '+b.a+' è nella tua libreria: aprilo per scoprirne trama e dettagli.','Pàgina','','none');
 }
 async function buildWeeklyCuriosityContent(b,avoidCategories){
- const verified=await weeklyCuriosityFromVerifiedSources(b,avoidCategories);
- if(verified)return verified;
- // prima un tentativo "di sapore" (Intervista/Musica/Arte/Documento storico) per varietà,
- // poi un tentativo generico se quello specifico non produce nulla di attendibile
+ // 1) raccogli fatti grezzi verificabili (mai mostrati così come sono)
+ const facts=await gatherEditorFacts(b,avoidCategories);
+ // 2) l'AI fa da editor: sceglie il più interessante e lo riscrive da zero
+ if(facts.length){
+   const edited=await weeklyCuriosityEdited(b,facts);
+   if(edited)return edited;
+ }
+ // 3) AI non disponibile: SOLO fatti già di per sé editoriali (mai bio/estratti grezzi)
+ const stFact=standaloneVerifiedFallback(facts);
+ if(stFact)return mkWeeklyCuriosity(b,stFact.category,stFact.standalone.title,stFact.standalone.teaser,stFact.standalone.content,stFact.sourceName,stFact.sourceUrl,'none');
+ // 4) ancora niente: prova una categoria "di sapore" generata dall'AI da zero
  const flavor=pickAiFlavor(avoidCategories);
  const aiFlavor=await weeklyCuriosityFromAI(b,flavor);
  if(aiFlavor)return aiFlavor;
  const aiGeneric=await weeklyCuriosityFromAI(b);
  if(aiGeneric)return aiGeneric;
+ // 5) rete di sicurezza finale
  return weeklyCuriosityBookFallback(b);
 }
 
@@ -3996,7 +4046,9 @@ async function loadCurioExtra(){
    const row=weeklyCurioRow;
    const b=row.book_id?book(row.book_id):{id:row.book_id||null,t:row.book_title,a:row.book_author,status:'reading'};
    const avoid=new Set([row.category]);
-   let extra=await weeklyCuriosityFromVerifiedSources(b,avoid);
+   const facts=await gatherEditorFacts(b,avoid);
+   let extra=facts.length?await weeklyCuriosityEdited(b,facts):null;
+   if(!extra){const stFact=standaloneVerifiedFallback(facts);if(stFact)extra=mkWeeklyCuriosity(b,stFact.category,stFact.standalone.title,stFact.standalone.teaser,stFact.standalone.content,stFact.sourceName,stFact.sourceUrl,'none');}
    if(!extra)extra=await weeklyCuriosityFromAI(b,pickAiFlavor(avoid));
    if(!extra)extra=await weeklyCuriosityFromAI(b);
    weeklyCurioExtraBusy=false;
