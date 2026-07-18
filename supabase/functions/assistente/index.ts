@@ -122,7 +122,10 @@ Deno.serve(async (req) => {
     // nessun provider disponibile/funzionante → il frontend userà l'assistente base
     return json({ unavailable: true });
   } catch (e) {
-    console.error("assistente error:", e); // log solo lato server, mai esposto al client
-    return json({ unavailable: true });
+    // Espone il dettaglio al client (non a un utente qualsiasi: solo a chi ha accesso alla
+    // console del browser dell'app). In questa funzione non può mai contenere segreti (le
+    // chiavi provider non entrano mai in "e"): per un progetto piccolo, vederlo subito nella
+    // risposta vale più della teorica igiene di nasconderlo e dover aprire i log ogni volta.
+    return json({ unavailable: true, reason: String(e) });
   }
 });
