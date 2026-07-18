@@ -599,8 +599,8 @@ renders.libreria=()=>{
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
- const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead],['ai','✨ Consigli',null]];
- let list=libTab==='ai'?null:books.filter(b=>libTab==='all'||b.status===libTab);
+ const tabs=[['all','Tutti',books.length],['reading','In lettura',nReading],['toread','Da leggere',nToread],['read','Letti',nRead]];
+ let list=books.filter(b=>libTab==='all'||b.status===libTab);
  // Filtro temporale: attivo solo nel tab "Letti"
  let yearBar='';
  if(libTab==='read'){
@@ -618,7 +618,7 @@ renders.libreria=()=>{
      list=list.filter(b=>libYear==='nodate'?!bookYear(b):bookYear(b)===+libYear);
    }
  }
- const tabMeta={all:['library','Tutti'],reading:['book','In lettura'],toread:['bookmark','Da leggere'],read:['check','Letti'],ai:['sparkles','Consigli']};
+ const tabMeta={all:['library','Tutti'],reading:['book','In lettura'],toread:['bookmark','Da leggere'],read:['check','Letti']};
  // Ricerca nello scaffale: filtra per titolo, autore o genere (compare quando la libreria cresce)
  const showSearch=libTab!=='ai'&&books.length>=6;
  if(showSearch&&libFilter){
@@ -636,16 +636,13 @@ renders.libreria=()=>{
  </div>
  ${searchBar}
  ${yearBar}`+`
- ${libTab==='ai'
-  ? `<div class="muted" style="font-size:13.5px;margin-bottom:14px">✨ Libri scelti per te dall'assistente, in base ai tuoi gusti e alla tua libreria — con il motivo di ogni consiglio.</div><div id="aiRecs"><div class="shelf">${Array(6).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div></div>`
-  : `<div id="libShelf">${list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
+ <div id="libShelf">${list.length?`<div class="shelf case">${list.map(b=>bookCard(b)).join('')}</div>`
      :`<div class="card pad empty-state-card">
         <span class="icn-badge gold">${icon(libFilter?'search':'book')}</span>
         <h3>${libFilter?'Nessun libro trovato':(libTab==='all'?'La tua libreria è vuota':(libTab==='read'&&libYear!=='all'?'Nessun libro in questo periodo':'Niente qui, per ora'))}</h3>
         <p>${libFilter?('Nessun risultato per «'+esc(libFilter)+'». Prova con un altro termine.'):(libTab==='all'?'Aggiungi il tuo primo libro: cerca un titolo e copertina, trama e dettagli arrivano da soli.':'Aggiungi libri o spostali in questo scaffale.')}</p>
         ${libFilter?`<button class="btn ghost" style="margin-top:6px" onclick="libFilter='';renders.libreria()">Azzera ricerca</button>`:`<button class="btn" style="margin-top:6px" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button>`}
-      </div>`}</div>`}`;
- if(libTab==='ai')loadAiRecs();
+      </div>`}</div>`;
 };
 
 renders.club=()=>renderClubCloud();
@@ -812,10 +809,7 @@ async function aiAsk(q){
      let extra='';if(/\b(trovami|cerca|cercami|trova)\b/i.test(q)){extra=await aiSearchCards(q.replace(/^.*?\b(trovami|cerca|cercami|trova)\b\s*/i,''))}
      aiChat.push({who:'ai',html:mdLite(res.answer)+extra,src:'AI · '+esc(res.provider)});
    }else{
-     const loc=localAssistant(q,ctx);
-     if(loc.kind==='search'){const cards=await aiSearchCards(loc.text);
-       aiChat.push({who:'ai',html:(cards?'Ecco alcuni libri che potrebbero piacerti:'+cards:'Non ho trovato libri per questa ricerca: prova con un titolo o un autore.'),src:'Assistente base gratuito'});}
-     else aiChat.push({who:'ai',html:loc.html,src:'Assistente base gratuito'});
+     aiChat.push({who:'ai',html:'Non riesco a rispondere in questo momento. <a href="#" onclick="aiRetryLast();return false" style="color:var(--plum);font-weight:600">Riprova</a>',src:'Errore'});
    }
  }catch(e){
    aiChat.pop();
@@ -831,43 +825,6 @@ function aiRetryLast(){
  const lastUser=[...aiChat].reverse().find(m=>m.who==='me');
  if(lastUser){const txt=lastUser.raw||lastUser.html;aiChat.pop();aiAsk(txt);}
 }
-function localAssistant(q,ctx){
- const t=deburr(q);const has=(...k)=>k.some(x=>t.includes(x));
- const reading=ctx.reading;const book=reading?('«'+reading.title+'»'+(reading.author?(' di '+reading.author):'')):'il libro del mese';
- if(has('trovami','cerca','cercami','trova','consiglia','consigliami','suggerisci','suggeriscimi','consiglio','libri su','libro su','qualcosa di','vorrei leggere','voglio leggere'))
-   return {kind:'search',text:q.replace(/^.*?(trovami|cerca|cercami|trova|consigliami|consiglia|suggeriscimi|suggerisci|vorrei leggere|voglio leggere)\s*/i,'').replace(/^(un|una|dei|delle|di|qualcosa di)\s+/i,'')||q};
- if(has('domande','discussione'))
-   return {html:`<b>Spunti di discussione su ${book}:</b><br>• Quale personaggio ti ha colpito di più e perché?<br>• Qual è il tema centrale e come viene sviluppato?<br>• C'è una scena che funzionerebbe diversamente se fosse ambientata oggi?<br>• Quali scelte dei personaggi condividi o contesti?<br>• Che domanda faresti all'autore/autrice?`};
- if(has('temi','dibattito','dibattere'))
-   return {html:`<b>Temi di dibattito:</b><br>• Il libro "invecchia" bene rispetto a oggi?<br>• Lo stile aiuta o ostacola la storia?<br>• Il messaggio è ancora attuale?<br>• Lo consiglieresti a chi non ama il genere? Perché?`};
- if(has('citazion'))
-   return {html:`Per <b>citazioni verificate</b> serve l'AI esterna (ora non attiva). Nel frattempo segna i passaggi che ti colpiscono come <b>note</b> nel Diario condiviso. 📖`};
- if(has('riferimenti storici','contesto storico'))
-   return {html:`Le spiegazioni di <b>contesto storico</b> approfondite richiedono l'AI esterna (ora non attiva). In modalità base posso aiutarti su app, club, note e progresso di lettura.`};
- if(has('offuscat','blur','bloccat','spoiler','non vedo le note','perche non vedo'))
-   return {html:`Nel <b>Diario condiviso</b> le note degli altri restano <b>bloccate</b> finché non raggiungi la pagina a cui si riferiscono: così niente spoiler. Aggiorna "Sei a pagina" col tuo avanzamento e le note fino a quel punto si sbloccano. Le tue note le vedi sempre; quelle più avanti sono contate ("🔒 N più avanti") ma il loro testo non viene nemmeno caricato.`};
- if(has('progress','aggiornare pagina','che pagina','pagina raggiunta','avanzamento','a che punto'))
-   return {html:`Per aggiornare il <b>progresso</b>: vai su <b>Diario condiviso</b> e usa il selettore <b>"Sei a pagina"</b> (− / numero / +). Decide quali note puoi vedere; è personale e non scende sotto le note che hai già scritto.`};
- if(has('nota','note','annotazion','commento'))
-   return {html:`Le <b>note</b> si gestiscono nel <b>Diario condiviso</b>: scrivi una considerazione e scegli se riferirla a una pagina, a un intervallo o "fino a qui". Puoi <b>modificare/eliminare solo le tue</b> (✏️/🗑). Le altrui restano bloccate finché non arrivi alla loro pagina.`};
- if(has('club','invito','codice','membri','unisci'))
-   return {html:`Per i <b>club</b>: <b>Club del libro</b> → "Crea o unisciti". Inviti con un <b>link</b> o un <b>codice</b> (l'altro va su "Crea o unisciti → Unisciti con un codice"). L'admin elimina il club dalle Impostazioni.`};
- if(has('sorteggio','turni','chi sceglie'))
-   return {html:`Il <b>sorteggio a turni</b> decide chi sceglie il libro: il primo sorteggio dà l'inizio, chi sceglie viene escluso finché non hanno scelto tutti, poi si riparte. Lo avvia l'admin.`};
- if(has('votazione','proporre','votare','proposta'))
-   return {html:`Nella <b>votazione</b> ogni membro propone <b>un</b> libro (puoi toglierlo per cambiarlo) e vota quelli altrui (non il proprio). L'admin chiude: il più votato diventa libro del mese.`};
- if(has('incontro','incontri','calendario','luogo','quando ci vediamo'))
-   return {html:`Gli <b>incontri</b> si creano in <b>Incontri</b> (serve un libro del mese). Scegli club/libro, data (non passata) e ora, e un <b>luogo</b> con suggerimenti mappa. Modificabili/eliminabili.`};
- if(has('mappa','ambientaz','dove sono ambientati'))
-   return {html:`In <b>Mappa letture</b> premi <b>"Rileva ambientazioni"</b>: i tuoi libri vengono posizionati sul planisfero in base a dove sono ambientati. 🌍`};
- if(has('quanti libri','statistich','quanti ho'))
-   {const tot=books.length,rd=books.filter(b=>b.status==='read').length,rg=books.filter(b=>b.status==='reading').length;
-    return {html:`Nella tua libreria: <b>${tot}</b> libri · ${rd} letti · ${rg} in lettura.${reading?(' Ora stai leggendo '+book+'.'):''}`};}
- if(has('come funziona','aiuto','help','cosa puoi fare','cosa sai fare','guida','come si usa','come usare'))
-   return {html:`Sono l'<b>Assistente base</b> di Pàgina. Posso aiutarti con: 📚 libreria e consigli di lettura, 👥 club, ✍️ note e diario (e perché alcune sono bloccate), 📖 progresso di lettura, 🗳️ sorteggio/votazione, 📅 incontri, 🌍 mappa. Esempi: <i>"consigliami un giallo"</i>, <i>"come aggiorno la pagina"</i>, <i>"perché le note sono bloccate"</i>.`};
- return {html:`Sono in <b>modalità base</b> (senza AI esterna): rispondo su uso dell'app, club, note/diario, progresso e consigli di libri. Prova: <i>"consigliami un fantasy"</i>, <i>"come funziona il sorteggio"</i>, <i>"perché le note sono bloccate"</i>.`};
-}
-
 renders.calendario=()=>{
  // Il piano di lettura ha senso SOLO per i libri di un club con un incontro già fissato:
  // l'obiettivo è "arrivare pronta a quell'incontro". Niente date inventate.
@@ -1301,6 +1258,15 @@ function deburr(s){return(s||'').toString().toLowerCase().normalize('NFD').repla
 function normKey(s){return deburr(s).replace(/[^a-z0-9\s]/g,' ')
   .replace(/\b(il|lo|la|i|gli|le|un|uno|una|el|los|las|le|the|a|of|del|de|della|dei|degli|dello|delle|y|e|and)\b/g,' ')
   .replace(/\s+/g,' ').trim()}
+// due titoli "combaciano" se condividono abbastanza parole significative (usato per verificare
+// che un risultato di ricerca corrisponda davvero al libro cercato, non solo genericamente simile)
+function titlesRoughlyMatch(a,b){
+ const norm=s=>normKey(s).split(/\s+/).filter(w=>w.length>2);
+ const wa=new Set(norm(a)),wb=norm(b);
+ if(!wa.size||!wb.length)return false;
+ const common=wb.filter(w=>wa.has(w)).length;
+ return common>=1 && common/Math.min(wa.size,wb.length)>=0.5;
+}
 function tokenSet(s){return new Set(normKey(s).split(' ').filter(w=>w.length>1))}
 function simRatio(a,b){const A=tokenSet(a),B=tokenSet(b);if(!A.size||!B.size)return 0;let n=0;A.forEach(w=>{if(B.has(w))n++});return n/Math.max(A.size,B.size)}
 function authorMatch(a,b){const A=tokenSet(a),B=tokenSet(b);if(!A.size||!B.size)return 0;let n=0;A.forEach(w=>{if(B.has(w))n++});return n/Math.min(A.size,B.size)}
@@ -2800,204 +2766,6 @@ function renderAiCloud(){
  </div>`;
  renderChat();
 }
-/* ---- Consigli AI: cache locale + verifica titoli + rigenera + escludi ----
-   Chiave cache legata all'utente. Salviamo i consigli con una "firma" dei gusti+libreria:
-   se nulla è cambiato, mostriamo dalla cache all'istante (niente attesa, niente instabilità).
-   La lista "esclusi" (dai 'non questo') viene passata al modello e persiste. */
-function aiRecKey(){return 'pagina_airecs_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
-function aiRecSignature(){
- const d=(profile&&profile.data)||{};
- const parts=[(d.authors||[]),(d.genres||[]),(d.loved||[]),(d.disliked||[]),books.map(b=>b.t)]
-   .map(a=>(a||[]).slice().sort().join('|'));
- return 'v2§'+parts.join('§');
-}
-function aiRecCache(){try{return JSON.parse(localStorage.getItem(aiRecKey())||'null')}catch(e){return null}}
-function setAiRecCache(o){try{localStorage.setItem(aiRecKey(),JSON.stringify(o))}catch(e){}}
-function aiExcluded(){const c=aiRecCache();return (c&&Array.isArray(c.excluded))?c.excluded:[]}
-
-async function loadAiRecs(force){
- const box=$('#aiRecs');if(!box)return;
- const d=(profile&&profile.data)||{};
- const authors=[...new Set([...(d.authors||[]), ...books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean)])].slice(0,8);
- const genres=[...new Set([...(d.genres||[]), ...books.map(b=>b.g).filter(Boolean)])].slice(0,8);
- const loved=(d.loved||[]).slice(0,8);
- const libraryTitles=[...new Set(books.map(b=>b.t).filter(Boolean))].slice(0,20);
- const disliked=(d.disliked||[]);
- if(!authors.length && !genres.length && !loved.length && !libraryTitles.length){
-   box.innerHTML=`<div class="card pad empty-state-card"><span class="icn-badge gold">${icon('sparkles')}</span>
-     <h3>Nessun consiglio ancora</h3>
-     <p style="max-width:440px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</p>
-     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px"><button class="btn" onclick="go('profilo')">${icon('profile')} Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button></div></div>`;return;
- }
-
- // 1) CACHE: se la firma coincide e non è una rigenerazione forzata, mostra subito.
- const cache=aiRecCache();
- if(!force && cache && cache.sig===aiRecSignature() && Array.isArray(cache.recs) && cache.recs.length){
-   aiRecsData=cache.recs.slice();
-   renderAiRecs();
-   return;
- }
-
- const excluded=aiExcluded();
- // 2) chiedo i consigli al modello
- let recs=null;
- if(typeof supa!=='undefined'&&supa){
-   const prompt=`Sei un libraio esperto. Consiglia 6 libri a una persona con questi gusti.
-Autori amati: ${authors.join(', ')||'—'}
-Generi preferiti: ${genres.join(', ')||'—'}
-Libri del cuore: ${loved.join(', ')||'—'}
-Già in libreria (NON riproporre): ${libraryTitles.join('; ')||'—'}
-Già scartati dall'utente (NON riproporre): ${excluded.join('; ')||'—'}
-Da evitare: ${disliked.join(', ')||'—'}
-Regole: proponi libri NUOVI, reali ed esistenti, affini ai gusti; VARIA molto gli autori (max 1 libro per autore); evita i titoli più ovvi e arcinoti che questa persona conosce già; niente riassunti/analisi/guide, solo romanzi/opere originali; niente spoiler. Per ciascuno una motivazione breve e personale (max 18 parole).
-Rispondi SOLO con JSON valido: array di 6 oggetti [{"titolo":"...","autore":"...","perche":"..."}]. Nessun altro testo.`;
-   try{
-     const {data,error}=await supa.functions.invoke('assistente',{body:{message:prompt}});
-     if(error){aiUnavailable=true;}
-     if(!error && data && data.answer){
-       const m=data.answer.match(/\[[\s\S]*\]/);
-       if(m){const arr=JSON.parse(m[0]);
-         if(Array.isArray(arr)&&arr.length)recs=arr.filter(x=>x&&x.titolo).slice(0,8);
-       }
-     }
-   }catch(e){aiUnavailable=true;}
- }
- if(!recs||!recs.length){return loadAiRecsFallback();}
-
- const have=new Set(books.map(b=>normKey(b.t)));
- const exSet=new Set(excluded.map(normKey));
- recs=recs.filter(r=>!have.has(normKey(r.titolo)) && !exSet.has(normKey(r.titolo)));
- if(!recs.length){return loadAiRecsFallback();}
-
- // 3) VERIFICA anti-allucinazione + dedup + qualità:
- //    - il titolo trovato deve combaciare con quello consigliato (no allucinazioni)
- //    - niente doppioni (per titolo E per autore)
- //    - scarto edizioni "analisi/riassunto/guida" e i libri già in libreria
- aiRecsData=[];
- renderAiRecs(true);
- const usedTitles=new Set(books.map(b=>normKey(b.t)));   // già in libreria
- const usedAuthors=new Set();                            // max 1 libro per autore
- const badEdition=/(analisi|riassunto|guida|summary|study guide|sintesi|commento|schede? di lettura)/i;
- for(const r of recs){
-   if(aiRecsData.length>=6)break;
-   let res=[];
-   try{res=await doSearch((r.titolo||'')+' '+(r.autore||''))}catch(e){}
-   if(!res||!res.length)continue;
-   const best=res.find(c=>c && c.t
-     && titlesRoughlyMatch(r.titolo,c.t)
-     && !badEdition.test(c.t)
-     && !usedTitles.has(normKey(c.t)));
-   if(!best)continue;
-   const ak=normKey(best.a||r.autore||'');
-   if(ak && usedAuthors.has(ak))continue;   // già un libro di questo autore
-   usedTitles.add(normKey(best.t));
-   if(ak)usedAuthors.add(ak);
-   aiRecsData.push({t:best.t,a:best.a||r.autore||'',reason:r.perche||'',coverUrl:best.coverUrl,trama:best.trama,year:best.year,pg:best.pg,isbn:best.isbn,lang:best.lang,found:best});
-   renderAiRecs();
- }
- if(!aiRecsData.length){return loadAiRecsFallback();}
- setAiRecCache({sig:aiRecSignature(),recs:aiRecsData.slice(),excluded});
-}
-// due titoli "combaciano" se condividono abbastanza parole significative
-function titlesRoughlyMatch(a,b){
- const norm=s=>normKey(s).split(/\s+/).filter(w=>w.length>2);
- const wa=new Set(norm(a)),wb=norm(b);
- if(!wa.size||!wb.length)return false;
- const common=wb.filter(w=>wa.has(w)).length;
- return common>=1 && common/Math.min(wa.size,wb.length)>=0.5;
-}
-let aiRecsData=[];
-function excludeAiRec(i){
- const it=aiRecsData[i];if(!it)return;
- const cache=aiRecCache()||{};
- const excluded=Array.isArray(cache.excluded)?cache.excluded:[];
- if(!excluded.map(normKey).includes(normKey(it.t)))excluded.push(it.t);
- aiRecsData.splice(i,1);
- setAiRecCache({sig:aiRecSignature(),recs:aiRecsData.slice(),excluded});
- renderAiRecs();
- // se ne restano pochi, rigenera per ripopolare
- if(aiRecsData.length<3)loadAiRecs(true);
-}
-function renderAiRecs(verifying){
- const box=$('#aiRecs');if(!box)return;
- searchResults=aiRecsData.map(r=>r.found||{t:r.t,a:r.a,coverUrl:r.coverUrl,trama:r.trama,year:r.year,pg:r.pg,isbn:r.isbn,lang:r.lang});
- const header=`<div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-   <button class="btn ghost sm" onclick="loadAiRecs(true)">🔄 Aggiornali</button></div>`;
- if(!aiRecsData.length){
-   box.innerHTML=header+(verifying
-     ? `<div class="shelf">${Array(4).fill('<div><div class="skel skel-cover"></div><div class="skel skel-line"></div><div class="skel skel-line sm"></div></div>').join('')}</div>`
-     : `<div class="srch-empty">Nessun consiglio al momento. Prova ad aggiornare o completa il profilo.</div>`);
-   return;
- }
- box.innerHTML=header+`<div class="shelf">${aiRecsData.map((s,i)=>`
-   <div class="book">
-     <button class="ai-x" title="Non questo" onclick="event.stopPropagation();excludeAiRec(${i})">✕</button>
-     ${coverEl(i,s.t,s.a,icon('sparkles'),s.coverUrl)}
-     <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
-       ${s.reason?`<div style="font-size:11.5px;margin-top:5px;color:var(--sage);font-weight:600;line-height:1.4">✨ ${esc(s.reason)}</div>`:''}
-       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">${icon('bookmark')} Aggiungi</button>
-     </div>
-   </div>`).join('')}</div>`;
-}
-async function loadAiRecsFallback(){
- const box=$('#aiRecs');if(!box)return;
- const d=(profile&&profile.data)||{};
- const have=new Set(books.map(b=>(b.t||'').toLowerCase()));
- const disliked=(d.disliked||[]).map(x=>x.toLowerCase());
- const authorQs=[],genreQs=[];const usedA=new Set(),usedG=new Set();
- const addA=(a,reason)=>{if(!a)return;const k=a.toLowerCase();if(usedA.has(k))return;usedA.add(k);authorQs.push({q:a,reason,kind:'a'})};
- const addG=(g,reason)=>{if(!g)return;const k=g.toLowerCase();if(usedG.has(k))return;usedG.add(k);genreQs.push({q:g,reason,kind:'g'})};
- (d.authors||[]).forEach(a=>addA(a,'Perché segui '+a));
- [...new Set(books.filter(b=>(b.rate||0)>=4).map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Perché hai apprezzato '+a));
- [...new Set(books.map(b=>b.a).filter(Boolean))].forEach(a=>addA(a,'Dalla tua libreria: '+a));
- (d.genres||[]).forEach(g=>addG(g,'Perché ami il genere '+g));
- [...new Set(books.map(b=>b.g).filter(Boolean))].forEach(g=>addG(g,'Dai generi della tua libreria'));
- const aMax=authorQs.slice(0,3),gMax=genreQs.slice(0,3);const queries=[];
- for(let i=0;i<3;i++){if(aMax[i])queries.push(aMax[i]);if(gMax[i])queries.push(gMax[i]);}
- if(!queries.length){
-   box.innerHTML=`<div class="card pad empty-state-card"><span class="icn-badge gold">${icon('sparkles')}</span>
-     <h3>Nessun consiglio ancora</h3>
-     <p style="max-width:440px">Completa il tuo profilo o aggiungi libri alla Libreria per ricevere consigli personalizzati.</p>
-     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:4px"><button class="btn" onclick="go('profilo')">${icon('profile')} Completa il profilo</button><button class="btn ghost" onclick="openAddBook()">${icon('plus')} Aggiungi un libro</button></div></div>`;return;
- }
- const buckets=[];
- for(const x of queries){
-   let r=[];try{r=await doSearch(x.q)}catch(e){r=[]}
-   const items=[];
-   for(const b of r){const key=(b.t||'').toLowerCase();
-     if(!b.t||have.has(key))continue;
-     if(disliked.length&&disliked.some(dx=>(b.g||'').toLowerCase().includes(dx)))continue;
-     items.push(Object.assign({},b,{reason:x.reason}));
-     if(items.length>=4)break;
-   }
-   buckets.push(items);
- }
- const recs=[];const seen=new Set();const aCount={};let progress=true;
- while(recs.length<12&&progress){
-   progress=false;
-   for(const bucket of buckets){
-     if(!bucket.length)continue;
-     const it=bucket.shift();progress=true;
-     const key=(it.t||'').toLowerCase();if(seen.has(key))continue;
-     const ak=(it.a||'').toLowerCase();if((aCount[ak]||0)>=2)continue;
-     seen.add(key);aCount[ak]=(aCount[ak]||0)+1;recs.push(it);
-     if(recs.length>=12)break;
-   }
- }
- if(!recs.length){box.innerHTML=`<div class="srch-empty">Non riesco a trovare consigli in questo momento (forse sei offline o l'archivio libri non risponde). Riprova tra poco.</div>`;return}
- const list=recs;
- searchResults=list;
- const note=aiUnavailable?`<div class="muted" style="font-size:12px;margin-bottom:12px;padding:9px 12px;background:var(--gold-soft);border-radius:10px">ℹ️ Consigli AI non disponibili al momento: ecco suggerimenti in base ai tuoi autori e generi.</div>`:'';
- box.innerHTML=note+`<div class="shelf">${list.map((s,i)=>`
-   <div class="book">
-     ${coverEl(i,s.t,s.a,icon('sparkles'),s.coverUrl)}
-     <div class="meta"><b>${esc(s.t)}</b><span>${esc(s.a)}</span>
-       <div style="font-size:11.5px;margin-top:5px;color:var(--sage);font-weight:600">✨ ${esc(s.reason)}</div>
-       <button class="btn gold sm" style="margin-top:8px;width:100%;justify-content:center" onclick="addFoundBook(${i})">${icon('bookmark')} Aggiungi</button>
-     </div>
-   </div>`).join('')}</div>`;
-}
-let aiUnavailable=false;
 function locKey(){return 'pagina_booklocs_'+((typeof authUser!=='undefined'&&authUser&&authUser.id)||'demo')}
 function bookLocs(){try{return JSON.parse(localStorage.getItem(locKey())||'{}')||{}}catch(e){return{}}}
 function setBookLocs(m){try{localStorage.setItem(locKey(),JSON.stringify(m))}catch(e){}}
