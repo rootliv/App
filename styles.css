@@ -1100,6 +1100,21 @@ body.sidebar-open .topsearch-res{display:none!important}
 .meet-date .meet-d{font-family:'Fraunces',serif;font-size:22px;font-weight:600;line-height:1}
 .meet-date .meet-m{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.9;margin-top:2px}
 .meet-go{color:var(--ink-faint);flex:none;display:grid;place-items:center}
+/* Card "Esplora la tua mappa del mondo" nel Profilo: stesso linguaggio delle altre
+   card interamente tappabili dell'app (icona a sinistra, testo, freccia a destra —
+   vedi .meet-row), con una piccola illustrazione al posto della data. Deliberatamente
+   silenziosa: nessun bordo acceso, nessun badge "nuovo", si nota per la cura dei
+   dettagli, non per il contrasto. */
+.map-teaser{display:flex;align-items:center;gap:14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.map-teaser:hover{border-color:var(--coral-soft)}
+.map-teaser:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.map-teaser-tx{flex:1;min-width:0}
+.map-teaser-tx b{font-size:14.5px;font-weight:600;display:block;line-height:1.3;color:var(--ink)}
+.map-teaser-tx p{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.42}
+.map-teaser-illus{flex:none;width:66px;height:40px}
+.map-teaser-go{color:var(--ink-faint);flex:none;display:grid;place-items:center}
+.map-teaser-go .icn{width:18px;height:18px}
+@media(max-width:360px){.map-teaser-illus{width:46px}}
 .inv-state{font-size:12px;font-weight:600;padding:6px 10px;border-radius:12px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
 .inv-state .icn{width:13px;height:13px}
 .inv-state.wait{background:var(--gold-soft);color:var(--gold)}
