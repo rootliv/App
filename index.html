@@ -159,6 +159,13 @@ document.addEventListener('keydown',function(e){
         <div id="topSearchRes" class="topsearch-res" style="display:none"></div>
       </div>
       <button class="bell" id="bellBtn" onclick="go('notifiche')" aria-label="Notifiche"><span id="bellIcon"></span><span class="dot"></span></button>
+      <div class="ai-btn-wrap">
+        <button class="bell" id="aiBtn" onclick="openAssistant()" aria-label="Chiedi all'assistente"><span id="aiIcon"></span><span class="dot" id="aiDot"></span></button>
+        <div class="ai-tip" id="aiTip" role="tooltip">
+          <b>Chiedi all'assistente</b>
+          <p>Domande, riassunti e consigli basati sulla schermata che stai visualizzando.</p>
+        </div>
+      </div>
     </header>
     <div class="view fade" id="view"></div>
   </main>
@@ -334,7 +341,7 @@ const pages=[
  {id:'diario',ic:'book',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Club e condivisione'},
  {id:'incontri',ic:'calendar',label:'Incontri',title:'Calendario incontri',sub:'Date, luoghi e videochiamate',grp:'Club e condivisione'},
  {id:'lettori',ic:'club',label:'Lettori',title:'Lettori',sub:'Chi segui e nuovi lettori',grp:'Club e condivisione'},
- {id:'ai',ic:'sparkles',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Club e condivisione',inBotNav:true},
+ {id:'ai',ic:'sparkles',label:'Assistente AI',title:'Assistente AI',sub:'Consigli e spunti su misura',grp:'Club e condivisione'}, // non è più in bottom nav: si apre dall'icona ✨ in App Bar
 ];
 function topSearchInput(q){
  const box=$('#topSearchRes');if(!box)return;q=(q||'').trim();
@@ -502,6 +509,7 @@ const STATS={
 
 function buildNav(){
  const bi=document.getElementById('bellIcon');if(bi)bi.innerHTML=icon('bell');
+ const ai=document.getElementById('aiIcon');if(ai)ai.innerHTML=icon('sparkles');
  const mi=document.getElementById('mtogIcon');if(mi)mi.innerHTML=icon('menu');
  const ci=document.getElementById('sbCloseIcon');if(ci)ci.innerHTML=icon('close');
  const li=document.getElementById('sbLogoutIcon');if(li)li.innerHTML=icon('logout');
@@ -513,7 +521,7 @@ function buildNav(){
  pages.forEach(p=>{if(p.grp!==last){html+=`<div class="grp">${p.grp}</div>`;last=p.grp}
    html+=`<button class="${p.inBotNav?'dup-botnav':''}" data-id="${p.id}" onclick="go('${p.id}')"><span class="ic">${icon(p.ic)}</span>${p.label}</button>`});
  $('#nav').innerHTML=html;
- const main=['home','profilo','libreria','club','ai'];
+ const main=['home','profilo','libreria','club']; // Assistente AI: si apre dall'icona ✨ in App Bar, non più qui
  $('#botnav').innerHTML=main.map(id=>{const p=pages.find(x=>x.id===id);
    return`<button data-id="${id}" onclick="go('${id}')"><span class="ic">${icon(NAV_ICON[id]||'book')}</span>${p.label.split(' ')[0]}</button>`}).join('');
 }
@@ -536,13 +544,14 @@ function toggleSidebar(show){
    scrim.classList.remove('show');
  }
 }
-let _navFromPopstate=false,_firstNavDone=false;
+let _navFromPopstate=false,_firstNavDone=false,_aiTipShown=false;
 function go(id){
  current=id;const p=pages.find(x=>x.id===id);
  $('#pageTitle').textContent=p.title;
  // Sottotitolo dinamico per i club (il valore statico era un residuo dei dati demo).
  let sub=p.sub;
  if(id==='club'){const n=(myClubs&&myClubs.length)||0;sub=n?(n+' '+(n===1?'club':'club')+' · libri condivisi'):'Crea o unisciti a un club';}
+ else if(id==='ai'){try{sub=aiContextInfo().sub;}catch(e){}} // sottotitolo coerente col contesto da cui è stata aperta
  $('#pageSub').textContent=sub;
  document.querySelectorAll('#nav button,#botnav button').forEach(b=>b.classList.toggle('active',b.dataset.id===id));
  // Nelle sezioni raggiungibili solo dal menu (Incontri, Lettori, Notifiche, Diario,
@@ -556,6 +565,8 @@ function go(id){
  document.body.classList.remove('sidebar-open');
  window.scrollTo(0,0);
  try{updateBellDot()}catch(e){}
+ try{updateAiDot()}catch(e){}
+ if(!_aiTipShown){_aiTipShown=true;setTimeout(maybeShowAiTip,900);} // popover introduttivo, una sola volta per installazione
  // Cronologia del browser: solo per l'uso via web/PWA (nell'app nativa il tasto Indietro
  // fisico è già gestito a parte in native.js e non passa da qui). Senza questo, passare da
  // una sezione all'altra non aggiungeva mai una voce alla cronologia: il tasto Indietro del
@@ -652,6 +663,91 @@ async function aiSearchCards(query){
    <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(s.t)}</b><div class="muted" style="font-size:12px">${esc(s.a)}${s.year?' · '+s.year:''}</div></div>
    <button class="btn sm" onclick="addFoundBook(${i})">＋ Aggiungi</button>
  </div>`).join('')+'</div>';
+}
+/* ====== Apertura contestuale dell'assistente dall'icona ✨ in App Bar ======
+   Un'unica icona, sempre nello stesso posto, su tutte le schermate principali. Non cambia
+   mai aspetto: è l'assistente ad aprirsi sapendo da quale schermata è stato chiamato
+   (aiOpenedFrom), per proporre suggerimenti iniziali pertinenti invece che sempre uguali. */
+let aiOpenedFrom='home';
+let aiDraftNote='';           // bozza di nota nel Diario, se presente, per "Migliora questo testo"
+const AI_TIP_KEY='pagina_ai_tip_seen';
+function openAssistant(){
+ aiOpenedFrom=current;
+ try{const ta=$('#noteText');aiDraftNote=(current==='diario'&&ta&&ta.value.trim())?ta.value.trim():'';}catch(e){aiDraftNote='';}
+ dismissAiTip();
+ go('ai');
+}
+function updateAiDot(){
+ try{const dot=$('#aiDot');if(dot)dot.style.display=localStorage.getItem(AI_TIP_KEY)?'none':'block';}catch(e){}
+}
+function aiTipOutsideClick(ev){
+ const wrap=document.querySelector('.ai-btn-wrap');
+ if(wrap&&!wrap.contains(ev.target))dismissAiTip();
+}
+function maybeShowAiTip(){
+ try{
+   if(localStorage.getItem(AI_TIP_KEY))return;
+   const tip=$('#aiTip');if(!tip)return;
+   tip.classList.add('show');
+   document.addEventListener('click',aiTipOutsideClick);
+ }catch(e){}
+}
+function dismissAiTip(){
+ try{
+   localStorage.setItem(AI_TIP_KEY,'1');
+   const tip=$('#aiTip');if(tip)tip.classList.remove('show');
+   document.removeEventListener('click',aiTipOutsideClick);
+   updateAiDot();
+ }catch(e){}
+}
+/* Suggerimenti iniziali per contesto di provenienza: stessa icona, stessa schermata
+   dell'assistente, ma proposte diverse a seconda di dove ti trovavi quando l'hai aperta. */
+function aiContextInfo(){
+ const reading=books.find(b=>b.status==='reading');
+ const readTitle=reading?reading.t:'';
+ const clubBooks=(myClubs||[]).filter(c=>c.current_title);
+ const clubTitle=clubBooks.length?clubBooks[0].current_title:'';
+ const jt=s=>JSON.stringify(s).replace(/"/g,'&quot;'); // per incorporare la stringa in un onclick="" HTML
+ const chip=(ic,label,prompt)=>`<button class="ai-chip" onclick="aiAsk(${jt(prompt)})">${icon(ic)} ${esc(label)}</button>`;
+ const chipGo=(ic,label,pageId)=>`<button class="ai-chip" onclick="go('${pageId}')">${icon(ic)} ${esc(label)}</button>`;
+ switch(aiOpenedFrom){
+  case 'libreria':
+   return {sub:'Su misura per la tua libreria',
+     desc:'Ti aiuto a orientarti nella tua libreria: confronti, consigli su cosa leggere dopo, o su cosa iniziare tra i libri "da leggere".',
+     chipsHtml:chip('sparkles','Consigliami il prossimo libro','Consigliami il prossimo libro da leggere in base ai miei gusti')
+       +chip('library','Confronta due libri che ho letto','Confronta due libri della mia libreria e dimmi cosa hanno in comune e cosa li differenzia')
+       +chip('book',readTitle?('Cosa leggo dopo «'+readTitle+'»?'):'Cosa leggo dopo il mio ultimo libro?',readTitle?('Cosa mi consigli di leggere dopo «'+readTitle+'»?'):'Cosa mi consigli di leggere dopo il mio ultimo libro?')
+       +chip('sparkles','Aiutami a scegliere cosa iniziare','Ho più libri "da leggere" in libreria: aiutami a scegliere quale iniziare adesso')};
+  case 'club':
+   return {sub:'Pronto per il tuo club',
+     desc:'Ti aiuto a preparare il prossimo incontro: kit di discussione, temi del libro del mese, domande da porre al gruppo.',
+     chipsHtml:chip('club','Prepara un kit per l\'incontro',clubTitle?('Prepara un kit di discussione per il club su «'+clubTitle+'»'):'Prepara un kit di discussione per il mio club')
+       +chip('sparkles','Analizza i temi del libro del mese',clubTitle?('Analizza i temi principali di «'+clubTitle+'» per discuterne al club'):'Analizza i temi principali del libro che il mio club sta leggendo')
+       +chip('book','Domande per l\'incontro','Prepara qualche domanda di discussione aperta per il club')
+       +chipGo('calendar','Aiutami col piano di lettura','calendario')};
+  case 'diario':
+   return {sub:'Per il tuo diario di lettura',
+     desc:'Ti aiuto a scrivere le tue riflessioni e a migliorarle, restando sempre senza spoiler oltre il punto a cui sei arrivata.',
+     chipsHtml:(aiDraftNote
+         ? chip('edit','Migliora questo testo','Migliora questo testo che ho scritto per il mio diario di lettura, mantenendo il mio tono e senza aggiungere spoiler:\n\n«'+aiDraftNote+'»')
+         : chip('edit','Aiutami a scrivere una riflessione',readTitle?('Aiutami a scrivere una breve riflessione su «'+readTitle+'», senza spoiler oltre il punto a cui sono arrivata'):'Aiutami a scrivere una breve riflessione sul libro che sto leggendo, senza spoiler'))
+       +chip('sparkles','Suggerisci una domanda da pormi','Suggeriscimi una domanda di riflessione sul punto del libro a cui sono arrivata, senza spoiler')
+       +chip('book','Come funziona la protezione anti-spoiler?','Come funziona la protezione anti-spoiler delle note nel diario condiviso del club?')};
+  case 'profilo':
+   return {sub:'Le tue abitudini di lettura',
+     desc:'Ti aiuto a leggere tra le righe delle tue statistiche: abitudini, generi preferiti, e come va il tuo obiettivo dell\'anno.',
+     chipsHtml:chip('sparkles','Analizza le mie abitudini di lettura','Analizza le mie abitudini di lettura di quest\'anno e dammi qualche statistica interessante')
+       +chip('calendar','Come vado con il mio obiettivo?','Come sto andando con il mio obiettivo di lettura di quest\'anno? Sono in linea per raggiungerlo?')
+       +chip('library','Che genere leggo di più?','Che genere leggo di più nella mia libreria e cosa mi consiglieresti di provare per variare?')};
+  case 'home':
+  default:
+   return {sub:'Consigli e spunti su misura',
+     desc:'Ti aiuto con la libreria, i club e la lettura: uso il progresso che hai registrato per limitare gli spoiler nelle risposte.',
+     chipsHtml:chip('sparkles','Consigliami il prossimo libro','Consigliami il prossimo libro da leggere')
+       +chip('club','Domande per il club','Prepara qualche domanda di discussione per il club')
+       +chip('book','Spiegami un riferimento','Spiegami un riferimento del libro che sto leggendo')
+       +chipGo('calendar','Aiutami col piano di lettura','calendario')};
+ }
 }
 /* ====== ASSISTENTE — architettura modulare a provider ======
    1) prova un provider AI esterno (Edge Function "assistente": Groq→OpenRouter)
@@ -2690,21 +2786,19 @@ function renderAiCloud(){
  const inClub=!!clubTitle;
  // prossimo incontro DI QUEL club (non un incontro qualsiasi)
  const nextMeeting=clubBook?((myMeetings||[]).filter(m=>m.club_id===clubBook.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]||null):null;
+ const ctx=aiContextInfo(); // adatta saluto e chip in base a dove hai premuto ✨ (Home/Libreria/Club/Diario/Profilo)
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <span class="icn-badge sky" style="flex:none">${icon('sparkles')}</span>
    <div style="flex:1">
      <b style="font-family:'Fraunces';font-size:18px">Ciao ${esc(nm)}, sono Pàgina AI</b>
-     <p class="muted" style="font-size:13px;margin-top:4px;line-height:1.55">Ti aiuto con la libreria, i club e la lettura: uso il progresso che hai registrato per limitare gli spoiler nelle risposte.</p>
+     <p class="muted" style="font-size:13px;margin-top:4px;line-height:1.55">${esc(ctx.desc)}</p>
    </div>
  </div>
 
  <div class="sec-title">Chiedi all'assistente</div>
  <div class="ai-chips" role="list">
-   <button class="ai-chip" onclick="aiAsk('Consigliami il prossimo libro da leggere')">${icon('sparkles')} Consigliami il prossimo libro</button>
-   <button class="ai-chip" onclick="aiAsk('Prepara qualche domanda di discussione per il club')">${icon('club')} Domande per il club</button>
-   <button class="ai-chip" onclick="aiAsk('Spiegami un riferimento del libro che sto leggendo')">${icon('book')} Spiegami un riferimento</button>
-   <button class="ai-chip" onclick="go('calendario')">${icon('calendar')} Aiutami col piano di lettura</button>
+   ${ctx.chipsHtml}
  </div>
  <div id="aiOut" class="ai-chat" style="margin-top:10px"></div>
  <div class="ai-inputbox">

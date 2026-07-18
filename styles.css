@@ -140,6 +140,15 @@ input::placeholder,textarea::placeholder{color:var(--ink-faint)}
 .bell .icn{width:20px;height:20px}
 .bell:hover{transform:translateY(-2px);border-color:var(--coral-soft)}
 .bell .dot{display:none;position:absolute;top:9px;right:10px;width:10px;height:10px;background:var(--coral);border-radius:50%;border:2px solid var(--surface)}
+.ai-btn-wrap{position:relative}
+.ai-tip{display:none;position:absolute;top:calc(100% + 12px);right:0;width:248px;background:var(--surface);
+  border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lg);padding:14px 16px;z-index:70;animation:pop .18s}
+.ai-tip.show{display:block}
+.ai-tip::before{content:'';position:absolute;top:-6px;right:17px;width:12px;height:12px;background:var(--surface);
+  border-left:1px solid var(--line);border-top:1px solid var(--line);transform:rotate(45deg)}
+.ai-tip b{font-size:13.5px;display:block;margin-bottom:4px;color:var(--ink)}
+.ai-tip p{font-size:12.5px;color:var(--ink-soft);line-height:1.5;margin:0}
+@media (max-width:520px){.ai-tip{width:min(248px,72vw);right:-6px}}
 .view{padding:14px 38px 110px;max-width:1200px}
 
 /* ===== GENERIC ===== */
