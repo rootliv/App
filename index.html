@@ -1120,7 +1120,7 @@ function removeBook(id){
  try{const s=loadCurioState();if(s.payload&&s.payload.bookId===id){s.week=null;s.payload=null;saveCurioState(s);}}catch(e){}
  closeModal();go('libreria');
 }
-function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('')}
+function setRate(id,n){book(id).rate=n;persistBook(id,{rating:n});$('#rateStars').innerHTML=[1,2,3,4,5].map(i=>`<span onclick="setRate(${id},${i})">${i<=n?'★':'☆'}</span>`).join('');refreshLibraryList();}
 let noteEditing=false,noteBookId=null;
 /* Note personali multiple: salvate come JSON nel campo testo 'note' (schema DB invariato).
    Retrocompatibile: se 'note' è testo semplice (vecchia nota singola), lo leggiamo come 1 nota. */
@@ -1204,6 +1204,9 @@ function setPage(id,total,page){const b=book(id);if(!b)return;
  // Un solo punto di scrittura: aggiorna il libro (la fonte) e rispecchia la pagina
  // nel diario del club, se questo titolo è il libro del mese di un tuo club.
  setBookPos(b.t,Math.max(1,page));
+ // Lo scaffale della libreria mostra la barra di avanzamento su ogni copertina:
+ // senza questo, restava quella vecchia finché non si usciva e rientrava in Libreria.
+ refreshLibraryList();
  if((page>=total||pct>=100)&&total>0){toast('Libro completato! 🎉');openBook(id);setTimeout(scrollToRate,80);return;}
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage'),pctEl=$('#bdsPct');
  if(fill)fill.style.width=pct+'%';
