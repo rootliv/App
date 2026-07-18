@@ -3708,6 +3708,38 @@ async function wikidataFacts(qid){
    return out;
  }catch(e){return null}
 }
+// Trova l'autore CORRETTO del libro tramite il legame strutturato Wikidata
+// (proprietà P50, "autore"), invece di cercare per nome: due persone omonime
+// (es. John Williams romanziere vs John Williams compositore) altrimenti
+// possono confondersi facilmente in una ricerca testuale libera.
+async function wikidataAuthorQid(bookQid){
+ const q='SELECT ?author WHERE { wd:'+bookQid+' wdt:P50 ?author. } LIMIT 3';
+ try{
+   const r=await fetch('https://query.wikidata.org/sparql?format=json&query='+encodeURIComponent(q),{headers:{'Accept':'application/sparql-results+json'}});
+   if(!r.ok)return '';
+   const d=await r.json();const rows=(d.results&&d.results.bindings)||[];
+   if(!rows.length)return '';
+   const uri=(rows[0].author&&rows[0].author.value)||'';
+   const m=/Q\d+$/.exec(uri);
+   return m?m[0]:'';
+ }catch(e){return ''}
+}
+// Titolo della pagina Wikipedia (lingua data) collegata a un'entità Wikidata, se esiste.
+async function wikidataSitelinkTitle(qid,lang){
+ try{
+   const r=await fetch('https://www.wikidata.org/w/api.php?action=wbgetentities&ids='+qid+'&props=sitelinks&sitefilter='+lang+'wiki&format=json&origin=*');
+   if(!r.ok)return '';
+   const d=await r.json();
+   const ent=d&&d.entities&&d.entities[qid];
+   const sl=ent&&ent.sitelinks&&ent.sitelinks[lang+'wiki'];
+   return (sl&&sl.title)||'';
+ }catch(e){return ''}
+}
+// Verifica leggera: la pagina trovata per nome parla davvero di uno scrittore?
+// Usata solo come ripiego quando il libro non è collegato a un autore su Wikidata.
+function looksLikeWriterBio(extract){
+ return /\b(scrittor[ei]|romanzier[ei]|autor[ei]\b.{0,20}\b(libr|romanz|opere|narrativ)|narrator[ei]|poet[ae]|saggist[ae])\b/i.test(extract||'');
+}
 
 // --- fonti verificabili, provate PRIMA dell'AI: se una non raggiunge una soglia
 // minima di qualità/lunghezza viene scartata, non forzata. La fonte precisa (nome +
@@ -3724,6 +3756,7 @@ async function gatherEditorFacts(b,avoidCategories){
  const author=b.a||'',title=b.t||'';
  const spoilersOk=(b.status==='read');
  const facts=[];
+ let bookQid='';
 
  try{
    const w=await findBookWiki(b);
@@ -3731,6 +3764,7 @@ async function gatherEditorFacts(b,avoidCategories){
      const wUrl='https://it.wikipedia.org/wiki/'+encodeURIComponent(w.title.replace(/ /g,'_'));
      const qid=await wikiQid(w.title);
      if(qid){
+       bookQid=qid;
        const f=await wikidataFacts(qid);
        const wdUrl='https://www.wikidata.org/wiki/'+qid;
        if(f){
@@ -3760,15 +3794,33 @@ async function gatherEditorFacts(b,avoidCategories){
 
  try{
    if(author){
-     const aKey=normKey(author);
-     const hits=await wikiSearchHits(author,5);
-     const pick=hits.find(h=>normKey(h.title)===aKey)||hits.find(h=>aKey&&normKey(h.title).includes(aKey));
-     if(pick){
-       const ex=await wikiPageExtract(pick.title);
+     let pageTitle='';
+     // 1ª scelta: l'autore collegato al LIBRO su Wikidata (proprietà P50) — evita
+     // di confondere persone omonime (es. John Williams romanziere vs compositore),
+     // perché non cerca per nome ma segue il legame libro -> autore.
+     if(bookQid){
+       try{
+         const authorQid=await wikidataAuthorQid(bookQid);
+         if(authorQid)pageTitle=await wikidataSitelinkTitle(authorQid,'it');
+       }catch(e){}
+     }
+     // ripiego: ricerca per nome, ma SOLO se la pagina trovata parla davvero di
+     // uno scrittore (altrimenti meglio niente fatto "Autore" che uno sbagliato)
+     if(!pageTitle){
+       const aKey=normKey(author);
+       const hits=await wikiSearchHits(author,5);
+       const pick=hits.find(h=>normKey(h.title)===aKey)||hits.find(h=>aKey&&normKey(h.title).includes(aKey));
+       if(pick){
+         const exCheck=await wikiPageExtract(pick.title);
+         if(looksLikeWriterBio(exCheck))pageTitle=pick.title;
+       }
+     }
+     if(pageTitle){
+       const ex=await wikiPageExtract(pageTitle);
        if(validTrama(ex)){
          const raw=curioSentences(ex).slice(0,6).join(' ');
          if(raw&&raw.length>40)facts.push({category:'Autore',fact:raw,sourceName:'Wikipedia',
-           sourceUrl:'https://it.wikipedia.org/wiki/'+encodeURIComponent(pick.title.replace(/ /g,'_')),standalone:null});
+           sourceUrl:'https://it.wikipedia.org/wiki/'+encodeURIComponent(pageTitle.replace(/ /g,'_')),standalone:null});
        }
      }
    }
