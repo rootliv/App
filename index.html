@@ -3899,10 +3899,9 @@ function paintCurioPreview(row){
  weeklyCurioRow=row;
  box.innerHTML='<div class="card pad curio-preview" role="button" tabindex="0" onclick="openCurioDetail()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCurioDetail()}" aria-label="Apri la curiosità della settimana: '+esc(row.title)+'">'
   +'<div class="curio-preview-top">'
-    +'<span class="curio-preview-lab">'+icon('sparkles')+' Curiosità della settimana</span>'
+    +'<span class="pill sage curio-preview-cat">'+esc(row.category)+'</span>'
     +(row.saved?'<span class="curio-saved-dot" aria-label="Salvata">'+icon('bookmark')+'</span>':'')
   +'</div>'
-  +'<span class="pill sage curio-preview-cat">'+esc(row.category)+'</span>'
   +'<b class="curio-preview-title">'+esc(row.title)+'</b>'
   +'<p class="curio-preview-teaser">'+esc(row.teaser)+'</p>'
   +'<div class="curio-preview-foot">'
