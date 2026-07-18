@@ -1016,6 +1016,8 @@ body.sidebar-open .topsearch-res{display:none!important}
 .curio-preview{cursor:pointer;-webkit-tap-highlight-color:transparent}
 .curio-preview:hover{border-color:var(--coral-soft)}
 .curio-preview:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.curio-preview-book{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:10px}
+.curio-preview-book .icn{width:12px;height:12px}
 .curio-preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
 .curio-saved-dot{color:var(--primary);display:inline-flex}
 .curio-saved-dot .icn{width:16px;height:16px}
@@ -1040,6 +1042,16 @@ body.sidebar-open .topsearch-res{display:none!important}
 .curio-extra-text{font-size:13.5px;line-height:1.55;margin-top:8px;color:var(--ink)}
 .curio-extra-note{font-size:11px;margin-top:8px}
 .srch-empty.sm{padding:14px 4px;font-size:12.5px}
+.curio-collection-teaser{margin-bottom:14px}
+.curio-coll-total{font-family:'Fraunces';font-size:17px;margin-top:8px}
+.curio-coll-cats{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.curio-coll-list{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.curio-coll-item{border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.curio-coll-item:hover{border-color:var(--coral-soft)}
+.curio-coll-item:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.curio-coll-item-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.curio-coll-item-title{font-family:'Fraunces';font-size:14.5px;display:block;line-height:1.3;margin-top:8px}
+.curio-coll-item-book{font-size:11.5px;margin-top:3px}
 .clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .goal-card-v2{padding-bottom:16px;background:var(--surface)}
 /* Proporzioni come nel riferimento: numero grande, unità leggibile accanto (rapporto ~2:1) */

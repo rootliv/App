@@ -3786,19 +3786,31 @@ async function weeklyCuriosityFromVerifiedSources(b,avoidCategories){
 }
 
 // --- ultima risorsa: AI via Edge Function (mai chiavi/prompt lato client) ---
-async function weeklyCuriosityFromAI(b){
+// Categorie "esotiche": niente fonte verificabile in app per queste (nessuna proprietà
+// Wikidata per "musica citata" o "quadro collegato"), quindi qui l'AI non riformula un
+// fatto verificato ma genera da zero. Per questo sono SEMPRE etichettate come AI non
+// verificata (mai come Wikidata/Wikipedia), e il prompt le tratta con più cautela
+// anti-invenzione. Scelta esplicita: coprono varietà che le fonti verificate non danno.
+const AI_FLAVOR_CATEGORIES=['Intervista','Musica collegata','Arte collegata','Documento storico'];
+function pickAiFlavor(avoidCategories){
+ avoidCategories=avoidCategories||new Set();
+ const fresh=AI_FLAVOR_CATEGORIES.filter(c=>!avoidCategories.has(c));
+ const pool=fresh.length?fresh:AI_FLAVOR_CATEGORIES;
+ return pool[Math.floor(Math.random()*pool.length)];
+}
+async function weeklyCuriosityFromAI(b,categoryHint){
  if(!aiOn())return null;
  if(typeof supa==='undefined'||!supa||typeof mode==='undefined'||mode!=='cloud')return null;
  if(window.__aiCurioOff)return null;
  const spoilersOk=(b.status==='read');
  try{
-   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||'',allowSpoilers:spoilersOk}});
+   const {data,error}=await supa.functions.invoke('curiosita',{body:{title:b.t,author:b.a,originalTitle:b.originalTitle||'',genre:b.g||'',allowSpoilers:spoilersOk,categoryHint:categoryHint||''}});
    if(error){if((error.message||'').match(/not found|404/i))window.__aiCurioOff=true;return null;}
    if(!data||!data.testo)return null;
    let t=stripHtml(data.testo);
    if(!validTrama(t))return null;
    if(!spoilersOk&&SPOILER_RE.test(t))return null;
-   return mkWeeklyCuriosity(b,(data.categoria||'Curiosità'),b.t,t,t,'AI (contenuto generato, non verificato)','',spoilersOk?'light':'none');
+   return mkWeeklyCuriosity(b,(data.categoria||categoryHint||'Curiosità'),b.t,t,t,'AI (contenuto generato, non verificato)','',spoilersOk?'light':'none');
  }catch(e){return null}
 }
 function weeklyCuriosityBookFallback(b){
@@ -3812,8 +3824,13 @@ function weeklyCuriosityBookFallback(b){
 async function buildWeeklyCuriosityContent(b,avoidCategories){
  const verified=await weeklyCuriosityFromVerifiedSources(b,avoidCategories);
  if(verified)return verified;
- const ai=await weeklyCuriosityFromAI(b);
- if(ai)return ai;
+ // prima un tentativo "di sapore" (Intervista/Musica/Arte/Documento storico) per varietà,
+ // poi un tentativo generico se quello specifico non produce nulla di attendibile
+ const flavor=pickAiFlavor(avoidCategories);
+ const aiFlavor=await weeklyCuriosityFromAI(b,flavor);
+ if(aiFlavor)return aiFlavor;
+ const aiGeneric=await weeklyCuriosityFromAI(b);
+ if(aiGeneric)return aiGeneric;
  return weeklyCuriosityBookFallback(b);
 }
 
@@ -3898,6 +3915,7 @@ function paintCurioPreview(row){
  const box=$('#curioCard');if(!box)return;
  weeklyCurioRow=row;
  box.innerHTML='<div class="card pad curio-preview" role="button" tabindex="0" onclick="openCurioDetail()" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCurioDetail()}" aria-label="Apri la curiosità della settimana: '+esc(row.title)+'">'
+  +(row.book_title?('<div class="curio-preview-book">'+icon('book')+' <span>'+esc(row.book_title)+(row.book_author?(' · '+esc(row.book_author)):'')+'</span></div>'):'')
   +'<div class="curio-preview-top">'
     +'<span class="pill sage curio-preview-cat">'+esc(row.category)+'</span>'
     +(row.saved?'<span class="curio-saved-dot" aria-label="Salvata">'+icon('bookmark')+'</span>':'')
@@ -3926,7 +3944,7 @@ function openCurioDetail(){
 function renderCurioDetailModal(row){
  const m=$('#modal');if(!m)return;
  m.innerHTML=
-  '<div class="modal-top"><b>'+icon('sparkles')+' Curiosità della settimana</b><div class="mt-actions"><button class="mt-share" onclick="shareCurio()" title="Condividi" aria-label="Condividi">'+icon('share')+'</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>'
+  '<div class="modal-top"><b>'+icon('sparkles')+' Da non perdere questa settimana</b><div class="mt-actions"><button class="mt-share" onclick="shareCurio()" title="Condividi" aria-label="Condividi">'+icon('share')+'</button><button class="close" onclick="closeModal()">✕ Chiudi</button></div></div>'
   +'<div class="modal-body">'
     +'<span class="pill sage">'+esc(row.category)+'</span>'
     +(row.spoiler_level==='light'?'<span class="badge-tint info curio-spoiler-badge">Contiene dettagli sulla trama</span>':'')
@@ -3979,6 +3997,7 @@ async function loadCurioExtra(){
    const b=row.book_id?book(row.book_id):{id:row.book_id||null,t:row.book_title,a:row.book_author,status:'reading'};
    const avoid=new Set([row.category]);
    let extra=await weeklyCuriosityFromVerifiedSources(b,avoid);
+   if(!extra)extra=await weeklyCuriosityFromAI(b,pickAiFlavor(avoid));
    if(!extra)extra=await weeklyCuriosityFromAI(b);
    weeklyCurioExtraBusy=false;
    if(!$('#curioExtraZone'))return; // modale chiusa nel frattempo
@@ -4022,6 +4041,49 @@ async function renderCuriosity(){
  // se cachedFresh ed è fallita solo la rilettura di rete: resta visibile quella
  // già mostrata (valida per questa settimana), si ritenterà silenziosamente
  // alla prossima apertura della Home.
+}
+
+// --- Collezione: tutte le curiosità scoperte (seen_at valorizzato), viste dal Profilo ---
+async function loadCurioCollectionSummary(){
+ const el=$('#curioCollectionSub');if(!el)return;
+ if(typeof supa==='undefined'||!supa||mode!=='cloud'||!authUser){el.textContent='Disponibile con un account cloud.';return}
+ try{
+   const {data,error}=await supa.from('weekly_curiosities').select('*').eq('user_id',authUser.id).not('seen_at','is',null).order('week_key',{ascending:false});
+   if(!$('#curioCollectionSub'))return; // pagina cambiata nel frattempo
+   if(error||!data){el.textContent='Scopri la curiosità di questa settimana.';return}
+   window.__curioCollectionData=data;
+   const n=data.length;
+   if(!n){el.textContent='Nessuna ancora: scopri quella di questa settimana.';return}
+   const byCat={};data.forEach(r=>{byCat[r.category]=(byCat[r.category]||0)+1});
+   const top=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([c,n2])=>c+' '+n2).join(' · ');
+   el.textContent=n+' '+(n===1?'curiosità scoperta':'curiosità scoperte')+(top?(' — '+top):'');
+ }catch(e){if($('#curioCollectionSub'))$('#curioCollectionSub').textContent='Scopri la curiosità di questa settimana.';}
+}
+function openCurioCollection(){
+ const data=window.__curioCollectionData||[];
+ _modalKind='curioCollection';
+ const byCat={};data.forEach(r=>{byCat[r.category]=(byCat[r.category]||0)+1});
+ const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+ $('#modal').innerHTML=
+  '<div class="modal-top"><b>'+icon('sparkles')+' Le tue curiosità</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>'
+  +'<div class="modal-body">'
+    +(data.length?(
+       '<div class="curio-coll-total">'+data.length+' '+(data.length===1?'curiosità scoperta':'curiosità scoperte')+'</div>'
+      +(catRows.length?('<div class="curio-coll-cats">'+catRows.map(([c,n])=>'<span class="pill sage">'+esc(c)+' '+n+'</span>').join('')+'</div>'):'')
+      +'<div class="curio-coll-list">'+data.map(r=>'<div class="curio-coll-item" role="button" tabindex="0" onclick="openCurioHistoryItem(\''+r.id+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCurioHistoryItem(\''+r.id+'\')}">'
+        +'<div class="curio-coll-item-top"><span class="pill sky curio-coll-item-cat">'+esc(r.category)+'</span>'+(r.saved?('<span class="curio-saved-dot" aria-label="Salvata">'+icon('bookmark')+'</span>'):'')+'</div>'
+        +'<b class="curio-coll-item-title">'+esc(r.title)+'</b>'
+        +(r.book_title?('<div class="muted curio-coll-item-book">'+esc(r.book_title)+'</div>'):'')
+      +'</div>').join('')+'</div>'
+     ):'<div class="srch-empty">Non hai ancora scoperto nessuna curiosità. Torna in Home per quella di questa settimana.</div>')
+  +'</div>';
+ openOverlay();
+}
+function openCurioHistoryItem(id){
+ const data=window.__curioCollectionData||[];
+ const row=data.find(r=>r.id===id);if(!row)return;
+ weeklyCurioRow=row;
+ renderCurioDetailModal(row);
 }
 
 /* Anno di completamento di un libro: usa finished_year se presente, altrimenti l'anno di creazione record.
@@ -4094,6 +4156,15 @@ function renderProfiloPage(){
    ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
  </div>`:''}
 
+ <div class="card pad map-teaser curio-collection-teaser" role="button" tabindex="0" onclick="openCurioCollection()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCurioCollection()}" aria-label="Le tue curiosità scoperte">
+   <span class="icn-badge gold" style="flex:none">${icon('sparkles')}</span>
+   <div class="map-teaser-tx">
+     <b>Le tue curiosità</b>
+     <p id="curioCollectionSub">Caricamento…</p>
+   </div>
+   <span class="map-teaser-go" aria-hidden="true">${icon('chevron')}</span>
+ </div>
+
  <div class="card pad map-teaser" role="button" tabindex="0" onclick="go('mappa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('mappa')}" aria-label="Esplora la tua mappa del mondo: scopri dove ti hanno portato i tuoi libri">
    <span class="icn-badge sage" style="flex:none">${icon('globe')}</span>
    <div class="map-teaser-tx">
@@ -4133,6 +4204,7 @@ function renderProfiloPage(){
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
  ${mode==='cloud'?`<div class="acct-footer"><button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button></div>`:''}`;
+ loadCurioCollectionSummary();
 }
 // Arrotondamento a somma costante (largest remainder) per percentuali coerenti
 function largestRemainder(counts,total){
@@ -4274,7 +4346,7 @@ function renderHomeCloud(){
  </div>
 
  <!-- 4) CURIOSITÀ DELLA SETTIMANA — spunto piacevole, in chiusura -->
- <div class="sec-head-ic" id="curioHead"><div class="sec-title-ic">${icon('sparkles')}<span>Curiosità della settimana</span></div></div>
+ <div class="sec-head-ic" id="curioHead"><div class="sec-title-ic">${icon('sparkles')}<span>Da non perdere questa settimana</span></div></div>
  <div id="curioCard"></div>
 
  <!-- INVITI (se presenti) -->
