@@ -708,8 +708,9 @@ function aiContextInfo(){
  const clubBooks=(myClubs||[]).filter(c=>c.current_title);
  const clubTitle=clubBooks.length?clubBooks[0].current_title:'';
  const jt=s=>JSON.stringify(s).replace(/"/g,'&quot;'); // per incorporare la stringa in un onclick="" HTML
- const chip=(ic,label,prompt)=>`<button class="ai-chip" onclick="aiAsk(${jt(prompt)})">${icon(ic)} ${esc(label)}</button>`;
- const chipGo=(ic,label,pageId)=>`<button class="ai-chip" onclick="go('${pageId}')">${icon(ic)} ${esc(label)}</button>`;
+ const chip=(ic,label,prompt)=>`<button type="button" class="ai-sugg" onclick="aiAsk(${jt(prompt)})"><span class="ai-sugg-ic">${icon(ic)}</span><span class="ai-sugg-txt">${esc(label)}</span></button>`;
+ const chipGo=(ic,label,pageId)=>`<button type="button" class="ai-sugg" onclick="go('${pageId}')"><span class="ai-sugg-ic">${icon(ic)}</span><span class="ai-sugg-txt">${esc(label)}</span></button>`;
+ const chipDiscuss=(ic,label,book)=>`<button type="button" class="ai-sugg" onclick="aiDiscuss('kit',${jt(book||'')})"><span class="ai-sugg-ic">${icon(ic)}</span><span class="ai-sugg-txt">${esc(label)}</span></button>`;
  switch(aiOpenedFrom){
   case 'libreria':
    return {sub:'Su misura per la tua libreria',
@@ -720,8 +721,8 @@ function aiContextInfo(){
        +chip('sparkles','Aiutami a scegliere cosa iniziare','Ho più libri "da leggere" in libreria: aiutami a scegliere quale iniziare adesso')};
   case 'club':
    return {sub:'Pronto per il tuo club',
-     desc:'Ti aiuto a preparare il prossimo incontro: kit di discussione, temi del libro del mese, domande da porre al gruppo.',
-     chipsHtml:chip('club','Prepara un kit per l\'incontro',clubTitle?('Prepara un kit di discussione per il club su «'+clubTitle+'»'):'Prepara un kit di discussione per il mio club')
+     desc:clubTitle?('Ti aiuto a preparare l\'incontro su «'+clubTitle+'»: kit di discussione, temi, domande per il gruppo.'):'Ti aiuto a preparare il prossimo incontro: kit di discussione, temi, domande per il gruppo.',
+     chipsHtml:chipDiscuss('club','Genera un kit per l\'incontro',clubTitle)
        +chip('sparkles','Analizza i temi del libro del mese',clubTitle?('Analizza i temi principali di «'+clubTitle+'» per discuterne al club'):'Analizza i temi principali del libro che il mio club sta leggendo')
        +chip('book','Domande per l\'incontro','Prepara qualche domanda di discussione aperta per il club')
        +chipGo('calendar','Aiutami col piano di lettura','calendario')};
@@ -2772,21 +2773,9 @@ function paintDiary(c){
  if(total)setTimeout(()=>diaryDragSetup(c.current_title,total,mn),50);
 }
 
-let aiClubSel=null;
 function renderAiCloud(){
  const nm=((profile&&profile.name)||'Lettore').split(' ')[0];
- const reading=books.find(b=>b.status==='reading');
- // TUTTI i club con una lettura in corso (non solo il primo): l'utente può averne più d'uno.
- const clubBooks=(myClubs||[]).filter(c=>c.current_title);
- if(aiClubSel==null||!clubBooks.some(c=>c.id===aiClubSel))aiClubSel=clubBooks.length?clubBooks[0].id:null;
- const clubBook=clubBooks.find(c=>c.id===aiClubSel)||clubBooks[0]||null;
- const clubTitle=clubBook?clubBook.current_title:'';
- const readTitle=reading?reading.t:'';
- const discBook=clubTitle||readTitle;
- const inClub=!!clubTitle;
- // prossimo incontro DI QUEL club (non un incontro qualsiasi)
- const nextMeeting=clubBook?((myMeetings||[]).filter(m=>m.club_id===clubBook.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]||null):null;
- const ctx=aiContextInfo(); // adatta saluto e chip in base a dove hai premuto ✨ (Home/Libreria/Club/Diario/Profilo)
+ const ctx=aiContextInfo(); // adatta saluto e suggerimenti in base a dove hai premuto ✨ (Home/Libreria/Club/Diario/Profilo)
  view.innerHTML=`
  <div class="card pad ai-card" style="margin-bottom:18px">
    <span class="icn-badge sky" style="flex:none">${icon('sparkles')}</span>
@@ -2797,10 +2786,10 @@ function renderAiCloud(){
  </div>
 
  <div class="sec-title">Chiedi all'assistente</div>
- <div class="ai-chips" role="list">
+ <div class="ai-sugg-grid" role="list">
    ${ctx.chipsHtml}
  </div>
- <div id="aiOut" class="ai-chat" style="margin-top:10px"></div>
+ <div id="aiOut" class="ai-chat" style="margin-top:14px"></div>
  <div class="ai-inputbox">
    <textarea id="aiText" rows="1" placeholder="Scrivi un messaggio…" aria-label="Scrivi un messaggio all'assistente" oninput="aiTextInput(this)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();aiAsk(this.value)}"></textarea>
    <button id="aiSendBtn" class="btn" onclick="aiAsk(document.getElementById('aiText').value)" aria-label="Invia messaggio" disabled>${icon('send')}</button>
@@ -2808,19 +2797,6 @@ function renderAiCloud(){
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
    <span>Risponde in base alla tua libreria e ai tuoi gusti.</span>
    ${aiChat.length?'<a href="#" onclick="aiClear();return false" style="color:var(--plum);font-weight:600">Pulisci chat</a>':''}
- </div>
-
- <div class="sec-title" style="margin-top:24px">${inClub?'Prepara il prossimo incontro':'Spunti di lettura'}</div>
- <div class="card pad" style="margin-bottom:18px">
-   ${clubBooks.length>1?`<div class="field"><label>Per quale club</label><select id="aiClubSel" onchange="aiClubSel=+this.value;renderAiCloud()">${clubBooks.map(c=>`<option value="${c.id}" ${c.id===aiClubSel?'selected':''}>${esc(c.name)} · ${esc(c.current_title)}</option>`).join('')}</select></div>`:''}
-   <p style="font-size:13.5px;line-height:1.6;margin-bottom:${discBook?'14px':'4px'}">
-     ${discBook
-       ? (inClub
-          ? `Domande, temi e spunti per <b>${esc(clubTitle)}</b>${nextMeeting?(' — incontro '+(daysTo(nextMeeting.date)===0?'di oggi':'del '+fmtNoteDate(nextMeeting.date))):''}, senza spoiler oltre il tuo progresso.`
-          : `Nessun libro di club in corso: posso preparare spunti su <b>${esc(readTitle)}</b> che stai leggendo.`)
-       : `Quando un tuo club avvia la lettura di un libro, qui trovi il kit pronto. In alternativa, metti un libro "in lettura" nella Libreria.`}
-   </p>
-   ${discBook?`<button class="btn" style="width:100%;justify-content:center" onclick="aiDiscuss('kit',${JSON.stringify(discBook).replace(/"/g,'&quot;')})">${icon('sparkles')} Genera il kit</button>`:''}
  </div>`;
  renderChat();
 }

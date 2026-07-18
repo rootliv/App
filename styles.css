@@ -358,21 +358,28 @@ input[type=range]{accent-color:var(--coral)}
 .ai-card{display:flex;gap:16px;align-items:flex-start;border:1px solid var(--coral-soft);
   background:var(--ai-bg)}
 .match{font-weight:700;color:var(--sage)}
-.ai-chips{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;margin-top:10px;max-width:100%}
-/* Sfumatura sul bordo destro: senza, l'ultima chip veniva tagliata a metà parola e sembrava un testo troncato per errore invece di un invito a scorrere. */
-.ai-chips{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent 100%)}
+/* Suggerimenti dell'assistente: griglia di card (non più chip a scorrimento orizzontale
+   — con testi brevi funzionava, ma i suggerimenti per-contesto sono frasi più lunghe e
+   in una riga che scorre restavano quasi tutti nascosti). Tutti visibili subito, nessuno
+   scroll nascosto, stesso linguaggio visivo delle altre card dell'app. */
+.ai-sugg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.ai-sugg{display:flex;align-items:center;gap:12px;text-align:left;font-family:inherit;
+  padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:var(--surface);
+  box-shadow:var(--shadow-sm);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:.15s}
+.ai-sugg:hover{transform:translateY(-2px);border-color:var(--coral-soft);box-shadow:var(--shadow)}
+.ai-sugg:active{transform:none;background:var(--primary-muted)}
+.ai-sugg:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.ai-sugg-ic{width:36px;height:36px;border-radius:11px;background:var(--ai-bg);display:grid;place-items:center;
+  flex:none;color:var(--plum)}
+.ai-sugg-ic .icn{width:17px;height:17px}
+.ai-sugg-txt{flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--ink);line-height:1.32}
+@media(max-width:560px){.ai-sugg-grid{grid-template-columns:1fr}}
 /* Checklist requisiti password (5 voci sempre visibili, spunta che si accende man mano). */
 .pw-chk-row{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:2px}
 .pw-chk{font-size:11.5px;color:var(--ink-faint);transition:color .15s}
 .pw-chk.ok{color:var(--sage,#5f8d6c);font-weight:600}
 .pw-chk-ctx{display:block;margin-top:5px;font-size:12px;color:var(--coral,#e08a5d)}
 .pw-chk-ctx.ok{color:var(--sage,#5f8d6c)}
-.ai-chip{flex:none;display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12.5px;font-weight:600;
-  padding:10px 14px;border-radius:20px;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
-  cursor:pointer;white-space:nowrap;min-height:44px;-webkit-tap-highlight-color:transparent}
-.ai-chip .icn{width:14px;height:14px}
-.ai-chip:active{background:var(--primary-muted);color:var(--primary);border-color:var(--primary-muted)}
-.ai-chip:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 /* Indicatore di focus per i controlli interattivi che sono div con role="button" (card libro, avatar, ecc.): senza, chi naviga da tastiera non vede mai dove si trova. */
 [role="button"]:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:8px}
 .chatbox{display:flex;gap:9px;margin-top:16px}
