@@ -1183,12 +1183,17 @@ function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;
  // Prima veniva toccato solo il salvataggio locale e il server restava indietro.
  try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');if(m[b.t]){m[b.t]=(st==='read'&&b.pg)?b.pg:1;localStorage.setItem(posKey(),JSON.stringify(m));}}catch(e){}
  syncReadingPos(b.t,(st==='read'&&b.pg)?b.pg:1);
- if(st==='read'){openBook(id);setTimeout(scrollToRate,80);}
+ // Lo scaffale raggruppa/conta i libri per stato (tab "In lettura"/"Letti"/ecc. con
+ // i relativi contatori): un refresh solo dello scaffale lasciava i contatori vecchi.
+ if(st==='read'){if(current==='libreria')renders.libreria();openBook(id);setTimeout(scrollToRate,80);}
  else{closeModal();go(current);}
 }
 function setBookYear(id,val){const b=book(id);if(!b)return;
  const y=val?+val:null;b.finishedYear=y;
  persistBook(id,{finished_year:y});
+ // Non basta lo scaffale: il tab "Letti" ha anche i chip per anno con i loro conteggi,
+ // costruiti solo dal render completo della pagina.
+ if(current==='libreria')renders.libreria();
  toast(y?('Anno di lettura: '+y):'Anno rimosso','📅');
 }
 function scrollToRate(){const el=$('#rateStars')||document.querySelector('.rate-stars');if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){el.scrollIntoView()}}}
@@ -1204,9 +1209,10 @@ function setPage(id,total,page){const b=book(id);if(!b)return;
  // Un solo punto di scrittura: aggiorna il libro (la fonte) e rispecchia la pagina
  // nel diario del club, se questo titolo è il libro del mese di un tuo club.
  setBookPos(b.t,Math.max(1,page));
- // Lo scaffale della libreria mostra la barra di avanzamento su ogni copertina:
- // senza questo, restava quella vecchia finché non si usciva e rientrava in Libreria.
- refreshLibraryList();
+ // setBookPos può anche cambiare lo stato del libro (es. "da leggere" -> "in lettura",
+ // o "in lettura" -> "letto" a pagina 100%): serve il render completo, non solo lo
+ // scaffale, altrimenti i contatori dei tab restano vecchi.
+ if(current==='libreria')renders.libreria();
  if((page>=total||pct>=100)&&total>0){toast('Libro completato! 🎉');openBook(id);setTimeout(scrollToRate,80);return;}
  const fill=$('#bmFill'),tag=$('#bmTag'),inp=$('#bmPage'),pctEl=$('#bdsPct');
  if(fill)fill.style.width=pct+'%';
