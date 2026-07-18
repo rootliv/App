@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" data-app-ver="pagina-v91">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=160">
+<link rel="stylesheet" href="styles.css?v=161">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1256,8 +1256,14 @@ let _bmMove=null,_bmUp=null;
 let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
-let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v160 (copertine: rapporto 2:3 garantito anche su WebView Android datate)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+/* Quota Google Books: prima, al primo 429/403, Google veniva ESCLUSO per tutta la
+   sessione. Effetto collaterale grave: da quel momento restavano solo fonti coi titoli
+   originali (stranieri), e cercando "La casa degli spiriti" comparivano solo edizioni
+   estere. Ora il blocco è TEMPORANEO: si riprova dopo qualche minuto. */
+let _gbBlockUntil=0;
+function gbBlocked(){return Date.now()<_gbBlockUntil;}
+function gbBlock(){_gbBlockUntil=Date.now()+3*60*1000;}   // pausa 3 minuti, poi riprova
+console.log('%cPàgina build: v161 (copertine: bug griglia prima colonna; ricerca: quota Google temporanea, titoli italiani prioritari)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1296,10 +1302,10 @@ function openLibCoverByIsbn(isbn){isbn=cleanIsbn(isbn);return isbn?`https://cove
 
 /* ===== FONTI DATI ===== */
 async function fromGoogle(q,itOnly){
- if(GBLOCK)throw new Error('gb-quota');               // quota Google esaurita: non insistere
+ if(gbBlocked())throw new Error('gb-quota');               // quota Google esaurita: non insistere
  const extra=itOnly?'&langRestrict=it&maxResults=20':'&maxResults=20';
  const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&country=IT'+extra+gbKey());
- if(r.status===429||r.status===403){GBLOCK=true;throw new Error('gb-quota');}
+ if(r.status===429||r.status===403){gbBlock();throw new Error('gb-quota');}
  if(!r.ok)throw new Error('google');
  const d=await r.json();
  return(d.items||[]).map(it=>{const v=it.volumeInfo||{};const im=v.imageLinks||{};
@@ -1311,7 +1317,7 @@ async function fromGoogle(q,itOnly){
      source:'google'+(itOnly?':it':'')};
  });
 }
-async function fetchVolume(id){if(GBLOCK||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){GBLOCK=true;return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
+async function fetchVolume(id){if(gbBlocked()||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){gbBlock();return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
   return{trama:stripHtml(v.description),lang:langCode(v.language),coverUrl:httpsImg(im.large||im.medium||im.thumbnail||im.smallThumbnail||''),isbn:(v.industryIdentifiers||[]).map(x=>cleanIsbn(x.identifier)).filter(Boolean)}}catch(e){return null}}
 async function googleByIsbn(isbn){try{return await fromGoogle('isbn:'+cleanIsbn(isbn),false)}catch(e){return[]}}
 async function fromOpenLib(q){
@@ -1576,12 +1582,30 @@ async function wikiGenre(title,author){
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 async function doSearch(q){
  let cands=[];
- try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}   // edizioni italiane per prime
- try{cands=cands.concat(await fromGoogle(q,false))}catch(e){}  // fallback internazionale
- try{cands=cands.concat(await fromOpenLib(q))}catch(e){}       // fonte aggiuntiva
- const seen=new Set(),uniq=[];
- cands.forEach(c=>{const k=normKey(c.t)+'|'+normKey(c.a);if(c.t&&!seen.has(k)){seen.add(k);uniq.push(c)}});
- // ordina: italiano prima, poi per ricchezza dei metadati (trama+copertina)
+ // Più passaggi, ognuno protetto: edizioni italiane per prime, poi un tentativo mirato
+ // sul titolo in italiano, poi il fallback internazionale, infine Open Library.
+ try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}
+ if(cands.filter(c=>c.lang===APP_LANG).length<3){
+   try{cands=cands.concat(await fromGoogle('intitle:'+q,true))}catch(e){}
+ }
+ if(!cands.length){try{cands=cands.concat(await fromGoogle(q,false))}catch(e){}}
+ try{cands=cands.concat(await fromOpenLib(q))}catch(e){}
+
+ // Dedup affidabile: stesso titolo+autore = stessa voce (teniamo la più ricca / italiana).
+ const best=new Map();
+ const score=x=>(x.lang===APP_LANG?100:0)+(validTrama(x.trama)?4:0)+(x.coverUrl?2:0)+(x.pg?1:0);
+ cands.forEach(c=>{
+   if(!c.t)return;
+   const k=normKey(c.t)+'|'+normKey(c.a);
+   const cur=best.get(k);
+   if(!cur||score(c)>score(cur))best.set(k,c);
+ });
+ let uniq=[...best.values()];
+
+ // Se per questa ricerca esistono edizioni italiane, le edizioni STRANIERE dello stesso
+ // autore sono quasi sempre traduzioni con titolo originale (es. "Das Geisterhaus" per
+ // "La casa degli spiriti"): le teniamo, ma sempre DOPO le italiane. L'ordinamento sotto
+ // mette l'italiano in cima, così cercando un titolo italiano vedi prima quello giusto.
  uniq.sort((a,b)=>{
    const la=a.lang===APP_LANG?1:0,lb=b.lang===APP_LANG?1:0;if(lb-la)return lb-la;
    const ra=(validTrama(a.trama)?2:0)+(a.coverUrl?1:0),rb=(validTrama(b.trama)?2:0)+(b.coverUrl?1:0);return rb-ra;
@@ -5159,23 +5183,33 @@ function obGo(what){
    volta. Se è cambiato, mostriamo un banner visibile con un pulsante "Aggiorna": così,
    anche quando il meccanismo automatico silenzioso non funziona, l'utente lo vede e può
    forzare l'aggiornamento con un tocco. ---- */
-let _lastSwVer=null,_updBannerShown=false;
+let _updBannerShown=false;
 function _showUpdateBanner(){
  if(_updBannerShown)return;_updBannerShown=true;
  const b=document.createElement('div');
  b.id='updBanner';
- b.innerHTML=icon('refresh')+'<span>È disponibile una versione più recente dell\'app.</span><button type="button" onclick="location.reload()">Aggiorna</button>';
+ b.innerHTML=icon('refresh')+'<span>È disponibile una versione più recente dell\'app.</span><button type="button" onclick="_forceUpdate()">Aggiorna</button>';
  document.body.appendChild(b);
 }
+/* Versione DAVVERO in esecuzione, incisa nell'HTML a build-time. La confrontiamo con
+   quella del server fin dal PRIMO controllo (anche appena riaperta l'app da chiusa):
+   prima invece la prima lettura veniva presa come riferimento e non avvisava mai se la
+   pagina in esecuzione era già vecchia. */
+const _runningVer=(document.documentElement.getAttribute('data-app-ver')||'');
 async function _checkAppVersion(){
  try{
    const r=await fetch('sw.js?_='+Date.now(),{cache:'no-store'});
    const txt=await r.text();
    const m=txt.match(/CACHE_VERSION\s*=\s*'([^']+)'/);
    if(!m)return;
-   if(_lastSwVer===null){_lastSwVer=m[1];return}
-   if(m[1]!==_lastSwVer)_showUpdateBanner();
+   if(_runningVer && m[1]!==_runningVer) _showUpdateBanner();
  }catch(e){}
+}
+async function _forceUpdate(){
+ // Svuota cache e disinstalla i service worker: nessun residuo vecchio dopo il reload.
+ try{if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}}catch(e){}
+ try{if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}}catch(e){}
+ location.reload();
 }
 if('serviceWorker' in navigator){
  let _swReloaded=false;
