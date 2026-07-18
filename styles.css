@@ -1010,7 +1010,38 @@ body.sidebar-open .topsearch-res{display:none!important}
 .bar-goal i{background:var(--progress)}
 .primary-outline{background:var(--surface);color:var(--primary);border:1.5px solid var(--primary)!important;box-shadow:none}
 .primary-outline:active{background:var(--primary-muted)}
-.curio-body{display:flex;gap:12px;align-items:center}
+/* ===== CURIOSITÀ DELLA SETTIMANA — rubrica editoriale, non chat ===== */
+.pill.sage{background:#e3f1e8;color:#2f8168;border-color:transparent}
+.curio-skel{padding-top:20px;padding-bottom:20px}
+.curio-preview{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.curio-preview:hover{border-color:var(--coral-soft)}
+.curio-preview:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.curio-preview-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.curio-preview-lab{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;letter-spacing:.2px;color:var(--ink-soft);text-transform:uppercase}
+.curio-preview-lab .icn{width:13px;height:13px;color:var(--primary)}
+.curio-saved-dot{color:var(--primary);display:inline-flex}
+.curio-saved-dot .icn{width:16px;height:16px}
+.curio-preview-cat{margin-bottom:8px}
+.curio-preview-title{font-family:'Fraunces';font-size:16px;display:block;line-height:1.3;color:var(--ink)}
+.curio-preview-teaser{font-size:13.5px;color:var(--ink-soft);line-height:1.5;margin-top:6px}
+.curio-preview-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.curio-preview-time{display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.curio-preview-time .icn{width:13px;height:13px}
+.curio-scopri-btn{pointer-events:none} /* l'intera card è già cliccabile */
+.curio-spoiler-badge{margin-left:8px}
+.curio-detail-title{font-family:'Fraunces';font-size:19px;line-height:1.3;margin-top:10px}
+.curio-detail-text{font-size:14.5px;line-height:1.6;margin-top:12px;color:var(--ink)}
+.curio-source-link,.curio-source-txt{display:inline-block;font-size:12px;margin-top:10px;color:var(--ink-faint)}
+.curio-source-link{color:var(--brand-solid);font-weight:600;text-decoration:none}
+.curio-source-link:hover{text-decoration:underline}
+.curio-detail-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.curio-extra-zone{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.curio-extra-toggle{padding-left:0;padding-right:0}
+.curio-extra-card{animation:fade .3s ease}
+.curio-extra-title{font-family:'Fraunces';font-size:15px;display:block;line-height:1.3;margin-top:8px}
+.curio-extra-text{font-size:13.5px;line-height:1.55;margin-top:8px;color:var(--ink)}
+.curio-extra-note{font-size:11px;margin-top:8px}
+.srch-empty.sm{padding:14px 4px;font-size:12.5px}
 .clamp1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .goal-card-v2{padding-bottom:16px;background:var(--surface)}
 /* Proporzioni come nel riferimento: numero grande, unità leggibile accanto (rapporto ~2:1) */
