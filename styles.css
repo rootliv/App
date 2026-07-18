@@ -976,22 +976,25 @@ body.sidebar-open .topsearch-res{display:none!important}
 .club-desc-edit:hover{background:rgba(255,255,255,.3)}
 .usearch{position:relative;display:flex;align-items:center}
 .lib-head{margin:2px 0 16px}
-.lib-actions{display:flex;gap:10px;align-items:stretch;margin-bottom:14px}
+.lib-actions{display:flex;gap:10px;align-items:stretch;margin-bottom:16px}
 .lib-actions .lib-priv{flex:1;background:transparent;box-shadow:none;color:var(--ink-soft);border-color:var(--line)}
 .lib-actions .lib-priv .icn{width:14px;height:14px;vertical-align:-2px;margin-right:3px}
 .lib-actions .lib-priv.pub{color:var(--primary);border-color:var(--primary-muted);background:var(--primary-muted)}
 .lib-actions .btn{flex:1.3;justify-content:center}
-.lib-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
-.lib-tab{display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;
-  font-family:inherit;font-size:11px;font-weight:600;padding:11px 4px 9px;border-radius:15px;cursor:pointer;
+/* 4 colonne reali (Tutti/In lettura/Da leggere/Letti): con 4 voci fisse c'è più respiro
+   disponibile di quando erano 5, quindi gap e padding sono leggermente più larghi invece
+   di lasciare lo spazio inutilizzato — tocco più comodo, non solo estetica. */
+.lib-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.lib-tab{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;
+  font-family:inherit;font-size:11.5px;font-weight:600;padding:13px 6px 11px;border-radius:15px;cursor:pointer;
   background:var(--surface2);color:var(--ink-soft);border:1px solid var(--line);transition:.18s;line-height:1.2;text-align:center;-webkit-tap-highlight-color:transparent}
 .lib-tab-ic{display:grid;place-items:center}
-.lib-tab-ic .icn{width:17px;height:17px}
+.lib-tab-ic .icn{width:18px;height:18px}
 .lib-tab-tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .lib-tab.active{background:var(--brand-grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px rgba(30,80,60,.22);transform:translateY(-1px)}
-.lib-tabn{position:absolute;top:5px;right:6px;font-style:normal;font-size:9.5px;font-weight:700;min-width:16px;padding:0 4px;height:16px;line-height:16px;border-radius:8px;background:rgba(0,0,0,.1)}
+.lib-tabn{position:absolute;top:6px;right:7px;font-style:normal;font-size:9.5px;font-weight:700;min-width:16px;padding:0 4px;height:16px;line-height:16px;border-radius:8px;background:rgba(0,0,0,.1)}
 .lib-tab.active .lib-tabn{background:rgba(255,255,255,.28)}
-@media(max-width:380px){.lib-tab{font-size:10px;padding:9px 2px 7px}.lib-tab-ic .icn{width:15px;height:15px}.lib-tabs{gap:5px}}
+@media(max-width:380px){.lib-tab{font-size:10.5px;padding:10px 3px 8px}.lib-tab-ic .icn{width:16px;height:16px}.lib-tabs{gap:7px}}
 .add-choice{display:flex;gap:6px;flex:none}
 .add-mini{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-size:18px;display:grid;place-items:center;transition:.15s;flex:none}
 .add-mini:hover{border-color:var(--brand-solid);background:var(--hover);transform:translateY(-1px)}
@@ -1075,7 +1078,7 @@ body.sidebar-open .topsearch-res{display:none!important}
 .empty-mini .icn-badge{margin-top:2px}
 .empty-mini b{font-size:14px}
 .empty-mini p{font-size:12.5px;color:var(--ink-soft);margin:3px 0 0;line-height:1.5}
-.year-wrap{margin-bottom:18px}
+.year-wrap{margin-bottom:16px}
 .hub-lab{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--ink-soft);margin-bottom:9px}
 .hub-lab .icn{width:14px;height:14px}
 .codechip.big{font-size:22px;letter-spacing:4px;padding:12px 24px;font-weight:700}
