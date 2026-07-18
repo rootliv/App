@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=156">
+<link rel="stylesheet" href="styles.css?v=157">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1257,7 +1257,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v156 (home: il libro del club distinto con badge e prossimo incontro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v157 (home: card club in cima; via sezione Prossimo incontro, ora nella card)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4412,15 +4412,7 @@ function renderHomeCloud(){
  <div class="sec-head-ic"><div class="sec-title-ic">${icon('bookOpen')}<span>Continua a leggere</span></div></div>
  ${continueReadingCard(reading)}
 
- <!-- 2) PROSSIMO INCONTRO (solo se esiste): ha una scadenza, va visto presto -->
- ${nextMeet?`<div class="sec-head-ic"><div class="sec-title-ic">${icon('calendar')}<span>Prossimo incontro</span></div><button class="link-btn" onclick="go('incontri')">Vedi tutti ›</button></div>
- <div class="card pad meet-row" onclick="go('incontri')" style="cursor:pointer">
-   <div class="meet-date"><span class="meet-d">${new Date(nextMeet.date).getDate()}</span><span class="meet-m">${['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'][new Date(nextMeet.date).getMonth()]}</span></div>
-   <div style="flex:1;min-width:0"><b>${esc(nextMeet.title||'Incontro del club')}</b><div class="muted" style="font-size:12.5px">${daysTo(nextMeet.date)===0?'Oggi':(daysTo(nextMeet.date)===1?'Domani':'Tra '+daysTo(nextMeet.date)+' giorni')}${nextMeet.time?' · '+esc(nextMeet.time):''}</div></div>
-   <span class="meet-go">${icon('chevron')}</span>
- </div>`:''}
-
- <!-- 3) OBIETTIVO ANNUALE -->
+ <!-- 2) OBIETTIVO ANNUALE -->
  <div class="sec-head-ic"><div class="sec-title-ic">${icon('target')}<span>Obiettivo ${YR}</span></div><button class="link-btn" onclick="editGoal()">Modifica</button></div>
  <div class="card pad goal-card-v2">
    ${goalBlock(goal,readYrN,goalPct,goalPctBar,YR)}
@@ -4464,12 +4456,17 @@ function continueReadingCard(reading){
      </div>
    </div>`;
  }
- return `<div class="me-reading">${reading.map(b=>{
+ // I libri del mese dei club vanno in cima: hanno una scadenza (l'incontro) e riguardano
+ // una lettura condivisa, quindi meritano precedenza sulle letture personali. A parità,
+ // resta l'ordine originale (le letture aggiornate più di recente stanno già prima).
+ const isClub=b=>(myClubs||[]).some(c=>normKey(c.current_title||'')===normKey(b.t));
+ const ordered=[...reading].sort((a,b)=>(isClub(b)?1:0)-(isClub(a)?1:0));
+ return `<div class="me-reading">${ordered.map(b=>{
    const pr=STATS.readingProgress(b);
    const label=`${b.t}, ${pr.hasTotal?('pagina '+pr.cur+' di '+pr.tot):'avanzamento'}, ${pr.pct} percento completato`;
    const act=`${pr.cur===0?`setStatus(${b.id},'reading');`:''}openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)`;
-   // È il libro del mese di un tuo club? In tal caso lo distinguiamo (badge, prossimo incontro,
-   // frase più informale) invece di trattarlo come una lettura personale qualsiasi.
+   // È il libro del mese di un tuo club? In tal caso lo distinguiamo (badge, data
+   // dell'incontro, frase più informale) invece di trattarlo come lettura personale.
    const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(b.t));
    const meet=club?(myMeetings||[]).filter(m=>m.club_id===club.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]:null;
    const sub=pr.hasTotal
