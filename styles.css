@@ -1040,6 +1040,7 @@ body.sidebar-open .topsearch-res{display:none!important}
 .curio-extra-zone{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
 .curio-extra-toggle{padding-left:0;padding-right:0}
 .curio-extra-card{animation:fade .3s ease}
+.curio-extra-book{font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:2px}
 .curio-extra-title{font-family:'Fraunces';font-size:15px;display:block;line-height:1.3;margin-top:8px}
 .curio-extra-text{font-size:13.5px;line-height:1.55;margin-top:8px;color:var(--ink)}
 .curio-extra-note{font-size:11px;margin-top:8px}

@@ -4031,7 +4031,7 @@ function renderCurioDetailModal(row){
       +'<button class="btn sm ghost" onclick="askCurioAssistant()">'+icon('sparkles')+' Approfondisci con l\'Assistente</button>'
     +'</div>'
     +'<div class="curio-extra-zone" id="curioExtraZone">'
-      +(weeklyCurioExtra?curioExtraHtml(weeklyCurioExtra):'<button type="button" class="link-btn curio-extra-toggle" onclick="loadCurioExtra()">Scopri un\'altra curiosità</button>')
+      +(weeklyCurioExtra?curioExtraHtml(weeklyCurioExtra):'<button type="button" class="link-btn curio-extra-toggle" onclick="loadCurioExtra()">Parla di un altro libro?</button>')
     +'</div>'
   +'</div>';
 }
@@ -4055,6 +4055,7 @@ function askCurioAssistant(){
 }
 function curioExtraHtml(extra){
  return '<div class="curio-extra-card">'
+   +(extra.bookTitle?('<div class="curio-extra-book">'+esc(extra.bookTitle)+(extra.bookAuthor?(' · '+esc(extra.bookAuthor)):'')+'</div>'):'')
    +'<span class="pill sky">'+esc(extra.category)+'</span>'
    +'<b class="curio-extra-title">'+esc(extra.title)+'</b>'
    +'<p class="curio-extra-text">'+esc(extra.content)+'</p>'
@@ -4064,19 +4065,21 @@ function curioExtraHtml(extra){
 }
 async function loadCurioExtra(){
  if(weeklyCurioExtraBusy)return;weeklyCurioExtraBusy=true;
- const zone=$('#curioExtraZone');if(zone)zone.innerHTML='<div class="srch-empty sm">Cerco un\'altra curiosità…</div>';
+ const zone=$('#curioExtraZone');if(zone)zone.innerHTML='<div class="srch-empty sm">Cerco un altro libro di cui parlare…</div>';
  try{
    const row=weeklyCurioRow;
-   const b=row.book_id?book(row.book_id):{id:row.book_id||null,t:row.book_title,a:row.book_author,status:'reading'};
-   const avoid=new Set([row.category]);
-   const facts=await gatherEditorFacts(b,avoid);
+   const avoidIds=new Set([row.book_id].filter(x=>x!=null));
+   const cand=weeklyCuriosityCandidates(avoidIds).filter(x=>x.id!==row.book_id);
+   const b=cand[0]||null;
+   if(!b){weeklyCurioExtraBusy=false;if($('#curioExtraZone'))$('#curioExtraZone').innerHTML='<div class="srch-empty sm">Non hai altri libri in libreria da proporre ora.</div>';return;}
+   const facts=await gatherEditorFacts(b,new Set());
    let extra=facts.length?await weeklyCuriosityEdited(b,facts):null;
    if(!extra){const stFact=standaloneVerifiedFallback(facts);if(stFact)extra=mkWeeklyCuriosity(b,stFact.category,stFact.standalone.title,stFact.standalone.teaser,stFact.standalone.content,stFact.sourceName,stFact.sourceUrl,'none');}
-   if(!extra)extra=await weeklyCuriosityFromAI(b,pickAiFlavor(avoid));
+   if(!extra)extra=await weeklyCuriosityFromAI(b,pickAiFlavor(new Set()));
    if(!extra)extra=await weeklyCuriosityFromAI(b);
    weeklyCurioExtraBusy=false;
    if(!$('#curioExtraZone'))return; // modale chiusa nel frattempo
-   if(!extra){$('#curioExtraZone').innerHTML='<div class="srch-empty sm">Nessun\'altra curiosità verificata trovata per ora.</div>';return;}
+   if(!extra){$('#curioExtraZone').innerHTML='<div class="srch-empty sm">Nessuna curiosità trovata ora su un altro libro.</div>';return;}
    weeklyCurioExtra=extra;
    $('#curioExtraZone').innerHTML=curioExtraHtml(extra);
  }catch(e){weeklyCurioExtraBusy=false;if($('#curioExtraZone'))$('#curioExtraZone').innerHTML='<div class="srch-empty sm">Non disponibile ora, riprova più tardi.</div>';}
