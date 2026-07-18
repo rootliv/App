@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=155">
+<link rel="stylesheet" href="styles.css?v=156">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1257,7 +1257,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v155 (avviso eliminazione libro del club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v156 (home: il libro del club distinto con badge e prossimo incontro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4468,18 +4468,46 @@ function continueReadingCard(reading){
    const pr=STATS.readingProgress(b);
    const label=`${b.t}, ${pr.hasTotal?('pagina '+pr.cur+' di '+pr.tot):'avanzamento'}, ${pr.pct} percento completato`;
    const act=`${pr.cur===0?`setStatus(${b.id},'reading');`:''}openBook(${b.id});setTimeout(()=>{const el=document.getElementById('bmPage')||document.getElementById('bmTotal');if(el){el.focus();el.scrollIntoView({block:'center'})}},150)`;
-   return `<div class="card pad me-book-v2">
+   // È il libro del mese di un tuo club? In tal caso lo distinguiamo (badge, prossimo incontro,
+   // frase più informale) invece di trattarlo come una lettura personale qualsiasi.
+   const club=(myClubs||[]).find(c=>normKey(c.current_title||'')===normKey(b.t));
+   const meet=club?(myMeetings||[]).filter(m=>m.club_id===club.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)))[0]:null;
+   const sub=pr.hasTotal
+     ? (b.ch?`Cap. ${Math.max(1,Math.round(b.ch*pr.pct/100))} di ${b.ch} · ${pr.pct}%`:`Pagina ${pr.cur} di ${pr.tot} · ${pr.pct}%`)
+     : `${pr.pct}%`;
+   const clubSub=pr.hasTotal?`${progressWord(pr.pct)} · ${pr.pct}%`:`${pr.pct}%`;
+   return `<div class="card pad me-book-v2${club?' is-club':''}">
+     ${club?`<div class="mb-badge">${esc(club.name||'Club del libro')}</div>`:''}
      <div class="mb-row">
        <div class="mb-cover" onclick="openBook(${b.id})">${coverEl(b.id,b.t,b.a,null,b.coverUrl)}</div>
        <div class="mb-main">
          <b class="mb-title clamp2">${esc(b.t)}</b>
-         <div class="mb-sub">${pr.hasTotal?('Pagina '+pr.cur+' di '+pr.tot+' · '+pr.pct+'%'):(pr.pct+'%')}</div>
+         ${meet?`<div class="mb-meet" onclick="clubSel=${club.id};go('incontri')">${icon('calendar')} Incontro ${meetWhen(meet.date)}</div>`:''}
+         <div class="mb-sub">${club?clubSub:sub}</div>
          <div class="bar bar-reading mb-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pr.pct}" aria-label="${esc(label)}"><i style="width:${pr.pct}%"></i></div>
        </div>
        <button class="btn mb-go" onclick="${act}" aria-label="${pr.cur===0?'Inizia a leggere':'Riprendi e segna la pagina'}: ${esc(b.t)}">${pr.cur===0?'Inizia':'Riprendi'} ${icon('chevron')}</button>
      </div>
    </div>`;
  }).join('')}</div>`;
+}
+/* Descrizione informale dell'avanzamento. Nel riferimento un 18% è già "Sei a metà":
+   la frase descrive il gesto ("sei nel mezzo della lettura"), non la percentuale esatta. */
+function progressWord(pct){
+ if(pct<=0)return 'Da iniziare';
+ if(pct<12)return 'Hai appena iniziato';
+ if(pct<40)return 'Sei a metà';
+ if(pct<70)return 'Sei oltre metà';
+ if(pct<100)return 'Quasi alla fine';
+ return 'Completato';
+}
+/* "venerdì 24 luglio" per un incontro vicino, altrimenti "24 lug" */
+function meetWhen(date){
+ try{const d=new Date(date);const gg=['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato'];
+   const diff=Math.round((new Date(String(date).slice(0,10))-new Date(todayStr()))/86400000);
+   if(diff>=0&&diff<=7)return `${gg[d.getDay()]} ${d.getDate()} ${['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'][d.getMonth()]}`;
+   return d.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
+ }catch(e){return ''}
 }
 /* ===== OBIETTIVO ANNUALE ===== */
 function goalBlock(goal,read,goalPct,goalPctBar,YR){

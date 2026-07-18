@@ -1502,3 +1502,13 @@ select:focus{outline:none;border-color:var(--brand-solid)}
    icona della barra in basso e' evidenziata, quindi diamo qui l'unico segnale "sei qui".
    Scoperto solo su #mtogBtn: non tocca la campanella delle notifiche (stessa classe .bell). */
 #mtogBtn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* v156 — Card "Continua a leggere": distingue il libro del club (badge, incontro) */
+.mb-badge{display:inline-flex;align-items:center;font-family:'Fraunces',serif;font-weight:600;
+  font-size:12.5px;color:var(--brand-solid);background:var(--primary-muted);
+  padding:6px 13px;border-radius:20px;margin-bottom:14px;letter-spacing:.01em}
+.mb-meet{display:inline-flex;align-items:center;gap:7px;font-family:'Fraunces',serif;font-weight:600;
+  font-size:14px;color:var(--gold);margin:2px 0 6px;cursor:pointer}
+.mb-meet .icn{width:15px;height:15px;flex:none}
+.mb-meet:active{opacity:.7}
+.me-book-v2.is-club .mb-sub{margin-top:0}
