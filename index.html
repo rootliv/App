@@ -4121,48 +4121,6 @@ async function renderCuriosity(){
  // alla prossima apertura della Home.
 }
 
-// --- Collezione: tutte le curiosità scoperte (seen_at valorizzato), viste dal Profilo ---
-async function loadCurioCollectionSummary(){
- const el=$('#curioCollectionSub');if(!el)return;
- if(typeof supa==='undefined'||!supa||mode!=='cloud'||!authUser){el.textContent='Disponibile con un account cloud.';return}
- try{
-   const {data,error}=await supa.from('weekly_curiosities').select('*').eq('user_id',authUser.id).not('seen_at','is',null).order('week_key',{ascending:false});
-   if(!$('#curioCollectionSub'))return; // pagina cambiata nel frattempo
-   if(error||!data){el.textContent='Scopri la curiosità di questa settimana.';return}
-   window.__curioCollectionData=data;
-   const n=data.length;
-   if(!n){el.textContent='Nessuna ancora: scopri quella di questa settimana.';return}
-   const byCat={};data.forEach(r=>{byCat[r.category]=(byCat[r.category]||0)+1});
-   const top=Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([c,n2])=>c+' '+n2).join(' · ');
-   el.textContent=n+' '+(n===1?'curiosità scoperta':'curiosità scoperte')+(top?(' — '+top):'');
- }catch(e){if($('#curioCollectionSub'))$('#curioCollectionSub').textContent='Scopri la curiosità di questa settimana.';}
-}
-function openCurioCollection(){
- const data=window.__curioCollectionData||[];
- _modalKind='curioCollection';
- const byCat={};data.forEach(r=>{byCat[r.category]=(byCat[r.category]||0)+1});
- const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
- $('#modal').innerHTML=
-  '<div class="modal-top"><b>'+icon('sparkles')+' Le tue curiosità</b><button class="close" onclick="closeModal()">✕ Chiudi</button></div>'
-  +'<div class="modal-body">'
-    +(data.length?(
-       '<div class="curio-coll-total">'+data.length+' '+(data.length===1?'curiosità scoperta':'curiosità scoperte')+'</div>'
-      +(catRows.length?('<div class="curio-coll-cats">'+catRows.map(([c,n])=>'<span class="pill sage">'+esc(c)+' '+n+'</span>').join('')+'</div>'):'')
-      +'<div class="curio-coll-list">'+data.map(r=>'<div class="curio-coll-item" role="button" tabindex="0" onclick="openCurioHistoryItem(\''+r.id+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openCurioHistoryItem(\''+r.id+'\')}">'
-        +'<div class="curio-coll-item-top"><span class="pill sky curio-coll-item-cat">'+esc(r.category)+'</span>'+(r.saved?('<span class="curio-saved-dot" aria-label="Salvata">'+icon('bookmark')+'</span>'):'')+'</div>'
-        +'<b class="curio-coll-item-title">'+esc(r.title)+'</b>'
-        +(r.book_title?('<div class="muted curio-coll-item-book">'+esc(r.book_title)+'</div>'):'')
-      +'</div>').join('')+'</div>'
-     ):'<div class="srch-empty">Non hai ancora scoperto nessuna curiosità. Torna in Home per quella di questa settimana.</div>')
-  +'</div>';
- openOverlay();
-}
-function openCurioHistoryItem(id){
- const data=window.__curioCollectionData||[];
- const row=data.find(r=>r.id===id);if(!row)return;
- weeklyCurioRow=row;
- renderCurioDetailModal(row);
-}
 
 /* Anno di completamento di un libro: usa finished_year se presente, altrimenti l'anno di creazione record.
    I libri letti senza anno noto restituiscono null (restano navigabili in "Senza data"). */
@@ -4234,14 +4192,6 @@ function renderProfiloPage(){
    ${topAL?`<div class="stat-cell wide"><div class="stat-l">${topAL.label}</div><div class="stat-v clamp2">${esc(topAL.text)}</div></div>`:''}
  </div>`:''}
 
- <div class="card pad map-teaser curio-collection-teaser" role="button" tabindex="0" onclick="openCurioCollection()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCurioCollection()}" aria-label="Le tue curiosità scoperte">
-   <span class="icn-badge gold" style="flex:none">${icon('sparkles')}</span>
-   <div class="map-teaser-tx">
-     <b>Le tue curiosità</b>
-     <p id="curioCollectionSub">Caricamento…</p>
-   </div>
-   <span class="map-teaser-go" aria-hidden="true">${icon('chevron')}</span>
- </div>
 
  <div class="card pad map-teaser" role="button" tabindex="0" onclick="go('mappa')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('mappa')}" aria-label="Esplora la tua mappa del mondo: scopri dove ti hanno portato i tuoi libri">
    <span class="icn-badge sage" style="flex:none">${icon('globe')}</span>
@@ -4282,7 +4232,6 @@ function renderProfiloPage(){
    :`<div class="empty-mini"><span class="icn-badge sage">${icon('book')}</span><div><b>Nessun genere ancora</b><p>Aggiungi libri o indica i generi preferiti in Modifica.</p></div></div>`}
  </div>
  ${mode==='cloud'?`<div class="acct-footer"><button class="linklike-danger" onclick="openDeleteAccount()">Elimina account</button></div>`:''}`;
- loadCurioCollectionSummary();
 }
 // Arrotondamento a somma costante (largest remainder) per percentuali coerenti
 function largestRemainder(counts,total){
