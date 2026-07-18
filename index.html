@@ -768,6 +768,11 @@ async function aiProviderAsk(message,ctx){            // livello di astrazione: 
 }
 function renderChat(){
  const out=$('#aiOut');if(!out)return;
+ // Il link "Pulisci chat" vive FUORI da #aiOut (sotto il campo di scrittura): va aggiornato
+ // qui esplicitamente ad ogni chiamata, altrimenti resta congelato allo stato che aveva
+ // quando la pagina è stata aperta (visibile solo dopo aver lasciato la sezione e essere
+ // tornati, quando renderAiCloud() la ridisegna tutta da capo).
+ const cl=$('#aiClearLink');if(cl)cl.style.display=aiChat.length?'inline':'none';
  if(!aiChat.length){out.innerHTML='<div class="muted" style="font-size:13px;padding:6px 2px">Scrivimi qui sotto: posso aiutarti con la tua libreria, i club, le note, il progresso di lettura e consigli su misura.</div>';return}
  out.innerHTML=aiChat.map(m=>m.who==='me'
    ? `<div class="chat-row me"><div class="chat-bubble me">${m.html}</div></div>`
@@ -2762,7 +2767,7 @@ function renderAiCloud(){
  </div>
  <div class="muted" style="font-size:11.5px;margin-top:9px;display:flex;gap:12px;flex-wrap:wrap;align-items:center">
    <span>Risponde in base alla tua libreria e ai tuoi gusti.</span>
-   ${aiChat.length?'<a href="#" onclick="aiClear();return false" style="color:var(--plum);font-weight:600">Pulisci chat</a>':''}
+   <a href="#" id="aiClearLink" onclick="aiClear();return false" style="display:${aiChat.length?'inline':'none'};color:var(--plum);font-weight:600">Pulisci chat</a>
  </div>`;
  renderChat();
 }
