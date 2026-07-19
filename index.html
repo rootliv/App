@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v91">
+<html lang="it" data-app-ver="pagina-v92">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=161">
+<link rel="stylesheet" href="styles.css?v=162">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -596,6 +596,7 @@ renders.profilo=()=>renderProfiloPage();
 let libTab='all';
 renders.libreria=()=>{
  if(typeof autoEnrichGenres==='function')autoEnrichGenres();
+ if(typeof autoFixForeignTitles==='function')autoFixForeignTitles();
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
@@ -1150,13 +1151,25 @@ function saveEditBookNote(id,idx){
  editNoteIdx=-1;saveNotes(id,arr);openBook(id);
 }
 function cancelEditBookNote(id){editNoteIdx=-1;openBook(id);}
+/* Registro (locale) dei libri per cui abbiamo già cercato l'edizione italiana, così non
+   ripetiamo la chiamata a ogni apertura. Chiave: id libro. */
+function _itCheckKey(){return 'pag_it_checked_'+((authUser&&authUser.id)||'demo')}
+function _itCheckedSet(){try{return new Set(JSON.parse(localStorage.getItem(_itCheckKey())||'[]'))}catch(e){return new Set()}}
+function italianChecked(b){try{return _itCheckedSet().has(String(b.id))}catch(e){return false}}
+function markItalianChecked(b){try{const s=_itCheckedSet();s.add(String(b.id));localStorage.setItem(_itCheckKey(),JSON.stringify([...s]))}catch(e){}}
 async function enrichBook(b){
  if(b.enriched)return false;
  if(b.set&&b.set.length){b.enriched=true;return false;} // libri d'esempio già curati
- if(validTrama(b.trama)&&b.coverUrl){b.enriched=true;return false;} // già completo: non sprecare quota
+ // Prima: se trama e copertina c'erano già, ci fermavamo qui — ma così un libro aggiunto
+ // con titolo STRANIERO (che spesso porta con sé trama e copertina originali) non veniva
+ // MAI italianizzato: il titolo restava in lingua originale per sempre. Ora saltiamo la
+ // ricerca solo se il libro è completo E abbiamo già cercato l'edizione italiana una volta
+ // (il registro è in localStorage, così non rifacciamo la chiamata ogni sessione).
+ if(validTrama(b.trama)&&b.coverUrl&&italianChecked(b)){b.enriched=true;return false;}
  b._tries=(b._tries||0)+1;
  let n;try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}catch(e){if(b._tries>=3)b.enriched=true;return false}
  if(!n){if(b._tries>=3)b.enriched=true;return false}
+ markItalianChecked(b); // interrogate le fonti per l'edizione italiana: non ripetere ogni volta
  let changed=false;
  // TITOLO: preferisci sempre l'edizione italiana (non mostrare l'originale se esiste l'italiano)
  if(n.hasItalian&&n.title&&normKey(n.title)!==normKey(b.t)){
@@ -1263,7 +1276,7 @@ const APP_LANG='it';                       // lingua dell'app: priorità ai dati
 let _gbBlockUntil=0;
 function gbBlocked(){return Date.now()<_gbBlockUntil;}
 function gbBlock(){_gbBlockUntil=Date.now()+3*60*1000;}   // pausa 3 minuti, poi riprova
-console.log('%cPàgina build: v161 (copertine: bug griglia prima colonna; ricerca: quota Google temporanea, titoli italiani prioritari)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v162 (titoli stranieri portati in italiano: fix enrichBook + passata di massa)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -4339,6 +4352,22 @@ function genreFromText(txt){
  ];
  for(const[re,g]of rules){if(re.test(t))return g;}
  return '';
+}
+let _titleFixing=false;
+/* In sottofondo porta in italiano i titoli stranieri già in libreria, senza doverli aprire
+   a mano. Pochi per volta (limita le chiamate), e salta quelli già controllati (registro). */
+async function autoFixForeignTitles(){
+ if(_titleFixing||mode!=='cloud')return;_titleFixing=true;
+ try{
+   const todo=(books||[]).filter(b=>!b.enriched&&!italianChecked(b)&&b.t&&(!b.set||!b.set.length)).slice(0,6);
+   let changed=false;
+   for(const b of todo){
+     const before=b.t;
+     try{if(await enrichBook(b)&&b.t!==before)changed=true;}catch(e){}
+   }
+   if(changed&&(current==='libreria'||current==='profilo'))refreshView();
+ }catch(e){}
+ _titleFixing=false;
 }
 async function autoEnrichGenres(){
  if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
