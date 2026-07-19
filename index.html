@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v94">
+<html lang="it" data-app-ver="pagina-v95">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=164">
+<link rel="stylesheet" href="styles.css?v=165">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -317,10 +317,35 @@ async function shareBook(id){
  try{await navigator.clipboard.writeText(text);toast('Copiato negli appunti 📋');}
  catch(e){toast('Condivisione non disponibile');}
 }
-function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
+function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';
+ // archive.org spesso non risponde (ERR_CONNECTION_RESET) e le copertine sparivano.
+ // Quegli URL sono in realtà copertine di Open Library: le reindirizziamo all'host
+ // ufficiale delle copertine, che è affidabile. Formato: .../download/<id>/<COVERID>-L.jpg
+ const arch=u.match(/archive\.org\/download\/[^/]+\/(\d+)-[SML]\.jpg/i);
+ if(arch)return 'https://covers.openlibrary.org/b/id/'+arch[1]+'-L.jpg';
+ if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
 function coverEl(i,t,a,badge,url,statusPair){const su=safeImgUrl(url);
  const statusHtml=statusPair?`<div class="status-badge ${statusPair[1]}">${statusPair[0]}</div>`:'';
- return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" loading="lazy" onerror="this.style.display='none'">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
+ return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" loading="lazy" onerror="this.remove()">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
+let _fixingCovers=false;
+/* Corregge una volta gli URL copertina morti (archive.org) salvati nel database,
+   riscrivendoli verso covers.openlibrary.org. Tocca SOLO cover_url: nient'altro. */
+async function fixArchiveCovers(){
+ if(_fixingCovers)return;_fixingCovers=true;
+ try{
+   let changed=false;
+   for(const b of (books||[])){
+     if(!b.coverUrl||!/archive\.org\/download\//i.test(b.coverUrl))continue;
+     const good=safeImgUrl(b.coverUrl);
+     if(good&&good!==b.coverUrl){
+       b.coverUrl=good;changed=true;
+       if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:good}).eq('id',b.id)}catch(e){}}
+     }
+   }
+   if(changed&&current==='libreria')refreshView();
+ }catch(e){}
+ _fixingCovers=false;
+}
 function bookCard(b){
  const st=b.status==='reading'?['In lettura','reading']:b.status==='read'?['Letto','read']:['Da leggere','toread'];
  return`<div class="book" role="button" tabindex="0" aria-label="Apri «${esc(b.t)}»" onclick="openBook(${b.id})">
@@ -596,6 +621,7 @@ renders.profilo=()=>renderProfiloPage();
 let libTab='all';
 renders.libreria=()=>{
  if(typeof autoEnrichGenres==='function')autoEnrichGenres();
+ if(typeof fixArchiveCovers==='function')fixArchiveCovers();
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
@@ -1257,7 +1283,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v164 (copertine riparate: rimosso il blocco @supports difettoso che le azzerava)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v165 (copertine archive.org morte reindirizzate a Open Library + correzione nel DB)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
