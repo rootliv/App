@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v92">
+<html lang="it" data-app-ver="pagina-v93">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=162">
+<link rel="stylesheet" href="styles.css?v=163">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -596,7 +596,6 @@ renders.profilo=()=>renderProfiloPage();
 let libTab='all';
 renders.libreria=()=>{
  if(typeof autoEnrichGenres==='function')autoEnrichGenres();
- if(typeof autoFixForeignTitles==='function')autoFixForeignTitles();
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
@@ -1151,25 +1150,13 @@ function saveEditBookNote(id,idx){
  editNoteIdx=-1;saveNotes(id,arr);openBook(id);
 }
 function cancelEditBookNote(id){editNoteIdx=-1;openBook(id);}
-/* Registro (locale) dei libri per cui abbiamo già cercato l'edizione italiana, così non
-   ripetiamo la chiamata a ogni apertura. Chiave: id libro. */
-function _itCheckKey(){return 'pag_it_checked_'+((authUser&&authUser.id)||'demo')}
-function _itCheckedSet(){try{return new Set(JSON.parse(localStorage.getItem(_itCheckKey())||'[]'))}catch(e){return new Set()}}
-function italianChecked(b){try{return _itCheckedSet().has(String(b.id))}catch(e){return false}}
-function markItalianChecked(b){try{const s=_itCheckedSet();s.add(String(b.id));localStorage.setItem(_itCheckKey(),JSON.stringify([...s]))}catch(e){}}
 async function enrichBook(b){
  if(b.enriched)return false;
  if(b.set&&b.set.length){b.enriched=true;return false;} // libri d'esempio già curati
- // Prima: se trama e copertina c'erano già, ci fermavamo qui — ma così un libro aggiunto
- // con titolo STRANIERO (che spesso porta con sé trama e copertina originali) non veniva
- // MAI italianizzato: il titolo restava in lingua originale per sempre. Ora saltiamo la
- // ricerca solo se il libro è completo E abbiamo già cercato l'edizione italiana una volta
- // (il registro è in localStorage, così non rifacciamo la chiamata ogni sessione).
- if(validTrama(b.trama)&&b.coverUrl&&italianChecked(b)){b.enriched=true;return false;}
+ if(validTrama(b.trama)&&b.coverUrl){b.enriched=true;return false;} // già completo: non sprecare quota
  b._tries=(b._tries||0)+1;
  let n;try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}catch(e){if(b._tries>=3)b.enriched=true;return false}
  if(!n){if(b._tries>=3)b.enriched=true;return false}
- markItalianChecked(b); // interrogate le fonti per l'edizione italiana: non ripetere ogni volta
  let changed=false;
  // TITOLO: preferisci sempre l'edizione italiana (non mostrare l'originale se esiste l'italiano)
  if(n.hasItalian&&n.title&&normKey(n.title)!==normKey(b.t)){
@@ -1269,14 +1256,8 @@ let _bmMove=null,_bmUp=null;
 let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
-/* Quota Google Books: prima, al primo 429/403, Google veniva ESCLUSO per tutta la
-   sessione. Effetto collaterale grave: da quel momento restavano solo fonti coi titoli
-   originali (stranieri), e cercando "La casa degli spiriti" comparivano solo edizioni
-   estere. Ora il blocco è TEMPORANEO: si riprova dopo qualche minuto. */
-let _gbBlockUntil=0;
-function gbBlocked(){return Date.now()<_gbBlockUntil;}
-function gbBlock(){_gbBlockUntil=Date.now()+3*60*1000;}   // pausa 3 minuti, poi riprova
-console.log('%cPàgina build: v162 (titoli stranieri portati in italiano: fix enrichBook + passata di massa)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
+console.log('%cPàgina build: v163 (ripristino: annullate le modifiche a ricerca/titoli che rompevano le copertine; tenuto solo il fix griglia)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1315,10 +1296,10 @@ function openLibCoverByIsbn(isbn){isbn=cleanIsbn(isbn);return isbn?`https://cove
 
 /* ===== FONTI DATI ===== */
 async function fromGoogle(q,itOnly){
- if(gbBlocked())throw new Error('gb-quota');               // quota Google esaurita: non insistere
+ if(GBLOCK)throw new Error('gb-quota');               // quota Google esaurita: non insistere
  const extra=itOnly?'&langRestrict=it&maxResults=20':'&maxResults=20';
  const r=await fetch('https://www.googleapis.com/books/v1/volumes?q='+encodeURIComponent(q)+'&country=IT'+extra+gbKey());
- if(r.status===429||r.status===403){gbBlock();throw new Error('gb-quota');}
+ if(r.status===429||r.status===403){GBLOCK=true;throw new Error('gb-quota');}
  if(!r.ok)throw new Error('google');
  const d=await r.json();
  return(d.items||[]).map(it=>{const v=it.volumeInfo||{};const im=v.imageLinks||{};
@@ -1330,7 +1311,7 @@ async function fromGoogle(q,itOnly){
      source:'google'+(itOnly?':it':'')};
  });
 }
-async function fetchVolume(id){if(gbBlocked()||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){gbBlock();return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
+async function fetchVolume(id){if(GBLOCK||!id||/^\/works\//.test(id))return null;try{const r=await fetch('https://www.googleapis.com/books/v1/volumes/'+id+'?country=IT'+gbKey());if(r.status===429||r.status===403){GBLOCK=true;return null}if(!r.ok)return null;const d=await r.json();const v=d.volumeInfo||{};const im=v.imageLinks||{};
   return{trama:stripHtml(v.description),lang:langCode(v.language),coverUrl:httpsImg(im.large||im.medium||im.thumbnail||im.smallThumbnail||''),isbn:(v.industryIdentifiers||[]).map(x=>cleanIsbn(x.identifier)).filter(Boolean)}}catch(e){return null}}
 async function googleByIsbn(isbn){try{return await fromGoogle('isbn:'+cleanIsbn(isbn),false)}catch(e){return[]}}
 async function fromOpenLib(q){
@@ -1595,30 +1576,12 @@ async function wikiGenre(title,author){
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
 async function doSearch(q){
  let cands=[];
- // Più passaggi, ognuno protetto: edizioni italiane per prime, poi un tentativo mirato
- // sul titolo in italiano, poi il fallback internazionale, infine Open Library.
- try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}
- if(cands.filter(c=>c.lang===APP_LANG).length<3){
-   try{cands=cands.concat(await fromGoogle('intitle:'+q,true))}catch(e){}
- }
- if(!cands.length){try{cands=cands.concat(await fromGoogle(q,false))}catch(e){}}
- try{cands=cands.concat(await fromOpenLib(q))}catch(e){}
-
- // Dedup affidabile: stesso titolo+autore = stessa voce (teniamo la più ricca / italiana).
- const best=new Map();
- const score=x=>(x.lang===APP_LANG?100:0)+(validTrama(x.trama)?4:0)+(x.coverUrl?2:0)+(x.pg?1:0);
- cands.forEach(c=>{
-   if(!c.t)return;
-   const k=normKey(c.t)+'|'+normKey(c.a);
-   const cur=best.get(k);
-   if(!cur||score(c)>score(cur))best.set(k,c);
- });
- let uniq=[...best.values()];
-
- // Se per questa ricerca esistono edizioni italiane, le edizioni STRANIERE dello stesso
- // autore sono quasi sempre traduzioni con titolo originale (es. "Das Geisterhaus" per
- // "La casa degli spiriti"): le teniamo, ma sempre DOPO le italiane. L'ordinamento sotto
- // mette l'italiano in cima, così cercando un titolo italiano vedi prima quello giusto.
+ try{cands=cands.concat(await fromGoogle(q,true))}catch(e){}   // edizioni italiane per prime
+ try{cands=cands.concat(await fromGoogle(q,false))}catch(e){}  // fallback internazionale
+ try{cands=cands.concat(await fromOpenLib(q))}catch(e){}       // fonte aggiuntiva
+ const seen=new Set(),uniq=[];
+ cands.forEach(c=>{const k=normKey(c.t)+'|'+normKey(c.a);if(c.t&&!seen.has(k)){seen.add(k);uniq.push(c)}});
+ // ordina: italiano prima, poi per ricchezza dei metadati (trama+copertina)
  uniq.sort((a,b)=>{
    const la=a.lang===APP_LANG?1:0,lb=b.lang===APP_LANG?1:0;if(lb-la)return lb-la;
    const ra=(validTrama(a.trama)?2:0)+(a.coverUrl?1:0),rb=(validTrama(b.trama)?2:0)+(b.coverUrl?1:0);return rb-ra;
@@ -4353,22 +4316,6 @@ function genreFromText(txt){
  for(const[re,g]of rules){if(re.test(t))return g;}
  return '';
 }
-let _titleFixing=false;
-/* In sottofondo porta in italiano i titoli stranieri già in libreria, senza doverli aprire
-   a mano. Pochi per volta (limita le chiamate), e salta quelli già controllati (registro). */
-async function autoFixForeignTitles(){
- if(_titleFixing||mode!=='cloud')return;_titleFixing=true;
- try{
-   const todo=(books||[]).filter(b=>!b.enriched&&!italianChecked(b)&&b.t&&(!b.set||!b.set.length)).slice(0,6);
-   let changed=false;
-   for(const b of todo){
-     const before=b.t;
-     try{if(await enrichBook(b)&&b.t!==before)changed=true;}catch(e){}
-   }
-   if(changed&&(current==='libreria'||current==='profilo'))refreshView();
- }catch(e){}
- _titleFixing=false;
-}
 async function autoEnrichGenres(){
  if(_genreEnriching||mode!=='cloud')return;_genreEnriching=true;
  try{
@@ -5212,33 +5159,23 @@ function obGo(what){
    volta. Se è cambiato, mostriamo un banner visibile con un pulsante "Aggiorna": così,
    anche quando il meccanismo automatico silenzioso non funziona, l'utente lo vede e può
    forzare l'aggiornamento con un tocco. ---- */
-let _updBannerShown=false;
+let _lastSwVer=null,_updBannerShown=false;
 function _showUpdateBanner(){
  if(_updBannerShown)return;_updBannerShown=true;
  const b=document.createElement('div');
  b.id='updBanner';
- b.innerHTML=icon('refresh')+'<span>È disponibile una versione più recente dell\'app.</span><button type="button" onclick="_forceUpdate()">Aggiorna</button>';
+ b.innerHTML=icon('refresh')+'<span>È disponibile una versione più recente dell\'app.</span><button type="button" onclick="location.reload()">Aggiorna</button>';
  document.body.appendChild(b);
 }
-/* Versione DAVVERO in esecuzione, incisa nell'HTML a build-time. La confrontiamo con
-   quella del server fin dal PRIMO controllo (anche appena riaperta l'app da chiusa):
-   prima invece la prima lettura veniva presa come riferimento e non avvisava mai se la
-   pagina in esecuzione era già vecchia. */
-const _runningVer=(document.documentElement.getAttribute('data-app-ver')||'');
 async function _checkAppVersion(){
  try{
    const r=await fetch('sw.js?_='+Date.now(),{cache:'no-store'});
    const txt=await r.text();
    const m=txt.match(/CACHE_VERSION\s*=\s*'([^']+)'/);
    if(!m)return;
-   if(_runningVer && m[1]!==_runningVer) _showUpdateBanner();
+   if(_lastSwVer===null){_lastSwVer=m[1];return}
+   if(m[1]!==_lastSwVer)_showUpdateBanner();
  }catch(e){}
-}
-async function _forceUpdate(){
- // Svuota cache e disinstalla i service worker: nessun residuo vecchio dopo il reload.
- try{if('caches' in window){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)));}}catch(e){}
- try{if('serviceWorker' in navigator){const rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(r=>r.unregister()));}}catch(e){}
- location.reload();
 }
 if('serviceWorker' in navigator){
  let _swReloaded=false;
