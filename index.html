@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v98">
+<html lang="it" data-app-ver="pagina-v99">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=168">
+<link rel="stylesheet" href="styles.css?v=169">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -364,15 +364,22 @@ async function fixArchiveCovers(){
    for(const b of todo){
      let good=safeImgUrl(b.coverUrl);
      const ok=good?await _isRealImage(good):false;
+     let quotaHit=false;
      if(!ok){
-       // copertina morta o pixel-fantasma: proviamo una copertina vera su Google Books
+       // copertina morta o pixel-fantasma: proviamo una copertina vera su Google Books.
+       // Se la quota di Google è esaurita ORA, NON segniamo il libro come "verificato":
+       // deve poter riprovare quando la quota si libera, non restare colorato per sempre.
        good='';
-       try{
-         const cands=await fromGoogle((b.t||'')+' '+(b.a||''),true);
-         const withCover=(cands||[]).find(c=>c.coverUrl);
-         if(withCover)good=withCover.coverUrl;
-       }catch(e){}
+       if(gbBlocked()){quotaHit=true;}
+       else{
+         try{
+           const cands=await fromGoogle((b.t||'')+' '+(b.a||''),true);
+           const withCover=(cands||[]).find(c=>c.coverUrl);
+           if(withCover)good=withCover.coverUrl;
+         }catch(e){quotaHit=true;}
+       }
      }
+     if(quotaHit)break; // Google è bloccato: fermiamo qui il giro, riproveremo alla prossima visita
      markCoverChecked(b);
      if(good!==b.coverUrl){
        b.coverUrl=good;changed=true;
@@ -1320,7 +1327,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v168 (copertine: riparato il danno lasciato nel database da un tentativo precedente e annullato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v169 (copertine: non segnare verificato se Google e in quota; ricerca aggiungi libro: fallback colorato invece di sparire)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1654,11 +1661,16 @@ async function doSearch(q){
 function renderResults(btnFor){
  const box=$('#searchResults');if(!box)return;
  if(!searchResults.length){box.innerHTML='<div class="srch-empty">⚠️ Nessun risultato (o nessuna connessione). Prova con un altro titolo.</div>';return}
- box.innerHTML=searchResults.map((s,i)=>`<div class="srch-item">
-   ${s.coverUrl?`<img class="th" src="${esc(s.coverUrl)}" alt="${esc(s.t||'')}" loading="lazy" onerror="this.style.visibility='hidden'">`:`<div class="th" style="${coverStyle(i)}"></div>`}
+ // Stessa logica robusta della libreria: se la copertina è morta o è il pixel-fantasma
+ // di Open Library, non deve sparire lasciando uno spazio vuoto — torna il colore di ripiego.
+ box.innerHTML=searchResults.map((s,i)=>{
+   const su=safeImgUrl(s.coverUrl);
+   const onload="if(this.naturalWidth<=2||this.naturalHeight<=2)this.remove();";
+   return `<div class="srch-item">
+   <div class="th" style="${coverStyle(i)};position:relative;overflow:hidden">${su?`<img src="${esc(su)}" alt="${esc(s.t||'')}" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onload="${onload}" onerror="this.remove()">`:''}</div>
    <div style="flex:1;min-width:0"><b>${esc(s.t)}</b><div class="mt">${esc(s.a)}${s.year?' · '+esc(s.year):''}${s.pg?' · '+esc(s.pg)+' pag.':''}</div></div>
    ${btnFor(i)}
- </div>`).join('');
+ </div>`;}).join('');
 }
 async function searchBooks(q){
  q=(q||'').trim();if(!q)return;clearTimeout(searchTimer);
