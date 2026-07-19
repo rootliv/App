@@ -201,6 +201,7 @@
   try { notifiedMeetings = JSON.parse(localStorage.getItem('pagina_native_meet_notif') || '{}'); } catch (e) {}
   function scheduleMeetingReminders() {
     try {
+      if (typeof window.notifPrefOn !== 'function' || !window.notifPrefOn('incontro')) return;
       if (!Array.isArray(myMeetings)) return;
       const now = Date.now();
       myMeetings.forEach((m) => {

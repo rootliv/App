@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v100">
+<html lang="it" data-app-ver="pagina-v101">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=170">
+<link rel="stylesheet" href="styles.css?v=171">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -224,6 +224,13 @@ let books=JSON.parse(JSON.stringify(seedBooks));
 /* ============ HELPERS ============ */
 const $=s=>document.querySelector(s);
 const view=$('#view');
+// Trova un libro in libreria per titolo (e autore, quando lo conosciamo): evita di confondere
+// libri diversi con lo stesso titolo (es. "Inferno" di Dante e "Inferno" di Dan Brown), un
+// problema che toccava sia l'aggiunta di libri sia — più seriamente — il tracciamento della
+// pagina nel diario condiviso, che poteva finire sul libro sbagliato.
+function findLibBook(title,author){
+ return (books||[]).find(x=>normKey(x.t)===normKey(title||'')&&(!author||!x.a||normKey(x.a)===normKey(author)));
+}
 function book(id){return books.find(b=>b.id===id)}
 /* I generi vengono rilevati automaticamente da Wikidata (P136, etichette italiane).
    Qui sotto la via manuale, per quando il rilevamento non trova nulla o sbaglia:
@@ -937,7 +944,7 @@ function planItems(){
  const out=[];
  (myClubs||[]).forEach(c=>{
    if(!c.current_title)return;
-   const b=books.find(x=>normKey(x.t)===normKey(c.current_title));
+   const b=findLibBook(c.current_title,c.current_author);
    if(b&&b.status==='read')return;
    const ms=(myMeetings||[]).filter(m=>m.club_id===c.id&&m.date&&String(m.date).slice(0,10)>=todayStr()).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
    ms.forEach(meet=>out.push({club:c,book:b||{t:c.current_title,a:c.current_author,pg:0,prog:0,coverUrl:c.current_cover},meet}));
@@ -1278,7 +1285,7 @@ function setPage(id,total,page){const b=book(id);if(!b)return;
  const pct=total?Math.round((page/total)*100):0;
  // Un solo punto di scrittura: aggiorna il libro (la fonte) e rispecchia la pagina
  // nel diario del club, se questo titolo è il libro del mese di un tuo club.
- setBookPos(b.t,Math.max(1,page));
+ setBookPos(b.t,Math.max(1,page),b.a);
  // setBookPos può anche cambiare lo stato del libro (es. "da leggere" -> "in lettura",
  // o "in lettura" -> "letto" a pagina 100%): serve il render completo, non solo lo
  // scaffale, altrimenti i contatori dei tab restano vecchi.
@@ -1327,7 +1334,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v170 (notifiche: rete di sicurezza per inviti/follower + avviso chiaro quando un link ti aggiunge a un club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v171 (Inferno/Dante-DanBrown: trova libri per titolo+autore ovunque; inviti con Accetta/Rifiuta in Notifiche; promemoria ripristinati; club deletion via RPC server-side)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1702,7 +1709,7 @@ async function quickAdd(i,status,fy){
    books.push({id,t:s.t,a:s.a,g:s.g,pg:s.pg,ch:0,status,prog:status==='read'?100:0,rate:0,trama:s.trama,set:[],cur:'',quote:'',coverUrl:s.coverUrl,finishedYear:fy});
    save();
  }
-   const nbid=(function(){const b=books.find(x=>normKey(x.t)===normKey(s.t));return b?b.id:null;})();
+   const nbid=(function(){const b=findLibBook(s.t,s.a);return b?b.id:null;})();
    if(status==='read'&&nbid){closeModal();enrichGenreFromWiki(s.t,s.a);openBookToRate(nbid);return;}
    closeModal();libTab=status;libYear='all';go('libreria');
    toast(status==='reading'?'Buona lettura! 📖':'Aggiunto alla lista 🔖','📚');
@@ -1790,7 +1797,7 @@ async function enrichGenreFromWiki(title,author){
  try{
    const g=await wikiGenre(title,author);
    if(!g)return;
-   const b=books.find(x=>normKey(x.t)===normKey(title));
+   const b=findLibBook(title,author);
    if(!b||b.g===g)return;
    b.g=g;
    if(mode==='cloud'&&supa){try{await supa.from('books').update({genre:g}).eq('id',b.id)}catch(e){}}
@@ -1870,20 +1877,27 @@ function clubName(id){const c=myClubs.find(x=>x.id===id);return c?(c.emoji||'�
 /* Le "azioni in sospeso" ora sono le notifiche reali dalla tabella `notifications`.
    Manteniamo il nome per compatibilità con updateBellDot(). */
 function pendingItems(){
- const fromDb=(notifRows||[]).map(n=>({
+ // Gli INVITI vengono sempre dalla fonte live (letta direttamente da club_invites):
+ // è l'unica fonte davvero autorevole su "cosa è ancora in sospeso", e sparisce da
+ // sola non appena l'invito viene accettato o rifiutato. La riga storica nella tabella
+ // notifications (kind='invite') non viene più mostrata come voce separata: sarebbe
+ // ridondante mentre l'invito è ancora aperto, e priva di senso una volta risolto.
+ const inviteItems=(liveInvites||[]).map(n=>({
+   id:n.id, ic:'club', t:n.t, p:n.p, go:'lettori', cid:n.club_id||null,
+   read:false, when:n.when, key:n.id, synthetic:true, inviteId:n.inviteId, actionable:'invite'
+ }));
+ const fromDb=(notifRows||[]).filter(n=>n.kind!=='invite').map(n=>({
    id:n.id, ic:NOTIF_ICON[n.kind]||'bell',
    t:n.title, p:n.body||'',
    go:NOTIF_GO[n.kind]||'club', cid:n.club_id||null,
    read:!!n.read_at, when:n.created_at, key:'db-'+n.id
  }));
- // Le voci "live" (rete di sicurezza) vanno sempre in cima: sono azioni che aspettano una
- // risposta (un invito da accettare) o una novità appena scoperta, mai già lette.
- const live=[...(liveInvites||[]),...(liveFollowers||[])].map(n=>({
-   id:n.id, ic:n.t==='Nuovo follower'?'profile':'club',
-   t:n.t, p:n.p, go:'lettori', cid:n.club_id||null,
+ // I follower "live" (rete di sicurezza) restano semplici avvisi informativi.
+ const followerItems=(liveFollowers||[]).map(n=>({
+   id:n.id, ic:'profile', t:n.t, p:n.p, go:'lettori', cid:null,
    read:false, when:n.when, key:n.id, synthetic:true
  }));
- return [...live,...fromDb];
+ return [...inviteItems,...followerItems,...fromDb];
 }
 let notifRows=[];   // notifiche VERE, dalla tabella `notifications`: storico + letto/non letto reale
 const NOTIF_ICON={invite:'club',invite_accepted:'club',follower:'profile',book:'book',note:'edit',meeting:'calendar',vote:'sparkles'};
@@ -1923,7 +1937,7 @@ async function loadNotifSafetyNet(){
      const iids=[...new Set(todo.map(i=>i.inviter_id))];
      const pr=await pubProfiles('id,name,username',iids);
      const iname={};(pr||[]).forEach(p=>iname[p.id]=p.username||p.name||'Un lettore');
-     liveInvites=todo.map(i=>({id:'liveinvite-'+i.id,club_id:i.club_id,
+     liveInvites=todo.map(i=>({id:'liveinvite-'+i.id,inviteId:i.id,club_id:i.club_id,
        t:'Invito a un club',p:(iname[i.inviter_id]||'Un lettore')+' ti ha invitato in «'+(cname[i.club_id]||'un club')+'».',
        when:new Date().toISOString(),synthetic:true}));
    }
@@ -2310,7 +2324,7 @@ function openProposeBook(clubId){openBookSearch(icon('book')+' Proponi un libro'
    se non è già presente: così l'utente lo ritrova tra i suoi libri, col segnalibro e le note. */
 async function addClubBookToLibrary(title,author,cover){
  if(!title)return;
- if(books.some(b=>normKey(b.t)===normKey(title)))return; // già in libreria
+ if(findLibBook(title,author))return; // già in libreria (stesso titolo E autore)
  let extra={};try{const res=await doSearch(title+' '+(author||''));const best=res&&res[0];if(best&&titlesRoughlyMatch(title,best.t))extra={g:best.g,pg:best.pg,trama:best.trama,cover:best.coverUrl||cover};}catch(e){}
  const g=extra.g||'',pg=extra.pg||0,trama=extra.trama||'',cov=extra.cover||cover||'';
  if(mode==='cloud'&&supa){
@@ -2524,9 +2538,11 @@ async function deleteClub(id){
  const c=myClubs.find(x=>x.id===id);
  if(!c||c.owner!==authUser.id){alert('Solo l\'amministratore può eliminare il club.');return}
  if(!confirm('Eliminare definitivamente il club "'+c.name+'"?\nVerranno rimossi membri, proposte, incontri e note collegate. Operazione non reversibile.'))return;
- const del=async t=>{try{await supa.from(t).delete().eq('club_id',id)}catch(e){}};
- await del('proposals');await del('meetings');await del('notes');await del('club_members');
- const {error}=await supa.from('clubs').delete().eq('id',id);
+ // Una singola chiamata lato server garantisce la cancellazione per TUTTI i membri
+ // (vedi migration 20260723_delete_club_cascade.sql), invece di più cancellazioni dal
+ // client che potevano fallire in silenzio su alcune tabelle e lasciare il club ancora
+ // visibile agli altri membri.
+ const {error}=await supa.rpc('delete_club_cascade',{p_club_id:id});
  if(error){alert('Non riesco a eliminare il club: '+error.message);return}
  clubsLoaded=false;clubSel=null;go('club');
 }
@@ -2556,16 +2572,16 @@ function posKey(){return 'pagina_bookpos_'+((typeof authUser!=='undefined'&&auth
    libreria diceva 57%. La pagina si ricava con la stessa formula che usa la libreria
    (STATS.readingProgress), così i due schermi mostrano SEMPRE lo stesso numero.
    Il salvataggio locale resta solo come ripiego per un libro del club che non hai in libreria. */
-function bookPos(title){
- const b=(books||[]).find(x=>normKey(x.t)===normKey(title));
+function bookPos(title,author){
+ const b=findLibBook(title,author);
  if(b&&b.pg)return Math.max(0,Math.min(b.pg,Math.round(b.pg*(+b.prog||0)/100)));
  try{const m=JSON.parse(localStorage.getItem(posKey())||'{}');return +m[title]||0}catch(e){return 0}
 }
 /* Unico punto che SCRIVE la posizione: aggiorna il libro in libreria (la fonte) e
    rispecchia la pagina sul server per la regola anti-spoiler. */
-function setBookPos(title,p){
+function setBookPos(title,p,author){
  p=Math.max(1,p|0);
- const b=(books||[]).find(x=>normKey(x.t)===normKey(title));
+ const b=findLibBook(title,author);
  if(b&&b.pg){
    const page=Math.min(b.pg,p);
    const pct=Math.min(100,Math.round(page/b.pg*100));
@@ -2589,7 +2605,7 @@ function diaryTrackClick(ev,title,total,mn){
  const r=track.getBoundingClientRect();
  const frac=Math.max(0,Math.min(1,(ev.clientX-r.left)/r.width));
  const page=Math.max(mn,Math.round(total*frac));
- setBookPos(title,page);paintDiary(curDiaryClub);
+ setBookPos(title,page,curDiaryClub&&curDiaryClub.current_author);paintDiary(curDiaryClub);
 }
 let _diaryDrag=null,_diaryMove=null,_diaryUp=null,_diaryMovePrev=null,_diaryUpPrev=null;
 function diaryDragSetup(title,total,mn){
@@ -2597,7 +2613,7 @@ function diaryDragSetup(title,total,mn){
  const posFromX=cx=>{const r=track.getBoundingClientRect();return Math.max(0,Math.min(1,(cx-r.left)/r.width));};
  const live=(frac)=>{const pct=Math.round(frac*100);const fill=$('#diaryFill'),tag=$('#diaryTag');
    if(fill){fill.style.transition='none';fill.style.width=pct+'%';}if(tag){tag.style.transition='none';tag.style.left=Math.min(100,pct)+'%';}};
- const commit=(frac)=>{const page=Math.max(mn,Math.round(total*frac));setBookPos(title,page);paintDiary(curDiaryClub);};
+ const commit=(frac)=>{const page=Math.max(mn,Math.round(total*frac));setBookPos(title,page,curDiaryClub&&curDiaryClub.current_author);paintDiary(curDiaryClub);};
  track.onmousedown=e=>{e.preventDefault();_diaryDrag=1;live(posFromX(e.clientX));};
  _diaryMove=e=>{if(_diaryDrag)live(posFromX(e.clientX));};
  _diaryUp=e=>{if(_diaryDrag){_diaryDrag=null;commit(posFromX(e.clientX));}};
@@ -2633,7 +2649,7 @@ function syncReadingPos(title,pos){
    }catch(e){}
  },350);
 }
-function clubBookPages(c){const b=books.find(x=>normKey(x.t)===normKey(c.current_title||''));return (b&&b.pg)||0}
+function clubBookPages(c){const b=findLibBook(c.current_title,c.current_author);return (b&&b.pg)||0}
 function fmtNoteDate(s){try{
  const d=new Date(s);if(isNaN(d))return'';
  const now=new Date();
@@ -2654,7 +2670,7 @@ async function loadClubNotes(c){
  // NB: la protezione reale è la RLS su Supabase (vedi migration): questo filtro client evita
  // di trasferire inutilmente gli spoiler, ma è la policy DB a impedirne la lettura non autorizzata.
  const uid=authUser&&authUser.id;
- const pos=Math.max(1,bookPos(c.current_title||'')|0);
+ const pos=Math.max(1,bookPos(c.current_title||'',c.current_author)|0);
  const base=supa.from('notes').select('*').eq('club_id',c.id).eq('book_title',c.current_title);
  let visible=[];
  try{
@@ -2689,7 +2705,7 @@ function renderNotesList(){
  const el=$('#notesList');if(!el)return;
  const lockedNote=cloudNotesLocked?`<div class="note locked" style="text-align:center"><div class="note-hint locked-hint">${icon('lock')} ${cloudNotesLocked} ${cloudNotesLocked===1?'nota':'note'} — ${cloudNotesLockedMinPos?('disponibile dopo pagina '+cloudNotesLockedMinPos):'più avanti nel libro'}. Si sblocca man mano che avanzi con la lettura.</div></div>`:'';
  if(!cloudNotes.length){el.innerHTML=(lockedNote||'<div class="muted" style="padding:10px">Ancora nessuna nota. Scrivi la prima!</div>');return}
- const pos=bookPos(curDiaryTitle);
+ const pos=bookPos(curDiaryTitle,curDiaryClub&&curDiaryClub.current_author);
  const LIM=notesShown||20;
  const shown=cloudNotes.slice(0,LIM);
  const more=cloudNotes.length-shown.length;
@@ -2733,7 +2749,7 @@ async function addClubNote(clubId){
  if(_noteSending)return;_noteSending=true;
  const btn=$('#shareNoteBtn');const prevLabel=btn?btn.textContent:'';
  if(btn){btn.disabled=true;btn.textContent='Condivido…';}
- const pos=bookPos(c.current_title);let unlock=pos,marker='';
+ const pos=bookPos(c.current_title,c.current_author);let unlock=pos,marker='';
  if(noteScope==='range'){let f=parseInt($('#npFrom')&&$('#npFrom').value)||1,t=parseInt($('#npTo')&&$('#npTo').value)||pos;
    if(f<1)f=1;if(t>pos)t=pos;if(f<1)f=1;if(f>t){const x=f;f=t;t=x}unlock=t;marker='[[r='+f+'-'+t+']]';}
  else if(noteScope==='upto'){unlock=pos;marker='[[u='+pos+']]';}
@@ -2777,7 +2793,7 @@ function renderDiarioCloud(){
    così il segnalibro del diario funziona anche per libri scelti in passato. */
 async function ensureClubBookPages(c){
  if(!c||!c.current_title)return;
- const existing=books.find(x=>normKey(x.t)===normKey(c.current_title));
+ const existing=findLibBook(c.current_title,c.current_author);
  if(existing&&existing.pg)return; // già a posto
  try{
    const res=await doSearch(c.current_title+' '+(c.current_author||''));
@@ -2804,8 +2820,9 @@ function paintDiary(c){
  const withBook=myClubs.filter(x=>x.current_title);
  const total=clubBookPages(c);
  const mn=diaryMinPos();
- let pos=bookPos(c.current_title);if(pos<mn){pos=mn;setBookPos(c.current_title,pos);}
+ let pos=bookPos(c.current_title,c.current_author);if(pos<mn){pos=mn;setBookPos(c.current_title,pos,c.current_author);}
  const titEsc=(c.current_title||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+ const autEsc=(c.current_author||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
  const others=(cloudNotes||[]).filter(n=>n.user_id!==authUser.id);
  const readable=others.filter(n=>pos>=n.position).length;
  view.innerHTML=`
@@ -2823,7 +2840,7 @@ function paintDiary(c){
       </div>`:''}
       <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px">
         <span class="muted" style="font-size:12.5px">pag.</span>
-        <input class="bm-page-input" type="number" min="${mn}" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(${mn},parseInt(this.value)||${mn}));syncReadingPos('${titEsc}',bookPos('${titEsc}'));paintDiary(curDiaryClub)">
+        <input class="bm-page-input" type="number" min="${mn}" ${total?`max="${total}"`:''} value="${pos}" onchange="setBookPos('${titEsc}',Math.max(${mn},parseInt(this.value)||${mn}),'${autEsc}');syncReadingPos('${titEsc}',bookPos('${titEsc}','${autEsc}'));paintDiary(curDiaryClub)">
         ${total?`<span class="muted" style="font-size:12.5px">di ${total}</span>`:''}
       </div>
       ${mn>1?`<div class="muted" style="font-size:11px;margin-top:8px;text-align:center">Min ${mn} (hai già scritto fin lì)</div>`:''}
@@ -3415,7 +3432,13 @@ async function respondInvite(inviteId,clubId,accept){
      if(error&&error.code!=='23505'){alert('Errore: '+error.message);return}
      clubsLoaded=false;
    }
-   renderHomeCloud();
+   toast(accept?'Ti sei unita al club 🎉':'Invito rifiutato');
+   // Aggiorna la schermata in cui ci si trova davvero, invece di saltare sempre in Home:
+   // Notifiche e Lettori sono i due punti da cui si può rispondere a un invito.
+   if(current==='notifiche'){await loadNotifs();renderNotifCloud();}
+   else if(current==='lettori'){renderMyInvites();}
+   else{renderHomeCloud();}
+   try{updateBellDot()}catch(e){}
  }catch(e){alert('Errore: '+e.message);}
 }
 async function renderMyInvites(){
@@ -4825,8 +4848,10 @@ function renderNotifCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico…</div></div>';cloudLoadClubs().then(()=>{clubsLoaded=true;loadNotifs().then(renderNotifCloud)});return}
  const items=pendingItems();
  const unread=items.filter(i=>!i.read).length;
- // Preferenze: mostriamo SOLO gli interruttori realmente collegati a un invio (niente finti).
- const opts=[['Nuovo libro scelto','libro'],['Nuova nota nel diario','nota'],['Curiosità settimanale','curio']];
+ // Interruttori realmente collegati a qualcosa: "libro"/"nota" a un invio push lato server,
+ // "promemoria"/"incontro" a notifiche locali programmate dall'app nativa (scripts/native.js),
+ // "curio" alla curiosità settimanale in Home. Nessuno di questi è decorativo.
+ const opts=[['Promemoria di lettura','promemoria'],['Incontro imminente','incontro'],['Nuovo libro scelto','libro'],['Nuova nota nel diario','nota'],['Curiosità settimanale','curio']];
  const curioOn=(function(){try{return curioNotifWanted(loadCurioState())}catch(e){return true}})();
  view.innerHTML=`
  <div class="row">
@@ -4836,6 +4861,19 @@ function renderNotifCloud(){
        ${unread?`<button type="button" class="link-btn sm" onclick="markAllNotifsRead()">Segna tutte come lette</button>`:''}
      </div>
      ${items.length?items.map(it=>{
+       if(it.actionable==='invite'){
+         // Un invito non è "da leggere": è da RISOLVERE. Accetta/Rifiuta subito qui,
+         // senza dover saltare altrove — un tocco, un'azione.
+         const invEsc=String(it.inviteId).replace(/'/g,"\\'");
+         return `<div class="notif unread" data-notif-id="${esc(String(it.id))}" aria-label="${esc(it.t)}. ${esc(it.p)}">
+           <span class="ni">${icon(it.ic)}</span>
+           <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p><time class="notif-when">${notifWhen(it.when)}</time></span>
+           <span style="display:flex;gap:6px;flex:none">
+             <button type="button" class="btn sm" onclick="respondInvite('${invEsc}',${it.cid||'null'},true)">${icon('check')} Accetta</button>
+             <button type="button" class="btn ghost sm" onclick="respondInvite('${invEsc}',${it.cid||'null'},false)">✕</button>
+           </span>
+         </div>`;
+       }
        const idJs=typeof it.id==='string'?`'${String(it.id).replace(/'/g,"\\'")}'`:it.id;
        return `<button type="button" class="notif ${it.read?'':'unread'}" data-notif-id="${esc(String(it.id))}" onclick="openNotifItem(${idJs},${it.cid||'null'},'${it.go}')" aria-label="${it.read?'':'Non letta: '}${esc(it.t)}. ${esc(it.p)}">
          <span class="ni">${icon(it.ic)}</span>
@@ -4855,6 +4893,7 @@ function renderNotifCloud(){
          <button type="button" id="${id}" role="switch" aria-checked="${on}" aria-label="${esc(o)}" class="toggle ${on?'on':''}" onclick="${key==='curio'?'toggleCurioNotif(this)':`toggleNotifPref(this,'${key}')`}"></button>
        </div>`;
      }).join('')}
+     <div class="muted" style="font-size:11px;margin-top:12px;line-height:1.5">Inviti, follower, libro scelto e nota arrivano anche ad app chiusa se hai installato l'app e dato il permesso di notifiche.</div>
    </div>
  </div>`;
  markNotifsSeen(items); // aprendo la pagina, il puntino aggregato si azzera
