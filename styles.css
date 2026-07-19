@@ -227,13 +227,6 @@ input[type=range]{accent-color:var(--coral)}
 .cover{aspect-ratio:2/3;border-radius:6px 12px 12px 6px;position:relative;overflow:hidden;color:#fff;
   display:block;width:100%;
   box-shadow:0 14px 26px rgba(60,30,20,.28), inset 0 0 0 1px rgba(255,255,255,.08)}
-/* Cintura di sicurezza: su alcune WebView Android datate `aspect-ratio` viene ignorato
-   e l'immagine reale imponeva la propria altezza (una copertina diventava gigante,
-   sfondando la griglia). Il padding-top 150% garantisce comunque il rapporto 2:3
-   anche lì, e l'immagine resta ritagliata dentro il riquadro. */
-@supports not (aspect-ratio: 1){
-  .cover{height:0;padding-top:150%}
-}
 /* Didascalia (titolo+autore) fuori dal flusso: la copertina resta sempre 2:3,
    così tutte le copertine hanno la stessa dimensione anche senza immagine reale. */
 .cvcap{position:absolute;left:0;right:0;bottom:0;z-index:1;padding:16px 16px 18px;
