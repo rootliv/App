@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v99">
+<html lang="it" data-app-ver="pagina-v100">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=169">
+<link rel="stylesheet" href="styles.css?v=170">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1327,7 +1327,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v169 (copertine: non segnare verificato se Google e in quota; ricerca aggiungi libro: fallback colorato invece di sparire)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v170 (notifiche: rete di sicurezza per inviti/follower + avviso chiaro quando un link ti aggiunge a un club)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1870,12 +1870,20 @@ function clubName(id){const c=myClubs.find(x=>x.id===id);return c?(c.emoji||'�
 /* Le "azioni in sospeso" ora sono le notifiche reali dalla tabella `notifications`.
    Manteniamo il nome per compatibilità con updateBellDot(). */
 function pendingItems(){
- return (notifRows||[]).map(n=>({
+ const fromDb=(notifRows||[]).map(n=>({
    id:n.id, ic:NOTIF_ICON[n.kind]||'bell',
    t:n.title, p:n.body||'',
    go:NOTIF_GO[n.kind]||'club', cid:n.club_id||null,
    read:!!n.read_at, when:n.created_at, key:'db-'+n.id
  }));
+ // Le voci "live" (rete di sicurezza) vanno sempre in cima: sono azioni che aspettano una
+ // risposta (un invito da accettare) o una novità appena scoperta, mai già lette.
+ const live=[...(liveInvites||[]),...(liveFollowers||[])].map(n=>({
+   id:n.id, ic:n.t==='Nuovo follower'?'profile':'club',
+   t:n.t, p:n.p, go:'lettori', cid:n.club_id||null,
+   read:false, when:n.when, key:n.id, synthetic:true
+ }));
+ return [...live,...fromDb];
 }
 let notifRows=[];   // notifiche VERE, dalla tabella `notifications`: storico + letto/non letto reale
 const NOTIF_ICON={invite:'club',invite_accepted:'club',follower:'profile',book:'book',note:'edit',meeting:'calendar',vote:'sparkles'};
@@ -1886,15 +1894,55 @@ const NOTIF_GO={invite:'lettori',invite_accepted:'lettori',follower:'lettori',bo
    scritto dai trigger lato database. Qui NON si costruisce più uno "stato attuale":
    si legge un elenco vero, con data e stato letto/non letto. */
 async function loadNotifs(){
- if(mode!=='cloud'||!supa||!authUser){notifRows=[];return;}
+ if(mode!=='cloud'||!supa||!authUser){notifRows=[];liveInvites=[];liveFollowers=[];return;}
  try{
    const {data,error}=await supa.from('notifications')
-     .select('id,kind,title,body,club_id,read_at,created_at')
+     .select('id,kind,title,body,club_id,actor_id,read_at,created_at')
      .order('created_at',{ascending:false}).limit(60);
    notifRows=error?[]:(data||[]);
  }catch(e){notifRows=[];}
+ await loadNotifSafetyNet();
 }
-function unreadNotifCount(){return (notifRows||[]).filter(n=>!n.read_at).length;}
+let liveInvites=[],liveFollowers=[];
+/* Rete di sicurezza: inviti ai club ricevuti e nuovi follower letti DIRETTAMENTE dalle loro
+   tabelle (le stesse query, già affidabili, usate in "Lettori"), non solo dalla tabella
+   `notifications`. Così, anche se per qualsiasi motivo un trigger non avesse scritto la
+   riga di notifica, l'invito o il follower restano comunque visibili qui — non spariscono.
+   Vengono confrontati con le notifiche già presenti per non mostrare la stessa cosa due volte. */
+async function loadNotifSafetyNet(){
+ liveInvites=[];liveFollowers=[];
+ if(mode!=='cloud'||!supa||!authUser)return;
+ try{
+   const {data:invs}=await supa.from('club_invites').select('id,club_id,inviter_id').eq('invitee_id',authUser.id).eq('status','pending');
+   const haveInviteFor=new Set((notifRows||[]).filter(n=>n.kind==='invite').map(n=>n.club_id));
+   const todo=(invs||[]).filter(i=>!haveInviteFor.has(i.club_id));
+   if(todo.length){
+     const cids=[...new Set(todo.map(i=>i.club_id))];
+     const {data:cl}=await supa.from('clubs').select('id,name').in('id',cids);
+     const cname={};(cl||[]).forEach(c=>cname[c.id]=c.name);
+     const iids=[...new Set(todo.map(i=>i.inviter_id))];
+     const pr=await pubProfiles('id,name,username',iids);
+     const iname={};(pr||[]).forEach(p=>iname[p.id]=p.username||p.name||'Un lettore');
+     liveInvites=todo.map(i=>({id:'liveinvite-'+i.id,club_id:i.club_id,
+       t:'Invito a un club',p:(iname[i.inviter_id]||'Un lettore')+' ti ha invitato in «'+(cname[i.club_id]||'un club')+'».',
+       when:new Date().toISOString(),synthetic:true}));
+   }
+ }catch(e){}
+ try{
+   const {data:fols}=await supa.from('follows').select('follower_id,created_at').eq('followed_id',authUser.id).order('created_at',{ascending:false}).limit(15);
+   const haveFollowFor=new Set((notifRows||[]).filter(n=>n.kind==='follower').map(n=>n.actor_id));
+   const todo=(fols||[]).filter(f=>!haveFollowFor.has(f.follower_id));
+   if(todo.length){
+     const ids=[...new Set(todo.map(f=>f.follower_id))];
+     const pr=await pubProfiles('id,name,username',ids);
+     const nm={};(pr||[]).forEach(p=>nm[p.id]=p.username||p.name||'Un lettore');
+     liveFollowers=todo.map(f=>({id:'livefollow-'+f.follower_id,
+       t:'Nuovo follower',p:(nm[f.follower_id]||'Un lettore')+' ha iniziato a seguirti.',
+       when:f.created_at||new Date().toISOString(),synthetic:true}));
+   }
+ }catch(e){}
+}
+function unreadNotifCount(){return (notifRows||[]).filter(n=>!n.read_at).length+liveInvites.length+liveFollowers.length;}
 // Legge i profili pubblici. Usa la vista sicura public_profiles se esiste; se il DB
 // risponde con errore (es. migration di sicurezza non ancora applicata), ripiega sulla
 // tabella profiles limitandosi comunque alle sole colonne non sensibili. Così l'app
@@ -2463,12 +2511,14 @@ const SITE_URL='https://rootliv.github.io/App/';
 function inviteLink(id){return SITE_URL+'?club='+clubCode(id)}
 function copyInvite(id,btn){try{navigator.clipboard.writeText(inviteLink(id))}catch(e){}if(btn){const t=btn.innerHTML;btn.innerHTML=icon('check')+' Link copiato!';setTimeout(()=>btn.innerHTML=t,1700)}}
 async function joinByCode(code){
- const id=clubCodeToId(code);if(!id)return false;
- try{const {data:cl}=await supa.from('clubs').select('id').eq('id',id).maybeSingle();
-   if(!cl)return false;
-   await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
-   clubSel=id;clubsLoaded=false;return true;
- }catch(e){return false}
+ const id=clubCodeToId(code);if(!id)return null;
+ try{const {data:cl}=await supa.from('clubs').select('id,name').eq('id',id).maybeSingle();
+   if(!cl)return null;
+   const {error}=await supa.from('club_members').insert({club_id:id,user_id:authUser.id,role:'membro'});
+   const already=!!(error&&error.code==='23505'); // 23505 = eri già membro: non un errore vero
+   if(error&&!already)return null;
+   clubSel=id;clubsLoaded=false;return{id,name:cl.name,already};
+ }catch(e){return null}
 }
 async function deleteClub(id){
  const c=myClubs.find(x=>x.id===id);
@@ -2488,9 +2538,13 @@ async function leaveClub(id){
 }
 async function handlePendingJoin(){
  if(!pendingJoin)return false;const code=pendingJoin;pendingJoin=null;
- const ok=await joinByCode(code);
+ const res=await joinByCode(code);
  try{history.replaceState({},'',location.href.split('#')[0].split('?')[0])}catch(e){}
- return ok;
+ // Un link d'invito aggiunge SUBITO al club, senza un invito da accettare: prima questo
+ // avveniva in silenzio, e si scopriva solo dopo (es. il libro del club spuntava in Home).
+ // Ora lo diciamo chiaramente, appena l'app è pronta.
+ if(res&&!res.already){setTimeout(()=>{try{toast('Ti sei unita al club «'+(res.name||'')+'» 🎉','👥')}catch(e){}},700);}
+ return !!res;
 }
 
 /* ---- Diario condiviso cloud ---- */
@@ -4729,6 +4783,15 @@ async function deleteMeeting(id){
  await cloudLoadMeetings();go('incontri');
 }
 async function openNotifItem(id,cid,go){
+ // Le voci sintetiche (rete di sicurezza: invito o follower letti direttamente dalle
+ // loro tabelle) non hanno una riga in `notifications` da aggiornare: si limitano ad
+ // aprire la sezione giusta. Spariranno da sole non appena il trigger scrive la riga
+ // vera, o quando l'invito viene accettato/rifiutato.
+ if(typeof id==='string'&&(id.startsWith('liveinvite-')||id.startsWith('livefollow-'))){
+   if(cid)clubSel=cid;
+   window.go(go);
+   return;
+ }
  const n=(notifRows||[]).find(x=>x.id===id);
  if(n&&!n.read_at){
    n.read_at=new Date().toISOString();
@@ -4773,7 +4836,8 @@ function renderNotifCloud(){
        ${unread?`<button type="button" class="link-btn sm" onclick="markAllNotifsRead()">Segna tutte come lette</button>`:''}
      </div>
      ${items.length?items.map(it=>{
-       return `<button type="button" class="notif ${it.read?'':'unread'}" data-notif-id="${it.id}" onclick="openNotifItem(${it.id},${it.cid||'null'},'${it.go}')" aria-label="${it.read?'':'Non letta: '}${esc(it.t)}. ${esc(it.p)}">
+       const idJs=typeof it.id==='string'?`'${String(it.id).replace(/'/g,"\\'")}'`:it.id;
+       return `<button type="button" class="notif ${it.read?'':'unread'}" data-notif-id="${esc(String(it.id))}" onclick="openNotifItem(${idJs},${it.cid||'null'},'${it.go}')" aria-label="${it.read?'':'Non letta: '}${esc(it.t)}. ${esc(it.p)}">
          <span class="ni">${icon(it.ic)}</span>
          <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p><time class="notif-when">${notifWhen(it.when)}</time></span>
          ${it.read?'':'<span class="notif-dot" aria-hidden="true"></span>'}
