@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v102">
+<html lang="it" data-app-ver="pagina-v103">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=172">
+<link rel="stylesheet" href="styles.css?v=173">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1262,7 +1262,7 @@ function setStatus(id,st){const b=book(id);if(!b)return;b.status=st;
  syncReadingPos(b.t,(st==='read'&&b.pg)?b.pg:1);
  // Lo scaffale raggruppa/conta i libri per stato (tab "In lettura"/"Letti"/ecc. con
  // i relativi contatori): un refresh solo dello scaffale lasciava i contatori vecchi.
- if(st==='read'){if(current==='libreria')renders.libreria();openBook(id);setTimeout(scrollToRate,80);}
+ if(st==='read'){if(current==='libreria')renders.libreria();else if(current==='home')renderHomeCloud();openBook(id);setTimeout(scrollToRate,80);}
  else{closeModal();go(current);}
 }
 function setBookYear(id,val){const b=book(id);if(!b)return;
@@ -1334,7 +1334,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v172 (aggiungere un libro come Gia letto ora aggiorna subito la libreria, senza dover cambiare sezione)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v173 (aggiornamenti immediati: foto profilo, salvataggio profilo, e Gia letto da Home ora ridisegnano la pagina giusta subito)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -2131,7 +2131,7 @@ function openAvatarMenu(){
 async function saveAvatar(url){
  if(!profile)profile={};profile.data=Object.assign({},profile.data||{},{avatar:url});
  try{await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id)}catch(e){alert('Errore nel salvataggio della foto: '+e.message);return}
- applyMyAvatar();closeModal();if(current==='profilo')renderHomeCloud();toast('Foto aggiornata','📷');
+ applyMyAvatar();closeModal();if(current==='profilo')renderProfiloPage();toast('Foto aggiornata','📷');
 }
 async function removeAvatar(){
  if(!profile||!profile.data||!profile.data.avatar)return;
@@ -2142,7 +2142,7 @@ async function removeAvatar(){
    const {error}=await supa.from('profiles').update({data:profile.data}).eq('id',authUser.id);
    if(error){profile.data.avatar=prevAvatar;alert('Errore di rete, la foto non è stata rimossa. Riprova: '+error.message);return}
  }catch(e){profile.data.avatar=prevAvatar;alert('Errore di rete, la foto non è stata rimossa. Riprova.');return}
- applyMyAvatar();closeModal();if(current==='profilo')renderHomeCloud();
+ applyMyAvatar();closeModal();if(current==='profilo')renderProfiloPage();
 }
 function renderClubCloud(){
  if(!clubsLoaded){view.innerHTML='<div class="card pad"><div class="srch-empty">Carico i tuoi club…</div></div>';
@@ -3652,7 +3652,10 @@ async function saveProfile(){
  const sub=$('#meSub');if(sub&&mode!=='demo')sub.textContent=(profile.username?'@'+profile.username:'Account');
  _profileSaving=false;
  toast('Profilo salvato','✓');
- closeModal();renderHomeCloud();
+ // Questo modale si apre sempre dalla pagina Profilo (onboarding incluso): deve
+ // ridisegnare quella, non sostituirla in silenzio con Home mentre lo stato dice
+ // ancora "sei sul Profilo".
+ closeModal();if(current==='profilo')renderProfiloPage();else renderHomeCloud();
 }
 
 /* ---- Eliminazione account (permanente) ----
