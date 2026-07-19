@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v96">
+<html lang="it" data-app-ver="pagina-v97">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=166">
+<link rel="stylesheet" href="styles.css?v=167">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -327,20 +327,48 @@ function safeImgUrl(u){u=String(u||'').trim();if(!u)return'';
  if(/^(https:|data:image\/)/i.test(u))return u;if(/^http:\/\//i.test(u))return u.replace(/^http:/i,'https:');return''}
 function coverEl(i,t,a,badge,url,statusPair){const su=safeImgUrl(url);
  const statusHtml=statusPair?`<div class="status-badge ${statusPair[1]}">${statusPair[0]}</div>`:'';
- return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" loading="lazy" onerror="this.remove()">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
+ // Open Library, quando non ha davvero la copertina, non dà errore: risponde con successo
+ // ma un'immagine "vuota" di 1 pixel. Niente errore in console, ma sopra il colore di sfondo
+ // restava un puntino invisibile che copriva tutto. Al caricamento controlliamo le dimensioni
+ // vere dell'immagine: se è quel pixel fantasma, la togliamo e torna il colore sottostante.
+ const onload="if(this.naturalWidth<=2||this.naturalHeight<=2)this.remove();";
+ return`<div class="cover" style="${coverStyle(i)}">${statusHtml}${badge?`<div class="badge">${badge}</div>`:''}${su?`<img class="real" src="${esc(su)}" alt="${esc(t||'')}" loading="lazy" onload="${onload}" onerror="this.remove()">`:''}<span class="gloss"></span><div class="cvcap"><div class="ct">${esc(t||'')}</div><div class="ca">${esc(a||'')}</div></div></div>`}
 let _fixingCovers=false;
-/* Corregge una volta gli URL copertina morti (archive.org) salvati nel database,
-   riscrivendoli verso covers.openlibrary.org. Tocca SOLO cover_url: nient'altro. */
+/* Controlla se un URL immagine è un'immagine VERA (non il pixel-fantasma che Open Library
+   restituisce, con successo HTTP, quando non ha davvero la copertina). */
+function _isRealImage(url){
+ return new Promise(res=>{
+   if(!url){res(false);return;}
+   const im=new Image();
+   const to=setTimeout(()=>res(false),5000);
+   im.onload=()=>{clearTimeout(to);res(im.naturalWidth>2&&im.naturalHeight>2);};
+   im.onerror=()=>{clearTimeout(to);res(false);};
+   im.src=url;
+ });
+}
+/* Corregge gli URL copertina morti (archive.org) salvati nel database. Riscrive verso
+   covers.openlibrary.org, ma verifica anche che quella non sia il pixel-fantasma di Open
+   Library (successo HTTP, nessuna immagine vera): in quel caso cerca una copertina reale
+   su Google Books. Tocca SOLO cover_url: nient'altro. */
 async function fixArchiveCovers(){
  if(_fixingCovers)return;_fixingCovers=true;
  try{
    let changed=false;
-   for(const b of (books||[])){
-     if(!b.coverUrl||!/archive\.org\/download\//i.test(b.coverUrl))continue;
-     const good=safeImgUrl(b.coverUrl);
-     if(good&&good!==b.coverUrl){
+   const todo=(books||[]).filter(b=>b.coverUrl&&/archive\.org\/download\//i.test(b.coverUrl)).slice(0,4);
+   for(const b of todo){
+     let good=safeImgUrl(b.coverUrl);
+     if(good&&!(await _isRealImage(good))){
+       // il pixel-fantasma: proviamo una copertina vera su Google Books
+       good='';
+       try{
+         const cands=await fromGoogle((b.t||'')+' '+(b.a||''),true);
+         const withCover=(cands||[]).find(c=>c.coverUrl);
+         if(withCover)good=withCover.coverUrl;
+       }catch(e){}
+     }
+     if(good!==b.coverUrl){
        b.coverUrl=good;changed=true;
-       if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:good}).eq('id',b.id)}catch(e){}}
+       if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:good||null}).eq('id',b.id)}catch(e){}}
      }
    }
    if(changed&&current==='libreria')refreshView();
@@ -1284,7 +1312,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v166 (copertine archive.org: regex corretta per il formato .zip nel percorso)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v167 (copertine: rilevato il pixel-fantasma di Open Library, ora si vede il colore o si cerca una copertina vera su Google)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
