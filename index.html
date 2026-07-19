@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v97">
+<html lang="it" data-app-ver="pagina-v98">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=167">
+<link rel="stylesheet" href="styles.css?v=168">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -346,19 +346,26 @@ function _isRealImage(url){
    im.src=url;
  });
 }
-/* Corregge gli URL copertina morti (archive.org) salvati nel database. Riscrive verso
-   covers.openlibrary.org, ma verifica anche che quella non sia il pixel-fantasma di Open
-   Library (successo HTTP, nessuna immagine vera): in quel caso cerca una copertina reale
-   su Google Books. Tocca SOLO cover_url: nient'altro. */
+/* Registro (locale) dei libri la cui copertina è già stata verificata, per non ripetere
+   il controllo a ogni apertura. Un tentativo precedente e poi ANNULLATO di questa app aveva
+   già scritto nel database alcune copertine "corrette" ma in realtà vuote (il pixel-fantasma
+   di Open Library): quel danno resta nel database anche dopo aver tolto il codice che lo ha
+   causato, quindi qui NON ci limitiamo più a cercare "archive.org" — verifichiamo qualunque
+   copertina non ancora controllata, a prescindere da dove punti oggi. */
+function _coverCheckKey(){return 'pag_cover_checked_'+((authUser&&authUser.id)||'demo')}
+function _coverCheckedSet(){try{return new Set(JSON.parse(localStorage.getItem(_coverCheckKey())||'[]'))}catch(e){return new Set()}}
+function coverChecked(b){try{return _coverCheckedSet().has(String(b.id))}catch(e){return false}}
+function markCoverChecked(b){try{const s=_coverCheckedSet();s.add(String(b.id));localStorage.setItem(_coverCheckKey(),JSON.stringify([...s]))}catch(e){}}
 async function fixArchiveCovers(){
  if(_fixingCovers)return;_fixingCovers=true;
  try{
    let changed=false;
-   const todo=(books||[]).filter(b=>b.coverUrl&&/archive\.org\/download\//i.test(b.coverUrl)).slice(0,4);
+   const todo=(books||[]).filter(b=>b.coverUrl&&!coverChecked(b)).slice(0,5);
    for(const b of todo){
      let good=safeImgUrl(b.coverUrl);
-     if(good&&!(await _isRealImage(good))){
-       // il pixel-fantasma: proviamo una copertina vera su Google Books
+     const ok=good?await _isRealImage(good):false;
+     if(!ok){
+       // copertina morta o pixel-fantasma: proviamo una copertina vera su Google Books
        good='';
        try{
          const cands=await fromGoogle((b.t||'')+' '+(b.a||''),true);
@@ -366,6 +373,7 @@ async function fixArchiveCovers(){
          if(withCover)good=withCover.coverUrl;
        }catch(e){}
      }
+     markCoverChecked(b);
      if(good!==b.coverUrl){
        b.coverUrl=good;changed=true;
        if(mode==='cloud'&&supa){try{await supa.from('books').update({cover_url:good||null}).eq('id',b.id)}catch(e){}}
@@ -1312,7 +1320,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v167 (copertine: rilevato il pixel-fantasma di Open Library, ora si vede il colore o si cerca una copertina vera su Google)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v168 (copertine: riparato il danno lasciato nel database da un tentativo precedente e annullato)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
