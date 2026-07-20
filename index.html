@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v113">
+<html lang="it" data-app-ver="pagina-v114">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=183">
+<link rel="stylesheet" href="styles.css?v=184">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1426,7 +1426,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v183 (mappa letture: analisi ambientazioni parte da sola aprendo la mappa, se lIA e attiva, niente piu pulsante manuale)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v184 (mappa: tolti i pulsanti Aggiorna analisi, ora inutili visto che parte da sola - resta solo Svuota, piu un testo di stato durante lanalisi)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3026,15 +3026,12 @@ async function detectBookLocations(){
  const m=bookLocs();
  // Ririleva sia i libri mai analizzati sia quelli rimasti "senza luogo" (in caso di errori passati)
  const todo=books.filter(b=>{const e=m[normKey(b.t)];return !e||e.noPlace});
- const btn=$('#detectBtn');if(btn){btn.disabled=true;}
  const live=$('#detectLive');
- if(!todo.length){toast('Ambientazioni già sulla mappa','✓');curioMapBusy=false;if(btn)btn.disabled=false;return}
+ if(!todo.length){curioMapBusy=false;return}
  let done=0,noPlaceN=0,errors=0,i=0;
  for(const b of todo){
    i++;
-   const label='Analisi di '+i+' su '+todo.length;
-   if(btn)btn.textContent=label;
-   if(live)live.textContent=label;
+   if(live)live.textContent='Verifico le ambientazioni: '+i+' di '+todo.length+'…';
    try{
      const {data,error}=await supa.functions.invoke('assistente',{body:{message:'In which real-world city and country is the novel "'+b.t+'"'+(b.a?(' by '+b.a):'')+' primarily set? Reply ONLY with "City, Country" in English, or just "Country". If the setting is fictional/imaginary (invented world), or not a real place, or unknown, reply ONLY with the single word: UNKNOWN.'}});
      if(error){errors++;continue}   // errore di rete: NON segna il libro, così verrà ritentato
@@ -3046,21 +3043,20 @@ async function detectBookLocations(){
        if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};done++;}
        else{m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};noPlaceN++;}
      }
-     setBookLocs(m);   // salva progressivamente, ma NON ridisegna (evita di distruggere il bottone del loop)
+     setBookLocs(m);   // salva progressivamente, ma NON ridisegna (evita di interrompere il ciclo)
    }catch(e){errors++}
  }
  curioMapBusy=false;
- if(live)live.textContent='Analisi completata.';
+ if(live)live.textContent='';
  if(errors&&!done&&!noPlaceN)toast('AI non raggiungibile: riprova più tardi','⚠');
- else{
+ else if(done||noPlaceN){
    const parts=[];
    if(done)parts.push(done+' sulla mappa');
    if(noPlaceN)parts.push(noPlaceN+' senza luogo reale');
    if(errors)parts.push(errors+' da riprovare');
-   toast(parts.length?parts.join(' · '):'Nessuna ambientazione trovata','✓');
+   toast(parts.join(' · '),'✓');
  }
  if(current==='mappa')renderMappaCloud();   // un solo re-render, alla fine
- else{const b2=$('#detectBtn');if(b2){b2.disabled=false;b2.textContent='Analizza la libreria'}}
 }
 function clearMapLocs(){if(!confirm('Svuotare la mappa? Le posizioni rilevate verranno rimosse (potrai ririlevarle).'))return;setBookLocs({});toast('Mappa svuotata','✓');renderMappaCloud()}
 function renderMappaCloud(){
@@ -3085,8 +3081,8 @@ function renderMappaCloud(){
    <div class="muted" style="font-size:12.5px;margin-top:2px">Scopri dove sono ambientati i libri della tua libreria.</div>
    ${!empty?`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">
      <span class="pill sky" style="display:inline-flex;align-items:center;gap:5px">${icon('globe')} ${fmtIt(countries.length)} ${countries.length===1?'paese':'paesi'} · ${fmtIt(locs.length)} ${locs.length===1?'libro':'libri'}${todo?` · ${fmtIt(todo)} da verificare`:''}</span>
-     <button id="detectBtn" class="btn ghost sm" onclick="detectBookLocations()" aria-label="Aggiorna analisi ambientazioni">${icon('sparkles')} Aggiorna analisi</button>
      <button class="btn ghost sm danger-text" onclick="clearMapLocs()" aria-label="Svuota mappa">${icon('trash')} Svuota</button>
+     ${(todo&&!(typeof aiOn==='function'&&aiOn()))?`<span class="muted" style="font-size:12px">Attiva l'Assistente IA per rilevarle da sole</span>`:''}
    </div>`:''}
  </div>
  <div id="mapWrap" style="position:relative">
@@ -3094,11 +3090,10 @@ function renderMappaCloud(){
    ${empty?`<div class="map-empty-overlay">
      <span class="icn-badge sky">${icon(books.length?'sparkles':'globe')}</span>
      <h3>Nessuna ambientazione rilevata</h3>
-     <p>${books.length?'Analizza i libri della tua libreria per visualizzare sulla mappa i luoghi in cui sono ambientati.':'Aggiungi libri alla libreria per poterne analizzare le ambientazioni.'}</p>
-     ${books.length?`<button id="detectBtn" class="btn" onclick="detectBookLocations()">${icon('sparkles')} Analizza la libreria</button>`:''}
+     <p>${books.length?((typeof aiOn==='function'&&aiOn())?'Le ambientazioni si rilevano da sole: dai qualche istante, o riapri questa pagina.':'Attiva l\'Assistente IA per rilevare da sole le ambientazioni dei libri della tua libreria.'):'Aggiungi libri alla libreria per poterne analizzare le ambientazioni.'}</p>
    </div>`:''}
  </div>
- <div id="detectLive" aria-live="polite" class="sr-only"></div>
+ <div id="detectLive" aria-live="polite" style="font-size:12px;color:var(--ink-soft);margin-top:6px;min-height:16px"></div>
  ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
  <div class="card pad">
    <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" role="button" tabindex="0" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')" aria-label="Mostra ${esc(nm)} sulla mappa">
