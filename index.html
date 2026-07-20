@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v115">
+<html lang="it" data-app-ver="pagina-v116">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=185">
+<link rel="stylesheet" href="styles.css?v=186">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -418,7 +418,7 @@ const pages=[
  {id:'profilo',ic:'profile',label:'Profilo',title:'Profilo lettore',sub:'Il tuo ritratto di lettore',grp:'Personale',inBotNav:true},
  {id:'libreria',ic:'library',label:'Libreria',title:'La mia libreria',sub:'Letti, in lettura e da leggere',grp:'Personale',inBotNav:true},
  {id:'calendario',ic:'calendar',label:'Piano di lettura',title:'Calendario di lettura',sub:'Arriva in tempo all\'incontro',grp:'Personale'},
- {id:'mappa',ic:'globe',label:'Mappa letture',title:'Mappa del mondo',sub:'Dove ci portano i libri',grp:'Personale'},
+ {id:'mappa',ic:'globe',label:'Mappa letture',title:'Mappa letture',sub:'Dove ci portano i libri',grp:'Personale'},
  {id:'notifiche',ic:'bell',label:'Notifiche',title:'Notifiche',sub:'Tutto ciò che conta',grp:'Personale'},
  {id:'club',ic:'club',label:'Club del libro',title:'I miei club',sub:'I tuoi club del libro',grp:'Club e condivisione',inBotNav:true},
  {id:'diario',ic:'book',label:'Diario condiviso',title:'Diario del libro',sub:'Note senza spoiler',grp:'Club e condivisione'},
@@ -1134,29 +1134,16 @@ function openBook(id){
  // tardiva non deve sostituire cio' che sta guardando ora.
  enrichBook(b).then(ch=>{
    if(!ch||noteEditing||_modalKind!=='book:'+id||!$('#overlay').classList.contains('open'))return;
-   // Aggiornare il contenuto (trama, copertina, genere) arrivato in ritardo comporta ricreare
-   // pezzi di scheda che magari prima non esistevano nel DOM (es. l'intera sezione "Trama" se
-   // era assente). Anziché rincorrere ogni possibile scatto residuo, avvolgiamo l'intero
-   // aggiornamento in una dissolvenza morbida: qualunque cosa cambi si vede come una
-   // transizione voluta, non come un salto improvviso.
-   const modalEl=document.getElementById('modal');
-   let pulsePhase=null;
-   try{const old=document.getElementById('rateStars');const a=old&&old.getAnimations()[0];if(a)pulsePhase=a.currentTime;}catch(e){}
-   const applyUpdate=()=>{
-     openBook(id);
-     try{if(pulsePhase!=null){const nw=document.getElementById('rateStars');const a=nw&&nw.getAnimations()[0];if(a)a.currentTime=pulsePhase;}}catch(e){}
-     if(_scrollToRateOnUpdate===id){
-       // L'utente è qui apposta per votare le stelle: ricentriamole, senza far "scattare"
-       // la vista sotto il dito mentre sta per votare.
-       requestAnimationFrame(()=>requestAnimationFrame(()=>{
-         const el=document.getElementById('rateStars')||document.querySelector('.rate-stars');
-         if(el)el.scrollIntoView({block:'center'});
-       }));
-     }
-     if(modalEl)requestAnimationFrame(()=>{modalEl.style.opacity='1';});
-   };
-   if(modalEl){modalEl.style.opacity='.35';setTimeout(applyUpdate,180);}
-   else applyUpdate();
+   if(_scrollToRateOnUpdate===id){
+     // L'utente è qui apposta per votare le stelle appena dopo aver aggiunto il libro. Ho
+     // provato tre modi diversi di mostrare comunque il contenuto arrivato in ritardo (bloccare
+     // il ridisegno, ridisegnare e ricentrare, ridisegnare con una dissolvenza morbida): in
+     // tutti si vedeva ancora un piccolo scatto sul telefono vero. Meglio non rischiare più:
+     // qui NON si ridisegna nulla mentre vota. I dati (trama, genere, copertina) sono già
+     // salvati e si vedranno da soli, intatti, la prossima volta che apre questo libro.
+     return;
+   }
+   openBook(id);
  });
 }
 /* Card di stato in cima al dettaglio: completamento (letto), avanzamento (in lettura) o invito (da leggere) */
@@ -1426,7 +1413,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v185 (mappa: riprogettata da capo - tolto anche Svuota, distruttivo e ridondante col sistema che ora si autocorregge; barra ridotta alla sola pillola statistiche)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v186 (voto libro: niente piu ridisegno durante il voto, garanzia zero scatti; titolo Mappa allineato al menu)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
