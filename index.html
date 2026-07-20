@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v117">
+<html lang="it" data-app-ver="pagina-v118">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=187">
+<link rel="stylesheet" href="styles.css?v=188">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1413,7 +1413,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v187 (mappa: risolto il doppio caricamento - i nuovi segnaposto si aggiungono a quella gia aperta invece di ricrearla da zero)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v188 (mappa: pillola statistiche spostata come badge semi-trasparente sopra la mappa, niente piu riga di testo separata)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3075,13 +3075,11 @@ function renderMappaCloud(){
  <div style="margin-bottom:14px">
    <h3 style="font-size:17px">Le tue letture nel mondo</h3>
    <div class="muted" style="font-size:12.5px;margin-top:2px">Scopri dove sono ambientati i libri della tua libreria.</div>
-   ${!empty?`<div style="margin-top:12px">
-     <span class="pill sky" style="display:inline-flex;align-items:center;gap:5px">${icon('globe')} ${fmtIt(countries.length)} ${countries.length===1?'paese':'paesi'} · ${fmtIt(locs.length)} ${locs.length===1?'libro':'libri'}</span>
-     ${(todo&&!(typeof aiOn==='function'&&aiOn()))?`<div class="muted" style="font-size:12px;margin-top:8px">${icon('sparkles')} Attiva l'Assistente IA per rilevare da sole ${todo===1?"l'ambientazione mancante":`le ${fmtIt(todo)} ambientazioni mancanti`}.</div>`:''}
-   </div>`:''}
+   ${(!empty&&todo&&!(typeof aiOn==='function'&&aiOn()))?`<div class="muted" style="font-size:12px;margin-top:10px">${icon('sparkles')} Attiva l'Assistente IA per rilevare da sole ${todo===1?"l'ambientazione mancante":`le ${fmtIt(todo)} ambientazioni mancanti`}.</div>`:''}
  </div>
  <div id="mapWrap" style="position:relative">
    <div id="map" style="${empty?'height:220px':''}"></div>
+   ${!empty?`<span class="pill sky map-stat-badge">${icon('globe')} ${fmtIt(countries.length)} ${countries.length===1?'paese':'paesi'} · ${fmtIt(locs.length)} ${locs.length===1?'libro':'libri'}</span>`:''}
    ${empty?`<div class="map-empty-overlay">
      <span class="icn-badge sky">${icon(books.length?'sparkles':'globe')}</span>
      <h3>Nessuna ambientazione rilevata</h3>

@@ -339,6 +339,11 @@ input[type=range]{accent-color:var(--coral)}
 .place-count{flex:none;font-family:'Fraunces',serif;font-size:19px;font-weight:600;color:var(--primary);min-width:24px;text-align:right}
 .leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:40px!important;color:var(--ink)!important;background:var(--surface)!important}
 .leaflet-control-zoom{border:1px solid var(--line)!important;box-shadow:var(--shadow-sm)!important}
+/* Badge statistiche sulla mappa: in alto a destra (i controlli di zoom di Leaflet stanno
+   a sinistra), semi-trasparente, sopra le tessere — sostituisce la riga di testo separata
+   che c'era prima, cosi' la mappa e' la prima cosa che si vede aprendo la pagina. */
+.map-stat-badge{position:absolute;top:12px;right:12px;z-index:1000;background:rgba(255,253,248,.88);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);box-shadow:var(--shadow-sm)}
+[data-theme="dark"] .map-stat-badge{background:rgba(38,41,46,.88)}
 .leaflet-control-attribution{background:rgba(255,253,248,.82)!important;color:var(--ink-soft)!important;font-size:10.5px!important}
 [data-theme="dark"] .leaflet-control-attribution{background:rgba(38,41,46,.85)!important}
 [data-theme="dark"] .leaflet-control-attribution a{color:var(--ink-soft)!important}
