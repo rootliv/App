@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v107">
+<html lang="it" data-app-ver="pagina-v108">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=177">
+<link rel="stylesheet" href="styles.css?v=178">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -231,6 +231,13 @@ const view=$('#view');
 function findLibBook(title,author){
  return (books||[]).find(x=>normKey(x.t)===normKey(title||'')&&(!author||!x.a||normKey(x.a)===normKey(author)));
 }
+/* Segnale di "pronto": si attiva SOLO quando l'app sa già cosa mostrare (accesso, Home, o
+   la schermata di reimpostazione password) — mai prima. Lo splash aspetta questo segnale
+   prima di svelarsi, così sotto c'è sempre la schermata GIUSTA e definitiva, non uno stato
+   intermedio (es. un lampo della schermata di accesso prima di saltare in Home). */
+let _appReadyResolve;
+const appReadyPromise=new Promise(res=>{_appReadyResolve=res;});
+function markAppReady(){if(_appReadyResolve){_appReadyResolve();_appReadyResolve=null;}}
 function book(id){return books.find(b=>b.id===id)}
 /* I generi vengono rilevati automaticamente da Wikidata (P136, etichette italiane).
    Qui sotto la via manuale, per quando il rilevamento non trova nulla o sbaglia:
@@ -1376,7 +1383,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v177 (splash screen: dura 2.2s invece di sparire troppo in fretta)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v178 (splash: coordinato con la vera prontezza dellapp, niente piu lampo di accesso prima di Home su reti lente)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -5092,6 +5099,7 @@ function showPasswordRecoveryScreen(){
  clearErr();
  if(!showPasswordRecoveryScreen._hintBound){showPasswordRecoveryScreen._hintBound=true;passwordHint('rcPass','rcHint',()=>({}));}
  if(!showPasswordRecoveryScreen._confirmHintBound){showPasswordRecoveryScreen._confirmHintBound=true;passwordConfirmHint('rcPass','rcConfirm','rcConfirmHint');}
+ markAppReady();
 }
 async function completePasswordRecovery(){
  clearErr();
@@ -5285,6 +5293,7 @@ function refreshView(){
 }
 
 function startApp(target){
+ markAppReady();
  $('#auth').style.display='none';
  $('#appRoot').style.display='flex';
  const name=mode==='demo'?'Ospite Demo':((profile&&profile.name)||'Lettore');
@@ -5370,6 +5379,7 @@ function obGo(what){
  }
  if(passwordRecoveryActive)return;
  if(pendingJoin){const e=$('#authLead');if(e)e.textContent='Accedi o registrati per entrare nel club a cui hai ricevuto un invito.';const tt=$('#authTitle');if(tt)tt.textContent='Hai un invito a un club 📖';}
+ markAppReady(); // qui restiamo sulla schermata di accesso (nessuna sessione valida): è pronta
 })();
 
 /* ---- PWA: registra il service worker (installabilità + ripiego offline).
@@ -5426,13 +5436,19 @@ if('serviceWorker' in navigator){
  });
 }
 
-/* ---- Splash screen: resta visibile 2.2 secondi, tempo di vedere bene logo e nome,
-   poi dissolvi e rimuovi dal DOM. ---- */
+/* ---- Splash screen: resta visibile ALMENO 2.2 secondi (tempo di vedere bene logo e nome),
+   MA aspetta anche che l'app sappia davvero cosa mostrare sotto (accesso o Home), così la
+   dissolvenza rivela sempre la schermata GIUSTA e definitiva — mai un lampo dell'accesso
+   seguito da un salto brusco in Home se la rete è lenta. Tetto di sicurezza a 4.2s: se per
+   qualunque motivo il segnale non arrivasse, lo splash non resta bloccato per sempre. ---- */
 (function(){
  const sp=document.getElementById('splash');if(!sp)return;
  let done=false;
  const hide=()=>{if(done)return;done=true;sp.classList.add('hide');setTimeout(()=>{try{sp.remove()}catch(e){}},650)};
- setTimeout(hide,2200);
+ const minDelay=new Promise(res=>setTimeout(res,2200));
+ const ready=(typeof appReadyPromise!=='undefined')?appReadyPromise:Promise.resolve();
+ const safetyCap=new Promise(res=>setTimeout(res,4200));
+ Promise.race([Promise.all([minDelay,ready]),safetyCap]).then(hide);
 })();
 </script>
 </body>
