@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v108">
+<html lang="it" data-app-ver="pagina-v109">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=178">
+<link rel="stylesheet" href="styles.css?v=179">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1122,7 +1122,18 @@ function openBook(id){
  if(b.status==='reading'&&b.pg)setTimeout(()=>bmDragSetup(b.id,b.pg),50);
  // Se nel frattempo l'utente ha aperto un altro libro (o il selettore del genere), la risposta
  // tardiva non deve sostituire cio' che sta guardando ora.
- enrichBook(b).then(ch=>{if(ch&&!noteEditing&&_modalKind==='book:'+id&&$('#overlay').classList.contains('open'))openBook(id)});
+ enrichBook(b).then(ch=>{
+   if(!ch||noteEditing||_modalKind!=='book:'+id||!$('#overlay').classList.contains('open'))return;
+   if(_scrollToRateOnUpdate===id){
+     // L'utente è qui apposta per votare le stelle appena dopo aver aggiunto il libro: non
+     // ridisegniamo la scheda ora, perché farebbe spostare la vista proprio mentre sta
+     // toccando le stelle (anche "ricentrare" con uno scroll automatico si sente come uno
+     // scatto). I dati arrivati tardi (trama, genere, copertina) sono già salvati: si vedranno
+     // da soli la prossima volta che apre questo libro, senza disturbare il voto ora.
+     return;
+   }
+   openBook(id);
+ });
 }
 /* Card di stato in cima al dettaglio: completamento (letto), avanzamento (in lettura) o invito (da leggere) */
 function bookStatusCard(b){
@@ -1322,7 +1333,15 @@ function setBookYear(id,val){const b=book(id);if(!b)return;
  if(current==='libreria')renders.libreria();
  toast(y?('Anno di lettura: '+y):'Anno rimosso','📅');
 }
-function scrollToRate(){const el=$('#rateStars')||document.querySelector('.rate-stars');if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){el.scrollIntoView()}}}
+function scrollToRate(){
+ const doScroll=()=>{const el=$('#rateStars')||document.querySelector('.rate-stars');if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){el.scrollIntoView()}}};
+ // Stesso motivo di openBookToRate: i font web possono cambiare leggermente l'altezza del
+ // testo poco dopo il primo scroll, spostando le stelle. Aspettiamo che si siano assestati,
+ // e ricentriamo comunque una seconda volta come rete di sicurezza.
+ const afterFonts=(document.fonts&&document.fonts.ready)?document.fonts.ready.catch(()=>{}):Promise.resolve();
+ afterFonts.then(()=>requestAnimationFrame(doScroll));
+ setTimeout(doScroll,600);
+}
 /* Segnalibro virtuale a numero di pagina. Internamente il progresso resta in % (b.prog) per
    compatibilità, ma l'utente ragiona in pagine: "sono a pagina 130 di 302". */
 function setTotalPages(id,total){const b=book(id);if(!b)return;total=parseInt(total)||0;
@@ -1383,7 +1402,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v178 (splash: coordinato con la vera prontezza dellapp, niente piu lampo di accesso prima di Home su reti lente)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v179 (voto libro: lo scroll verso le stelle ora aspetta i font web, niente piu salti di vista)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1774,12 +1793,26 @@ async function quickAdd(i,status,fy){
 }
 /* Apre il dettaglio libro e posiziona SUBITO la vista sulle stelle, una volta sola,
    senza animazioni che rimbalzano. */
+let _scrollToRateOnUpdate=null; // se impostato, un ri-disegno per arricchimento tardivo ririporta le stelle al centro
 function openBookToRate(id){
+ _scrollToRateOnUpdate=id;
  openBook(id);
- requestAnimationFrame(()=>{requestAnimationFrame(()=>{
+ let scrolled=false;
+ const doScroll=()=>{
    const el=document.getElementById('rateStars')||document.querySelector('.rate-stars');
-   if(el){el.scrollIntoView({block:'center'});el.classList.add('pulse');}
- });});
+   if(!el)return;
+   el.scrollIntoView({block:'center'});
+   if(!scrolled){scrolled=true;el.classList.add('pulse');}
+ };
+ // I font web (Fraunces/Inter) caricano con "swap": il testo appare subito con un font di
+ // scorta e cambia poco dopo — quel cambio altera leggermente l'altezza delle righe e può
+ // spostare le stelle proprio subito dopo averle centrate. Aspettiamo che i font abbiano
+ // finito di sistemarsi prima di scorrere, invece di scorrere alla cieca.
+ const afterFonts=(document.fonts&&document.fonts.ready)?document.fonts.ready.catch(()=>{}):Promise.resolve();
+ afterFonts.then(()=>requestAnimationFrame(()=>requestAnimationFrame(doScroll)));
+ // Rete di sicurezza: se qualcos'altro (immagine, dato arrivato tardi) sposta ancora la
+ // vista dopo, un secondo passaggio la ricentra senza far ripartire l'effetto pulse.
+ setTimeout(doScroll,600);
 }
 function askReadYear(i){
  const s=searchResults[i];if(!s)return;
@@ -5000,7 +5033,7 @@ function markNotifsSeen(){ updateBellDot(); }
 let _modalReturnFocus=null;
 function _modalFocusables(){const m=$('#modal');if(!m)return[];return Array.prototype.slice.call(m.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(el=>el.offsetParent!==null);}
 function openOverlay(){_modalReturnFocus=document.activeElement;$('#overlay').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>{const f=_modalFocusables();if(f.length)f[0].focus();else{const m=$('#modal');if(m)m.focus();}},30);}
-function closeModal(){_modalKind=null;$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}try{if(_modalReturnFocus&&document.body.contains(_modalReturnFocus))_modalReturnFocus.focus();}catch(e){}_modalReturnFocus=null;}
+function closeModal(){_modalKind=null;_scrollToRateOnUpdate=null;$('#overlay').classList.remove('open');document.body.style.overflow='';try{if(typeof _avCleanup==='function'&&_avEd)_avCleanup()}catch(e){}try{window.removeEventListener('mousemove',_bmMove);window.removeEventListener('mouseup',_bmUp);_bmDrag=null}catch(e){}try{if(_modalReturnFocus&&document.body.contains(_modalReturnFocus))_modalReturnFocus.focus();}catch(e){}_modalReturnFocus=null;}
 document.addEventListener('keydown',e=>{
   if(!$('#overlay').classList.contains('open'))return;
   if(e.key==='Escape'){closeModal();return;}
