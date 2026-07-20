@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v116">
+<html lang="it" data-app-ver="pagina-v117">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=186">
+<link rel="stylesheet" href="styles.css?v=187">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -1413,7 +1413,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v186 (voto libro: niente piu ridisegno durante il voto, garanzia zero scatti; titolo Mappa allineato al menu)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v187 (mappa: risolto il doppio caricamento - i nuovi segnaposto si aggiungono a quella gia aperta invece di ricrearla da zero)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -3016,6 +3016,7 @@ async function detectBookLocations(){
  const live=$('#detectLive');
  if(!todo.length){curioMapBusy=false;return}
  let done=0,noPlaceN=0,errors=0,i=0;
+ const newPts=[]; // le ambientazioni trovate in QUESTO giro: le aggiungiamo alla mappa senza ricaricarla tutta
  for(const b of todo){
    i++;
    if(live)live.textContent='Verifico le ambientazioni: '+i+' di '+todo.length+'…';
@@ -3027,7 +3028,7 @@ async function detectBookLocations(){
        m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};noPlaceN++;
      }else{
        const g=await geocodeOne(ans);
-       if(g){m[normKey(b.t)]={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};done++;}
+       if(g){const entry={title:b.t,author:b.a||'',place:ans,country:g.country||'',lat:g.lat,lng:g.lng};m[normKey(b.t)]=entry;newPts.push(entry);done++;}
        else{m[normKey(b.t)]={title:b.t,author:b.a||'',noPlace:true};noPlaceN++;}
      }
      setBookLocs(m);   // salva progressivamente, ma NON ridisegna (evita di interrompere il ciclo)
@@ -3043,7 +3044,16 @@ async function detectBookLocations(){
    if(errors)parts.push(errors+' da riprovare');
    toast(parts.join(' · '),'✓');
  }
- if(current==='mappa')renderMappaCloud();   // un solo re-render, alla fine
+ if(current==='mappa'){
+   // Se la mappa è già a schermo, aggiungiamo solo i NUOVI segnaposto a quella esistente
+   // (niente tessere/vista da ricaricare: la mappa non "sparisce e ricompare" una seconda
+   // volta). Un ridisegno completo serve solo se la mappa non era ancora mai stata creata
+   // (es. prima ambientazione in assoluto, prima si vedeva solo lo stato vuoto).
+   if(mapObj&&newPts.length)addMapMarkers(mapObj,newPts);
+   else if(!mapObj)renderMappaCloud();
+   // Le statistiche testuali (pillola, elenco paesi) restano aggiornate alla prossima visita:
+   // qui contava evitare il doppio caricamento della mappa vera e propria.
+ }
 }
 function renderMappaCloud(){
  // Mostriamo solo le ambientazioni dei libri ancora in libreria: se un libro è stato
@@ -3302,6 +3312,21 @@ function normCountry(c){
  }
  return raw;
 }
+function mapMarkerIcon(n){return L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:12px;font-weight:700">'+(n>1?n:'')+'</span></div>',iconSize:[30,30],iconAnchor:[15,28]})}
+/* Aggiunge i marker per un elenco di ambientazioni a una mappa GIÀ esistente, senza toccare
+   tessere/vista/marker già presenti — usata sia per il primo caricamento sia per aggiungere
+   in modo leggero le ambientazioni trovate in sottofondo (vedi detectBookLocations). */
+function addMapMarkers(map,locs){
+ const pts=locs.filter(l=>l.lat!=null);
+ const groups={};
+ pts.forEach(l=>{const key=l.lat.toFixed(2)+','+l.lng.toFixed(2);(groups[key]=groups[key]||[]).push(l);});
+ Object.values(groups).forEach(g=>{
+   const first=g[0];
+   const popup='<b>'+esc(first.place||normCountry(first.country)||'')+'</b><br>'+g.map(l=>esc(l.title)+(l.author?(' — '+esc(l.author)):'')).join('<br>');
+   L.marker([first.lat,first.lng],{icon:mapMarkerIcon(g.length)}).addTo(map).bindPopup(popup);
+ });
+ return pts;
+}
 function initMapCloud(locs){
  if(mapObj){try{mapObj.remove()}catch(e){}mapObj=null}
  if(typeof L==='undefined')return;
@@ -3309,17 +3334,7 @@ function initMapCloud(locs){
  mapObj.on('focus',()=>mapObj.scrollWheelZoom.enable());
  mapObj.on('blur',()=>mapObj.scrollWheelZoom.disable());
  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'Leaflet | © OpenStreetMap | © CARTO',maxZoom:18}).addTo(mapObj);
- const mkIcon=(n)=>L.divIcon({className:'',html:'<div style="background:var(--brand-solid);color:#fff;width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;box-shadow:0 4px 10px rgba(0,0,0,.35);border:2px solid #caa15c"><span style="transform:rotate(45deg);font-size:12px;font-weight:700">'+(n>1?n:'')+'</span></div>',iconSize:[30,30],iconAnchor:[15,28]});
- const pts=locs.filter(l=>l.lat!=null);
- // Aggrega i libri con la stessa ambientazione (coordinate arrotondate) in un solo marker,
- // invece di sovrapporre marker identici senza indicazione del numero di libri.
- const groups={};
- pts.forEach(l=>{const key=l.lat.toFixed(2)+','+l.lng.toFixed(2);(groups[key]=groups[key]||[]).push(l);});
- Object.values(groups).forEach(g=>{
-   const first=g[0];
-   const popup='<b>'+esc(first.place||normCountry(first.country)||'')+'</b><br>'+g.map(l=>esc(l.title)+(l.author?(' — '+esc(l.author)):'')).join('<br>');
-   L.marker([first.lat,first.lng],{icon:mkIcon(g.length)}).addTo(mapObj).bindPopup(popup);
- });
+ const pts=addMapMarkers(mapObj,locs);
  fixMapSize(mapObj);
  if(pts.length){try{const g=L.featureGroup(pts.map(l=>L.marker([l.lat,l.lng])));setTimeout(()=>{try{mapObj.fitBounds(g.getBounds().pad(0.35))}catch(e){}},160)}catch(e){}}
 }
