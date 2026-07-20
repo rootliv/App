@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v104">
+<html lang="it" data-app-ver="pagina-v105">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=174">
+<link rel="stylesheet" href="styles.css?v=175">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -673,6 +673,7 @@ let libTab='all';
 renders.libreria=()=>{
  if(typeof autoEnrichGenres==='function')autoEnrichGenres();
  if(typeof fixArchiveCovers==='function')fixArchiveCovers();
+ if(typeof autoFixForeignTitles==='function')autoFixForeignTitles();
  const nReading=books.filter(b=>b.status==='reading').length;
  const nToread=books.filter(b=>b.status==='toread').length;
  const nRead=books.filter(b=>b.status==='read').length;
@@ -1227,10 +1228,51 @@ function saveEditBookNote(id,idx){
  editNoteIdx=-1;saveNotes(id,arr);openBook(id);
 }
 function cancelEditBookNote(id){editNoteIdx=-1;openBook(id);}
+/* Registro (locale) dei libri per cui abbiamo già cercato l'edizione italiana SOLO per il
+   titolo. Segnato "controllato" solo se la ricerca è andata a buon fine (anche senza
+   trovare nulla): se fallisce per rete/quota, NON lo segniamo, così riprova più tardi. */
+function _titleCheckKey(){return 'pag_title_checked_'+((authUser&&authUser.id)||'demo')}
+function _titleCheckedSet(){try{return new Set(JSON.parse(localStorage.getItem(_titleCheckKey())||'[]'))}catch(e){return new Set()}}
+function titleChecked(b){try{return _titleCheckedSet().has(String(b.id))}catch(e){return false}}
+function markTitleChecked(b){try{const s=_titleCheckedSet();s.add(String(b.id));localStorage.setItem(_titleCheckKey(),JSON.stringify([...s]))}catch(e){}}
+/* Corregge SOLO il titolo di un libro già completo (trama+copertina presenti — il caso
+   tipico dei libri stranieri, che arrivano completi nella lingua originale). Tocca
+   ESCLUSIVAMENTE t/originalTitle, sia in memoria che nel salvataggio: mai coverUrl, mai
+   trama, qualunque cosa suggerisca la ricerca. Un tentativo precedente (poi annullato)
+   aveva rotto le copertine toccandole proprio in un passaggio come questo. */
+async function fixTitleOnly(b){
+ if(titleChecked(b))return false;
+ let n;
+ try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}
+ catch(e){return false;} // errore di rete/quota: non segniamo, riproveremo alla prossima visita
+ markTitleChecked(b); // ricerca andata a buon fine (con o senza risultato utile)
+ if(!n||!n.hasItalian||!n.title||normKey(n.title)===normKey(b.t))return false;
+ if(!b.originalTitle)b.originalTitle=n.originalTitle||b.t;
+ b.t=n.title;
+ persistBook(b.id,{title:b.t}); // SOLO il titolo: cover_url e plot non vengono nemmeno nominati
+ return true;
+}
+let _titleFixing=false;
+/* In sottofondo, quando si entra in Libreria, porta in italiano i titoli dei libri già
+   completi (stranieri) senza doverli aprire uno per uno. Pochi alla volta. */
+async function autoFixForeignTitles(){
+ if(_titleFixing||mode!=='cloud')return;_titleFixing=true;
+ try{
+   const todo=(books||[]).filter(b=>!titleChecked(b)&&b.t&&(!b.set||!b.set.length)&&validTrama(b.trama)&&b.coverUrl).slice(0,5);
+   let changed=false;
+   for(const b of todo){if(await fixTitleOnly(b))changed=true;}
+   if(changed&&current==='libreria')refreshView();
+ }catch(e){}
+ _titleFixing=false;
+}
 async function enrichBook(b){
  if(b.enriched)return false;
  if(b.set&&b.set.length){b.enriched=true;return false;} // libri d'esempio già curati
- if(validTrama(b.trama)&&b.coverUrl){b.enriched=true;return false;} // già completo: non sprecare quota
+ if(validTrama(b.trama)&&b.coverUrl){
+   b.enriched=true;
+   fixTitleOnly(b); // in sottofondo, non blocca: tocca solo il titolo (vedi sopra)
+   return false;
+ }
  b._tries=(b._tries||0)+1;
  let n;try{n=await normalizeBook({t:b.t,a:b.a,originalTitle:b.originalTitle,isbn:b.isbn,coverUrl:b.coverUrl,trama:b.trama,pages:b.pg});}catch(e){if(b._tries>=3)b.enriched=true;return false}
  if(!n){if(b._tries>=3)b.enriched=true;return false}
@@ -1334,7 +1376,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v174 (Curiosita: Raccontami di piu ora dice allAssistente DI QUALE libro si tratta, non parlava piu a caso di un altro libro)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v175 (titoli stranieri: fix chirurgico che tocca SOLO il titolo, mai copertina/trama, testato a fondo)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
