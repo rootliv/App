@@ -1,10 +1,11 @@
 // Supabase Edge Function: "assistente" — assistente del club del libro, MULTI-PROVIDER.
 // Provider con piani GRATUITI e SENZA carta di credito per ottenere la chiave:
-//   1) GROQ_API_KEY      → console.groq.com  (Llama, veloce, free, no carta)
-//   2) OPENROUTER_API_KEY→ openrouter.ai      (modelli :free, free, no carta)
+//   1) GEMINI_API_KEY     → aistudio.google.com (Gemini Flash, generoso, free, no carta) — provato PER PRIMO
+//   2) GROQ_API_KEY       → console.groq.com  (Llama, veloce, free, no carta) — riserva
+//   3) OPENROUTER_API_KEY → openrouter.ai      (modelli :free, free, no carta) — riserva
 // Non restituisce MAI 502: se nessun provider risponde → 200 {unavailable:true}
 // così il frontend usa l'"Assistente base gratuito". Imposta i secret con:
-//   supabase secrets set GROQ_API_KEY=...   (poi: supabase functions deploy assistente)
+//   supabase secrets set GEMINI_API_KEY=...   (poi: supabase functions deploy assistente)
 //
 // Note di sicurezza:
 // - verify_jwt di Supabase è attivo di default per le Edge Function: solo richieste con un
@@ -13,6 +14,7 @@
 //   "best effort" per istanza (non è un rate limit distribuito: per una protezione robusta a
 //   livello di progetto, valutare Supabase rate limiting / un contatore su tabella dedicata).
 
+const GEMINI = Deno.env.get("GEMINI_API_KEY") || "";
 const GROQ = Deno.env.get("GROQ_API_KEY") || "";
 const OPENROUTER = Deno.env.get("OPENROUTER_API_KEY") || "";
 // Origine consentita per le richieste browser: se impostata, sostituisce il wildcard "*".
@@ -110,6 +112,7 @@ Deno.serve(async (req) => {
     const ctx = (context && typeof context === "object") ? context : {};
 
     const providers: Array<[string, () => Promise<string | null>]> = [];
+    if (GEMINI) providers.push(["Gemini", () => viaOpenAICompatible("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", GEMINI, "gemini-2.5-flash", safeMessage, ctx)]);
     if (GROQ) providers.push(["Groq (Llama 3.3)", () => viaOpenAICompatible("https://api.groq.com/openai/v1/chat/completions", GROQ, "llama-3.3-70b-versatile", safeMessage, ctx)]);
     if (OPENROUTER) providers.push(["OpenRouter", () => viaOpenAICompatible("https://openrouter.ai/api/v1/chat/completions", OPENROUTER, "meta-llama/llama-3.3-70b-instruct:free", safeMessage, ctx)]);
 
