@@ -1,10 +1,13 @@
 // Supabase Edge Function: "send-push" — invia una notifica push Android (via Firebase
 // Cloud Messaging) a un utente, leggendo i suoi token registrati in device_tokens.
 //
-// Chi la chiama: SOLO il trigger Postgres `notify_new_club_invite` (vedi migrazione
-// 20260715_push_notifications.sql), mai il client web direttamente. La verifica JWT di
-// piattaforma di Supabase richiede comunque un Authorization Bearer valido: il trigger
-// passa la service_role key del progetto (mai esposta al sito pubblico).
+// Chi la chiama: SOLO il trigger Postgres `notify_new_club_invite`/`notify()` (vedi
+// migrazioni push_notifications e unify_notifications_push), mai il client web
+// direttamente. Il trigger passa la service_role key del progetto (mai esposta al sito
+// pubblico) nell'header Authorization — QUESTA FUNZIONE ORA LA VERIFICA ESPLICITAMENTE
+// (vedi sotto): senza questo controllo, la sola verifica JWT di piattaforma di Supabase
+// non basta, perché accetta anche la chiave anon pubblica, permettendo a chiunque di
+// invocare la funzione direttamente e inviare notifiche arbitrarie a qualsiasi utente.
 //
 // Configurazione richiesta (una tantum, vedi docs/NOTIFICHE_PUSH_SETUP.md):
 // - Secret "FIREBASE_SERVICE_ACCOUNT" con il JSON dell'account di servizio Firebase
@@ -53,6 +56,17 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
 Deno.serve(async (req: Request) => {
   try {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+
+    // FIX SICUREZZA: prima, chiunque avesse la chiave pubblica anon (già visibile nel
+    // codice del sito) poteva chiamare direttamente questa funzione e far inviare una
+    // notifica push con TITOLO/TESTO a piacere a QUALSIASI user_id — la verifica JWT di
+    // piattaforma di Supabase da sola non basta, perché accetta anche la chiave anon.
+    // Qui verifichiamo esplicitamente che il chiamante possieda la VERA service_role key
+    // (nota solo al trigger interno del database, mai esposta al client pubblico).
+    const authHeader = req.headers.get('Authorization') || '';
+    if (authHeader !== `Bearer ${SERVICE_ROLE_KEY}`) {
+      return new Response('Unauthorized', { status: 401 });
+    }
 
     const { user_id, title, body } = await req.json();
     if (!user_id || !title) return new Response('Parametri mancanti (user_id, title)', { status: 400 });
