@@ -125,10 +125,12 @@ Deno.serve(async (req) => {
     // nessun provider disponibile/funzionante → il frontend userà l'assistente base
     return json({ unavailable: true });
   } catch (e) {
-    // Espone il dettaglio al client (non a un utente qualsiasi: solo a chi ha accesso alla
-    // console del browser dell'app). In questa funzione non può mai contenere segreti (le
-    // chiavi provider non entrano mai in "e"): per un progetto piccolo, vederlo subito nella
-    // risposta vale più della teorica igiene di nasconderlo e dover aprire i log ogni volta.
-    return json({ unavailable: true, reason: String(e) });
+    // Prima il dettaglio dell'errore veniva rimandato al client (String(e)): comodo per il
+    // debug, ma un'esposizione di informazioni interne non necessaria (nome di librerie,
+    // dettagli di rete) che uno scanner di sicurezza segnala correttamente come rischio,
+    // anche se qui non ci sono mai chiavi. Il dettaglio resta nei log della funzione
+    // (console.error), consultabili da chi ha accesso al progetto Supabase.
+    console.error('assistente: errore interno:', e);
+    return json({ unavailable: true });
   }
 });

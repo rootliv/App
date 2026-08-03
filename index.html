@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it" data-app-ver="pagina-v118">
+<html lang="it" data-app-ver="pagina-v119">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link rel="stylesheet" href="styles.css?v=188">
+<link rel="stylesheet" href="styles.css?v=189">
 <script>
 (function(){try{var t=localStorage.getItem('pagina_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 var THEME_ICON_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M4.2 4.2l1.7 1.7M18.1 18.1l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.2 19.8l1.7-1.7M18.1 5.9l1.7-1.7"/></svg>';
@@ -260,7 +260,7 @@ function genreChips(id,back){
  const b=book(id);if(!b)return'';
  const q=(_genreQuery||'').trim().toLowerCase();
  const list=genreChoices().filter(g=>!q||g.toLowerCase().includes(q));
- const esc2=g=>g.replace(/'/g,"\\'");
+ const esc2=g=>escJsAttr(g);
  let html=list.map(g=>`<button class="pill pill-btn ${g===b.g?'green':''}" onclick="saveBookGenre(${id},'${esc2(g)}','${back}')">${esc(g)}</button>`).join('');
  const exact=genreChoices().some(g=>g.toLowerCase()===q);
  if(q&&!exact){
@@ -1413,7 +1413,7 @@ let searchResults=[];
 let searchTimer=null;
 const APP_LANG='it';                       // lingua dell'app: priorità ai dati italiani
 let GBLOCK=false;                          // diventa true se Google Books esaurisce la quota (429/403): si passa alle altre fonti
-console.log('%cPàgina build: v188 (mappa: pillola statistiche spostata come badge semi-trasparente sopra la mappa, niente piu riga di testo separata)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
+console.log('%cPàgina build: v189 (sicurezza: corretti 6 avvisi CodeQL - escape onclick corretto, stripHtml rafforzata)','color:#1f6b57;font-weight:700'); // marcatore versione: se NON lo vedi, stai caricando codice vecchio (cache)
 /* ===== CHIAVE API GOOGLE BOOKS =====
    Incolla la tua chiave tra gli apici qui sotto (poi commit + push).
    In alternativa, per provarla SENZA pubblicare: apri la Console e digita
@@ -1425,7 +1425,7 @@ console.log('%cPàgina build: v188 (mappa: pillola statistiche spostata come bad
 let GB_KEY='';
 try{const k=(localStorage.getItem('gbkey')||'').trim();if(k)GB_KEY=k;}catch(e){}
 function gbKey(){return GB_KEY?('&key='+encodeURIComponent(GB_KEY)):''}
-function stripHtml(s){return(s||'').replace(/<[^>]+>/g,'').trim()}
+function stripHtml(s){s=(s||'');let prev;do{prev=s;s=s.replace(/<[^>]*>/g,'')}while(s!==prev);return s.replace(/[<>]/g,'').trim()}
 function httpsImg(u){return(u||'').replace(/^http:\/\//,'https://')}
 function validTrama(t){return!!t&&t.trim().length>5&&!/non disponibile/i.test(t)}
 function cleanIsbn(s){return(s||'').toString().replace(/[^0-9Xx]/g,'').toUpperCase()}
@@ -3089,7 +3089,7 @@ function renderMappaCloud(){
  <div id="detectLive" aria-live="polite" style="font-size:12px;color:var(--ink-soft);margin-top:6px"></div>
  ${(!empty&&countryRows.length)?`<div class="sec-title" style="margin-top:20px">Paesi più letti</div>
  <div class="card pad">
-   <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" role="button" tabindex="0" onclick="focusMapCountry('${esc(country).replace(/'/g,"\\'")}')" aria-label="Mostra ${esc(nm)} sulla mappa">
+   <div class="place-list">${(function(){const maxN=Math.max(...countryRows.map(r=>r[1].length));return countryRows.map(([country,items])=>{const nm=normCountry(country);const flag=countryFlag(country,nm);const pctW=Math.round((items.length/maxN)*100);return `<div class="place-row" role="button" tabindex="0" onclick="focusMapCountry('${escJsAttr(country)}')" aria-label="Mostra ${esc(nm)} sulla mappa">
      <span class="place-flag">${flag||icon('globe')}</span>
      <div class="place-main"><div class="place-name">${esc(nm)}</div><div class="place-bar"><i style="width:${pctW}%"></i></div></div>
      <span class="place-count">${items.length}</span>
@@ -3338,6 +3338,7 @@ function initMapCloud(locs){
 }
 /* ============ PROFILO (cloud) ============ */
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function escJsAttr(v){return String(v==null?'':v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 /* ===== SOCIAL: ricerca utenti, follow, libreria altrui, inviti ai club ===== */
 async function toggleLibraryPrivacy(btn){
  const now=!!(profile&&profile.public_library);
@@ -4974,7 +4975,7 @@ function renderNotifCloud(){
        if(it.actionable==='invite'){
          // Un invito non è "da leggere": è da RISOLVERE. Accetta/Rifiuta subito qui,
          // senza dover saltare altrove — un tocco, un'azione.
-         const invEsc=String(it.inviteId).replace(/'/g,"\\'");
+         const invEsc=escJsAttr(it.inviteId);
          return `<div class="notif unread" data-notif-id="${esc(String(it.id))}" aria-label="${esc(it.t)}. ${esc(it.p)}">
            <span class="ni">${icon(it.ic)}</span>
            <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p><time class="notif-when">${notifWhen(it.when)}</time></span>
@@ -4984,7 +4985,7 @@ function renderNotifCloud(){
            </span>
          </div>`;
        }
-       const idJs=typeof it.id==='string'?`'${String(it.id).replace(/'/g,"\\'")}'`:it.id;
+       const idJs=typeof it.id==='string'?`'${escJsAttr(it.id)}'`:it.id;
        return `<button type="button" class="notif ${it.read?'':'unread'}" data-notif-id="${esc(String(it.id))}" onclick="openNotifItem(${idJs},${it.cid||'null'},'${it.go}')" aria-label="${it.read?'':'Non letta: '}${esc(it.t)}. ${esc(it.p)}">
          <span class="ni">${icon(it.ic)}</span>
          <span style="flex:1;min-width:0;text-align:left"><b>${esc(it.t)}</b><p>${esc(it.p)}</p><time class="notif-when">${notifWhen(it.when)}</time></span>
